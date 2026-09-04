@@ -112,9 +112,11 @@ struct GeneralSettingsView: View {
 
                     Toggle(isOn: $settings.preventScreenSaver) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Prevent Screen Saver")
+                            Text("Prevent Screen Saver & Automatic Lock")
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Stops the macOS screen saver while an Awake session is active.")
+                            Text(
+                                "Prevents the screen saver and automatic idle lock while Awake is active. Manual locking remains available."
+                            )
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -141,7 +143,7 @@ struct GeneralSettingsView: View {
                     }
 
                     Text(
-                        "By default, Awake prevents only system sleep. Display and screen saver behavior changes only when enabled above; screen locking remains managed by macOS."
+                        "By default, Awake keeps the system and display awake and prevents automatic idle locking. Disable both options above to restore normal display and locking behavior."
                     )
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)

@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Awake — Hook Only エージェント検出 実装計画</title>
+  <style>
+    :root {
+      /* Canvas & Paper */
+      --bg: #f7f5f0;
+      --paper: #ffffff;
+      --ink: #1f1e1d;
+      --muted: #787571;
+
+      /* Borders */
+      --line: #e8e5de;
+      --line-strong: #cbc5ba;
+
+      /* Accent & Info */
+      --accent: #695a42;
+      --accent-soft: #f2efe9;
+
+      /* Status Colors */
+      --green: #376b4d;
+      --green-soft: #edf5ef;
+      --amber: #8c5e1e;
+      --amber-soft: #fbf5eb;
+      --red: #99483f;
+      --red-soft: #faf0ed;
+
+      /* Code & Mono */
+      --code: #292724;
+      --code-bg: #f2efe9;
+
+      /* Geometry - Sharp & Solid */
+      --radius: 2px;
+      --shadow: none;
+
+      /* Typography */
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.75;
+      letter-spacing: -0.01em;
+    }
+    button, input { font: inherit; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    code, pre { font-family: var(--font-mono); }
+    code {
+      padding: 0.1rem 0.28rem;
+      color: var(--code);
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: 0.88em;
+    }
+    pre {
+      margin: 1rem 0;
+      padding: 1rem;
+      overflow: auto;
+      color: var(--code);
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    pre code { padding: 0; border: 0; background: transparent; }
+
+    .shell { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
+    header {
+      padding: 48px 0 30px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .eyebrow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .meta { color: var(--muted); font-size: 12px; }
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+    }
+    .lede {
+      max-width: 720px;
+      margin: 16px 0 0;
+      color: #57534e;
+      font-size: 17px;
+    }
+    .copy-button, .segment button, .state-tabs button, .flow-step {
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      color: var(--ink);
+      background: var(--paper);
+      cursor: pointer;
+    }
+    .copy-button {
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .copy-button:hover, .segment button:hover, .state-tabs button:hover, .flow-step:hover {
+      border-color: var(--accent);
+    }
+
+    .layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 56px;
+      padding: 34px 0 80px;
+    }
+    main { flex: 1; min-width: 0; max-width: 760px; }
+    aside { width: 220px; position: sticky; top: 28px; }
+    .toc {
+      padding: 14px 0 14px 16px;
+      border-left: 1px solid var(--line-strong);
+    }
+    .toc-title {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .toc a {
+      display: block;
+      padding: 4px 0;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .toc a:hover { color: var(--ink); }
+
+    section { scroll-margin-top: 24px; margin-bottom: 56px; }
+    h2 {
+      margin: 0 0 16px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--line-strong);
+      font-size: 23px;
+      line-height: 1.3;
+      letter-spacing: -0.025em;
+    }
+    h3 { margin: 28px 0 8px; font-size: 16px; line-height: 1.4; }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 10px 0 16px; padding-left: 1.35rem; }
+    li + li { margin-top: 5px; }
+
+    .decision {
+      padding: 18px 20px;
+      border: 1px solid #b9cdbf;
+      border-left: 4px solid var(--green);
+      background: var(--green-soft);
+    }
+    .decision strong { display: block; margin-bottom: 5px; color: var(--green); }
+    .note, .warning {
+      margin: 16px 0;
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-size: 13px;
+    }
+    .warning { border-color: #e7d2b1; background: var(--amber-soft); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin: 18px 0;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .metric { padding: 16px; background: var(--paper); }
+    .metric b { display: block; font-size: 21px; line-height: 1.2; }
+    .metric span { color: var(--muted); font-size: 11px; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 13px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); background: var(--accent-soft); font-size: 11px; letter-spacing: 0.03em; }
+    tr:last-child td { border-bottom: 0; }
+    .status {
+      display: inline-flex;
+      padding: 1px 6px;
+      border: 1px solid currentColor;
+      border-radius: var(--radius);
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status.green { color: var(--green); background: var(--green-soft); }
+    .status.amber { color: var(--amber); background: var(--amber-soft); }
+    .status.red { color: var(--red); background: var(--red-soft); }
+
+    .comparison { border: 1px solid var(--line-strong); background: var(--paper); }
+    .widget-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--accent-soft);
+    }
+    .widget-label { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .segment { display: flex; gap: 0; }
+    .segment button, .state-tabs button { padding: 5px 9px; font-size: 11px; }
+    .segment button + button, .state-tabs button + button { margin-left: -1px; }
+    .segment button.active, .state-tabs button.active {
+      position: relative;
+      z-index: 1;
+      color: white;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .comparison-body { padding: 18px; min-height: 168px; }
+    .comparison-panel[hidden] { display: none; }
+    .comparison-panel h3 { margin-top: 0; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: stretch;
+      gap: 10px;
+      margin: 20px 0 12px;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 86px;
+      padding: 12px 10px;
+      text-align: left;
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 31px;
+      right: -10px;
+      transform: translateX(50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .flow-step b { display: block; margin-bottom: 4px; font-size: 12px; }
+    .flow-step span { display: block; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .flow-step.active { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+    .flow-detail {
+      min-height: 74px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-size: 13px;
+    }
+
+    .mock-shell { border: 1px solid var(--line-strong); background: #202126; color: #eeeff2; }
+    .mock-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #45464c;
+      background: #2a2b30;
+    }
+    .state-tabs { display: flex; }
+    .state-tabs button { color: #ddd; border-color: #55575f; background: #24252a; }
+    .state-tabs button.active { border-color: #c7b99f; background: #6c604d; }
+    .mock-body { width: min(100%, 440px); margin: 0 auto; padding: 16px; transition: width 180ms ease; }
+    .mock-body.compact { width: 280px; }
+    .mock-title { margin-bottom: 10px; color: #aeb0b8; font-size: 11px; font-weight: 750; letter-spacing: 0.05em; }
+    .agent-card { border-top: 1px solid #4a4b51; border-bottom: 1px solid #4a4b51; }
+    .agent-row { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 8px; padding: 9px 0; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #696b72; }
+    .dot.live { background: #4add78; }
+    .dot.warn { background: #e0a951; }
+    .agent-name { font-size: 13px; font-weight: 650; }
+    .agent-sub { display: block; color: #8f9199; font-size: 10px; font-weight: 400; }
+    .agent-value { color: #aeb0b8; font-size: 10px; }
+    .agent-value.live { color: #4add78; }
+    .agent-value.warn { color: #e0a951; }
+    .mock-summary { display: flex; justify-content: space-between; margin-bottom: 9px; font-size: 11px; }
+    .mock-summary strong { color: #4add78; }
+
+    details.phase { margin-bottom: 10px; border: 1px solid var(--line); background: var(--paper); }
+    details.phase[open] { border-color: var(--line-strong); }
+    details.phase summary {
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 14px;
+      cursor: pointer;
+      list-style: none;
+    }
+    details.phase summary::-webkit-details-marker { display: none; }
+    .phase-index { color: var(--accent); font-family: var(--font-mono); font-size: 11px; }
+    .phase-title { font-weight: 720; }
+    .phase-time { color: var(--muted); font-size: 11px; }
+    .phase-content { padding: 0 16px 14px 106px; border-top: 1px solid var(--line); }
+    .task { display: flex; align-items: flex-start; gap: 9px; margin-top: 10px; font-size: 13px; }
+    .task input { margin-top: 5px; accent-color: var(--green); }
+    .progress-wrap { margin: 0 0 18px; }
+    .progress-meta { display: flex; justify-content: space-between; margin-bottom: 6px; color: var(--muted); font-size: 11px; }
+    .progress-track { height: 7px; border: 1px solid var(--line-strong); background: var(--paper); }
+    .progress-fill { width: 0; height: 100%; background: var(--green); transition: width 180ms ease; }
+
+    .file-tree {
+      padding: 15px;
+      border: 1px solid var(--line);
+      background: var(--code-bg);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+    }
+    .acceptance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .acceptance div { padding: 12px; border: 1px solid var(--line); background: var(--paper); font-size: 12px; }
+    .acceptance b { display: block; margin-bottom: 3px; color: var(--green); }
+    .source-list { font-size: 12px; }
+
+    #toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      padding: 9px 12px;
+      color: white;
+      background: var(--code);
+      border: 1px solid #000;
+      border-radius: var(--radius);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: 150ms ease;
+      font-size: 12px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 850px) {
+      .shell { width: min(100% - 28px, 760px); }
+      .header-row { flex-direction: column; }
+      .layout { display: block; padding-top: 24px; }
+      aside { position: static; width: auto; margin-bottom: 36px; }
+      .toc { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 12px; }
+      .toc-title { grid-column: 1 / -1; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-step:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -12px; transform: translateX(50%); }
+    }
+    @media (max-width: 560px) {
+      body { font-size: 14px; }
+      header { padding-top: 30px; }
+      .metrics, .acceptance { grid-template-columns: 1fr; }
+      .mock-toolbar { align-items: flex-start; flex-direction: column; }
+      details.phase summary { grid-template-columns: 62px 1fr; }
+      .phase-time { grid-column: 2; }
+      .phase-content { padding-left: 16px; }
+    }
+    @media print {
+      body { background: white; color: black; }
+      .shell { width: 100%; max-width: none; }
+      header { padding-top: 0; }
+      aside, .copy-button, .widget-bar, #toast { display: none !important; }
+      .layout { display: block; padding-top: 24px; }
+      main { max-width: none; }
+      section { break-inside: avoid; margin-bottom: 32px; }
+      details.phase .phase-content { display: block; }
+      .comparison-panel[hidden] { display: block; margin-top: 18px; }
+      a { color: black; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell header-row">
+      <div>
+        <div class="eyebrow">
+          <span class="badge">実装計画</span>
+          <span class="meta">2026-09-04 · Draft for implementation</span>
+        </div>
+        <h1>Hook Only エージェント検出</h1>
+        <p class="lede">プロセス名とCPU使用率による推測をやめ、各エージェントが通知するライフサイクルイベントだけでスリープ防止を制御する。</p>
+      </div>
+      <button class="copy-button" id="copyMarkdown">📋 Copy Markdown</button>
+    </div>
+  </header>
+
+  <div class="shell layout">
+    <main>
+      <section id="summary">
+        <h2>決定事項</h2>
+        <div class="decision">
+          <strong>実行判定をイベントベースへ一本化する</strong>
+          Codex・Claude Code・Antigravityは公式Hook、OpenCodeはPluginイベントを使う。プロセス存在、CPU使用率、ログ更新時刻は「実行中」の根拠にしない。Gemini CLIは対象外とする。
+        </div>
+        <div class="metrics">
+          <div class="metric"><b>4</b><span>対応プロバイダ</span></div>
+          <div class="metric"><b>0</b><span>CPU判定ルール</span></div>
+          <div class="metric"><b>Session</b><span>状態管理の単位</span></div>
+        </div>
+        <p>Hook Onlyは、CPUが一時的に止まるネットワーク待ちを誤って終了扱いせず、常駐CLIを実行中と誤認しない。開始・終了をプロバイダ自身の意味的なイベントで判断できる。</p>
+        <p>OpenCodeにはHookという名称の機能がないため、公式Pluginのイベント購読を同じ受信形式へ変換する。この文書では両者をまとめて「Hook連携」と呼ぶ。</p>
+      </section>
+
+      <section id="current">
+        <h2>現状と置き換える範囲</h2>
+        <p>現在の <code>ProcessMonitor</code> は1.5秒間隔で全PIDを走査し、対象プロセスと子プロセスの累積CPU時間を比較している。0.1%以上のCPU活動または新しい子プロセスを検出すると、60秒間「実行中」を保持する。</p>
+        <div class="comparison" data-comparison>
+          <div class="widget-bar">
+            <span class="widget-label">判定方式の比較</span>
+            <div class="segment">
+              <button class="active" data-panel="before">現在</button>
+              <button data-panel="after">Hook Only</button>
+            </div>
+          </div>
+          <div class="comparison-body">
+            <div class="comparison-panel" data-name="before">
+              <h3>プロセス＋CPU推測</h3>
+              <ul>
+                <li>常駐プロセスと実行中ターンの区別に閾値が必要</li>
+                <li>モデル応答待ちやネットワーク待ちではCPUが動かない</li>
+                <li>全PID走査、子プロセス探索、60秒保持が必要</li>
+                <li>プロバイダ固有の「完了」を認識できない</li>
+              </ul>
+            </div>
+            <div class="comparison-panel" data-name="after" hidden>
+              <h3>ライフサイクルイベント</h3>
+              <ul>
+                <li>ターン開始でactive、終了イベントでidleへ遷移</li>
+                <li>複数セッションをID単位で正しく集約</li>
+                <li>入力内容やトランスクリプトは読み取らない</li>
+                <li>未連携・設定破損をUIで明示できる</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <h3>削除・縮小する既存責務</h3>
+        <ul>
+          <li><code>AgentActivityDetector</code>、CPU閾値、60秒のactivity holdを削除する。</li>
+          <li><code>ProcessMonitor.hasRunningAgent</code> を <code>AgentEventMonitor.hasActiveSession</code> に置き換える。</li>
+          <li>プロセス名は実行判定に使わない。移行期間中はクラッシュ後の安全な後始末にだけ利用できる。</li>
+          <li>設定画面の「Live Process Detection Preview」とPID表示をHook連携状態へ変更する。</li>
+        </ul>
+      </section>
+
+      <section id="scope">
+        <h2>スコープ</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>対象</th><th>初期リリース</th><th>扱い</th></tr></thead>
+            <tbody>
+              <tr><td>Codex</td><td><span class="status green">対応</span></td><td>公式Hooksをコマンド連携</td></tr>
+              <tr><td>Claude Code</td><td><span class="status green">対応</span></td><td>公式Hooksをコマンド連携</td></tr>
+              <tr><td>OpenCode</td><td><span class="status green">対応</span></td><td>グローバルPluginからイベント転送</td></tr>
+              <tr><td>Antigravity</td><td><span class="status green">対応</span></td><td>公式Hooks、<code>Stop.fullyIdle</code>を利用</td></tr>
+              <tr><td>Gemini CLI</td><td><span class="status red">対象外</span></td><td>プリセット・インストーラ・検出処理に含めない</td></tr>
+              <tr><td>カスタムプロセス</td><td><span class="status amber">後続</span></td><td>既存データは保持し、汎用Hookコマンドを後から提供</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>今回は行わないこと</h3>
+        <ul>
+          <li>ログ、JSONL、SQLite、画面表示、通知センターのスクレイピング</li>
+          <li>CPU・ネットワーク通信量からの推測</li>
+          <li>非公開IPCやDesktopアプリ内部ポートへの接続</li>
+          <li>Hook未対応の任意アプリをプロセス名だけで自動検出すること</li>
+        </ul>
+      </section>
+
+      <section id="architecture">
+        <h2>アーキテクチャ</h2>
+        <p>各プロバイダの入力形式は小さなCLIブリッジで正規化する。Awake本体はプロバイダ設定の細部を知らず、正規化済みのセッション状態だけを購読する。</p>
+        <div class="flow" id="flow">
+          <button class="flow-step active" data-detail="provider"><b>Provider</b><span>Hook / Plugin event</span></button>
+          <button class="flow-step" data-detail="bridge"><b>AwakeHookBridge</b><span>JSONを検証・正規化</span></button>
+          <button class="flow-step" data-detail="store"><b>Session Store</b><span>原子的に状態保存</span></button>
+          <button class="flow-step" data-detail="monitor"><b>Event Monitor</b><span>複数セッション集約</span></button>
+          <button class="flow-step" data-detail="coordinator"><b>Coordinator</b><span>Sleep assertion制御</span></button>
+        </div>
+        <div class="flow-detail" id="flowDetail">Codex・Claude Code・AntigravityはHookを実行し、OpenCodeはPluginイベントを転送する。プロンプト本文やツール出力は送らない。</div>
+
+        <h3>受信方式</h3>
+        <p><strong>推奨はローカル状態ファイル＋軽量CLIブリッジ。</strong> 固定ポートを開かず、Awakeが一時的に終了していても開始状態を受け取れる。ブリッジは標準入力JSONを読み、必要なフィールドだけを <code>~/Library/Application Support/Awake/agent-sessions/v1/</code> に原子的に保存して直ちに終了する。</p>
+        <div class="warning">Hookコマンドはエージェントの進行を止めてはいけない。入力不正、保存失敗、Awake未起動のいずれでも短時間で終了し、プロバイダ側へ失敗を返さない設計にする。</div>
+
+        <h3>イベント形式</h3>
+        <pre><code>{
+  "schemaVersion": 1,
+  "provider": "codex",
+  "sessionID": "provider-session-id",
+  "turnID": "optional-turn-id",
+  "state": "active",
+  "reason": "user_prompt_submit",
+  "occurredAt": "2026-09-04T16:30:00Z",
+  "sourcePID": 12345
+}</code></pre>
+        <p>ファイル名には生のセッションIDを使わずハッシュ値を使う。保存するのは状態、時刻、プロバイダ、識別子、送信元PIDだけとし、プロンプト・作業ディレクトリ・トランスクリプトパス・ツール引数は破棄する。</p>
+      </section>
+
+      <section id="providers">
+        <h2>プロバイダ別イベント対応</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>プロバイダ</th><th>activeへ遷移</th><th>idleへ遷移</th><th>注意点</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Codex</strong></td>
+                <td><code>UserPromptSubmit</code><br><code>PreToolUse</code> / <code>PostToolUse</code></td>
+                <td><code>Stop</code><br><code>Interrupt</code><br><code>SessionEnd</code></td>
+                <td><code>~/.codex/hooks.json</code>へAwake所有エントリを追加する。</td>
+              </tr>
+              <tr>
+                <td><strong>Claude Code</strong></td>
+                <td><code>UserPromptSubmit</code><br><code>PreToolUse</code> / <code>PostToolUse</code></td>
+                <td><code>Stop</code><br><code>StopFailure</code><br><code>SessionEnd</code></td>
+                <td>手動中断でStopが来ない場合に備え、<code>idle_prompt</code>通知と送信元プロセス終了で回収する。</td>
+              </tr>
+              <tr>
+                <td><strong>OpenCode</strong></td>
+                <td><code>session.status: busy</code><br><code>session.status: retry</code></td>
+                <td><code>session.status: idle</code><br><code>session.error</code></td>
+                <td><code>~/.config/opencode/plugins/awake.js</code>がHookBridgeを呼ぶ。古い<code>session.idle</code>は補助扱い。</td>
+              </tr>
+              <tr>
+                <td><strong>Antigravity</strong></td>
+                <td><code>PreInvocation</code><br><code>PreToolUse</code> / <code>PostToolUse</code><br><code>Stop.fullyIdle=false</code></td>
+                <td><code>Stop.fullyIdle=true</code></td>
+                <td><code>fullyIdle</code>がバックグラウンドコマンドと非同期タスクの完了を含むため、最優先の終了条件にする。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>承認待ち:</strong> 公開イベントで明示できる場合は <code>waitingForInput</code> とし、スリープ防止を解除する。明示できないプロバイダでは、ターン終了イベントまでactiveが継続する。この制約をCPU推測で補わない。</div>
+      </section>
+
+      <section id="state">
+        <h2>状態モデルと制御規則</h2>
+        <pre><code>enum AgentSessionState {
+    case active
+    case waitingForInput
+    case idle
+    case stale
+}
+
+hasActiveSession = sessions.values.contains(.active)
+shouldPreventSleep = selectedMode == .whileAgentRunning
+                  &amp;&amp; hasActiveSession
+                  &amp;&amp; !lowBatteryCutoff</code></pre>
+        <ul>
+          <li>状態はプロバイダ名ではなく <code>provider + sessionID</code> 単位で保持する。</li>
+          <li>同じイベントの再送は冪等に処理する。古い <code>occurredAt</code> のイベントは無視する。</li>
+          <li>1つのセッションが終了しても、別セッションがactiveならスリープ防止を継続する。</li>
+          <li>終了イベント、SessionEnd、送信元プロセス終了で状態ファイルを削除する。</li>
+          <li>時刻だけの短いTTLでは終了させない。長いモデル処理にはHookイベントが発生しない時間があるためである。</li>
+          <li>Awake再起動時は状態ファイルを読み、PIDとプロセス開始時刻が一致するものだけ復元する。</li>
+        </ul>
+        <p>プロセス確認は「activeにする根拠」には使わず、Hookが終了通知を残せなかった場合のクリーンアップだけに限定する。これはHook Onlyの判定方針と両立する。</p>
+      </section>
+
+      <section id="installation">
+        <h2>Hookの導入と削除</h2>
+        <p>設定画面からプロバイダごとに明示的に「連携を有効化」する。Awakeは既存設定を全置換せず、自分が所有するエントリだけを追加・更新・削除する。</p>
+        <ol>
+          <li>設定ファイルとプロバイダのバージョンを確認する。</li>
+          <li>現在の設定を解析し、Awakeの識別子が付いたエントリの有無を調べる。</li>
+          <li>変更内容を表示し、ユーザー操作後にバックアップを作成する。</li>
+          <li>一時ファイルへ書き出して構文検証し、原子的に置換する。</li>
+          <li>テストイベントを送り、Awakeが受信したら「連携済み」にする。</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状態</th><th>意味</th><th>UI操作</th></tr></thead>
+            <tbody>
+              <tr><td><span class="status amber">未連携</span></td><td>AwakeのHook／Pluginがない</td><td>連携を有効化</td></tr>
+              <tr><td><span class="status green">連携済み</span></td><td>設定とテストイベントが正常</td><td>再テスト・解除</td></tr>
+              <tr><td><span class="status red">要修復</span></td><td>パス切れ、構文不正、旧schema</td><td>修復</td></tr>
+              <tr><td><span class="status amber">未確認</span></td><td>設定はあるがテスト未完了</td><td>接続テスト</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning">アプリの移動でHookBridgeの絶対パスが壊れないよう、連携時に署名済みブリッジをApplication Support配下の固定位置へ配置する。解除時は設定エントリとブリッジをAwake所有分だけ削除する。</div>
+      </section>
+
+      <section id="ui">
+        <h2>UI変更</h2>
+        <p>メニューバーでは実行状態を簡潔に表示し、詳細な連携操作は設定画面へ置く。「エージェント実行中」モード以外では監視対象セクションを表示しない現在の方針を維持する。</p>
+        <div class="mock-shell">
+          <div class="mock-toolbar">
+            <span class="widget-label">メニューバー モック</span>
+            <div class="state-tabs" id="stateTabs">
+              <button class="active" data-state="idle">待機</button>
+              <button data-state="active">実行中</button>
+              <button data-state="unlinked">未連携</button>
+              <button data-state="error">要修復</button>
+            </div>
+          </div>
+          <div class="mock-body" id="mockBody">
+            <div class="mock-summary"><span>監視対象エージェント</span><strong id="mockCount">0件実行中</strong></div>
+            <div class="agent-card" id="agentCard"></div>
+          </div>
+        </div>
+        <h3>設定画面</h3>
+        <ul>
+          <li>プリセット行に有効／無効、連携状態、連携ボタンを表示する。</li>
+          <li>プロセス名一覧とPIDプレビューを削除し、最後に受信したイベント時刻とセッション数を表示する。</li>
+          <li>「すべて連携」「すべて再テスト」は用意できるが、設定変更前の説明と確認を省略しない。</li>
+          <li>既存カスタムプロセスは削除せず保存する。初期リリースでは「Hook連携が必要」と表示し、新規追加を一時的に隠す。</li>
+        </ul>
+      </section>
+
+      <section id="files">
+        <h2>コード構成</h2>
+        <div class="file-tree">awake/
+├── Models/
+│   ├── AgentProvider.swift           # 安定したprovider IDと表示情報
+│   ├── AgentHookEvent.swift          # 正規化イベントschema
+│   └── AgentSession.swift            # セッション状態
+├── Services/
+│   ├── AgentEventMonitor.swift       # 状態ファイル監視・集約
+│   ├── AgentSessionStore.swift       # 原子的保存・復元・cleanup
+│   ├── HookIntegrationManager.swift  # 導入、検証、解除
+│   └── ProcessMonitor.swift          # CPU判定を削除、cleanup用途へ縮小または廃止
+├── State/
+│   ├── AwakeCoordinator.swift        # hasActiveSessionを購読
+│   └── SettingsStore.swift           # provider有効化と連携情報
+├── Views/
+│   ├── MenuBar/RunningAgentsView.swift
+│   └── Settings/AgentSettingsView.swift
+└── Resources/
+    └── Hooks/OpenCodeAwakePlugin.js
+
+AwakeHookBridge/
+└── main.swift                        # 各Hook入力を正規化するCLI target</div>
+        <h3>モデル移行</h3>
+        <p>プリセットの識別子を毎回生成されるUUIDから安定した <code>AgentProvider</code> raw valueへ移す。既存の <code>MonitoredAgent</code> は読み込み時にproviderへ対応付け、ユーザーの有効／無効設定とカスタム項目を失わない。</p>
+      </section>
+
+      <section id="phases">
+        <h2>実装フェーズ</h2>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span>計画上の進捗</span><span id="progressText">0 / 20 tasks</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <details class="phase" open>
+          <summary><span class="phase-index">Phase 1</span><span class="phase-title">状態モデルと受信基盤</span><span class="phase-time">基盤</span></summary>
+          <div class="phase-content">
+            <label class="task"><input type="checkbox"><span><code>AgentProvider</code>、Hookイベント、セッション状態を定義する。</span></label>
+            <label class="task"><input type="checkbox"><span>状態ファイルのschema、保存場所、権限、原子的更新を実装する。</span></label>
+            <label class="task"><input type="checkbox"><span><code>AwakeHookBridge</code> CLI targetを追加し、不正入力でも高速に終了させる。</span></label>
+            <label class="task"><input type="checkbox"><span>複数セッション集約、重複・順序逆転・再起動復元の単体テストを作る。</span></label>
+          </div>
+        </details>
+
+        <details class="phase">
+          <summary><span class="phase-index">Phase 2</span><span class="phase-title">プロバイダアダプタ</span><span class="phase-time">4 providers</span></summary>
+          <div class="phase-content">
+            <label class="task"><input type="checkbox"><span>Codex Hook入力をstart／active／stop／interruptへ正規化する。</span></label>
+            <label class="task"><input type="checkbox"><span>Claude Code Hook入力とStopFailure／idle_prompt回収を実装する。</span></label>
+            <label class="task"><input type="checkbox"><span>OpenCode Pluginでsession.statusをHookBridgeへ転送する。</span></label>
+            <label class="task"><input type="checkbox"><span>AntigravityのStop.fullyIdleを含む状態遷移を実装する。</span></label>
+          </div>
+        </details>
+
+        <details class="phase">
+          <summary><span class="phase-index">Phase 3</span><span class="phase-title">導入・解除フロー</span><span class="phase-time">安全な設定編集</span></summary>
+          <div class="phase-content">
+            <label class="task"><input type="checkbox"><span>各設定形式を読み、Awake所有エントリだけをmergeする。</span></label>
+            <label class="task"><input type="checkbox"><span>バックアップ、構文検証、原子的置換、rollbackを実装する。</span></label>
+            <label class="task"><input type="checkbox"><span>ブリッジの固定配置と署名・実行可能性を確認する。</span></label>
+            <label class="task"><input type="checkbox"><span>連携テスト、修復、解除をprovider単位で実装する。</span></label>
+          </div>
+        </details>
+
+        <details class="phase">
+          <summary><span class="phase-index">Phase 4</span><span class="phase-title">CoordinatorとUIの切り替え</span><span class="phase-time">製品統合</span></summary>
+          <div class="phase-content">
+            <label class="task"><input type="checkbox"><span><code>AwakeCoordinator</code>を<code>hasActiveSession</code>購読へ切り替える。</span></label>
+            <label class="task"><input type="checkbox"><span>監視一覧をHook連携状態とセッション数の表示へ変更する。</span></label>
+            <label class="task"><input type="checkbox"><span>設定画面に連携、有効化、再テスト、解除を追加する。</span></label>
+            <label class="task"><input type="checkbox"><span>既存設定をprovider IDへ移行し、カスタム項目を保持する。</span></label>
+          </div>
+        </details>
+
+        <details class="phase">
+          <summary><span class="phase-index">Phase 5</span><span class="phase-title">旧判定削除と受け入れ確認</span><span class="phase-time">完了条件</span></summary>
+          <div class="phase-content">
+            <label class="task"><input type="checkbox"><span>CPU sampler、全PID走査、activity holdを削除する。</span></label>
+            <label class="task"><input type="checkbox"><span>4プロバイダで開始・完了・失敗・中断を実機確認する。</span></label>
+            <label class="task"><input type="checkbox"><span>複数同時セッション、低バッテリー停止、手動停止抑制を確認する。</span></label>
+            <label class="task"><input type="checkbox"><span>Gemini CLIが表示・導入・検出されないことを確認する。</span></label>
+          </div>
+        </details>
+      </section>
+
+      <section id="acceptance">
+        <h2>受け入れ条件</h2>
+        <div class="acceptance">
+          <div><b>開始</b>最初のactiveイベントから1秒以内にスリープ防止が有効になる。</div>
+          <div><b>終了</b>最後のactiveセッションの終了から1秒以内にスリープ防止が解除される。</div>
+          <div><b>多重実行</b>同一・異なるプロバイダの複数セッションを独立管理できる。</div>
+          <div><b>誤検出なし</b>CLIが起動しているだけではactiveにならない。</div>
+          <div><b>回収</b>SessionEndまたは送信元プロセス終了後にstale状態が残らない。</div>
+          <div><b>非阻害</b>HookBridge障害がプロバイダのターンを失敗させない。</div>
+          <div><b>プライバシー</b>プロンプト、応答、パス、ツール引数を永続化しない。</div>
+          <div><b>可逆性</b>連携解除でAwake所有設定だけを完全に除去できる。</div>
+        </div>
+      </section>
+
+      <section id="risks">
+        <h2>リスクと対策</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>リスク</th><th>影響</th><th>対策</th></tr></thead>
+            <tbody>
+              <tr><td>終了Hookが発火しない</td><td>スリープ防止が残る</td><td>SessionEnd、失敗・中断イベント、送信元PID終了で回収する。</td></tr>
+              <tr><td>設定schema変更</td><td>連携できない</td><td>provider別installerを分離し、未対応版では自動編集せず「要修復」にする。</td></tr>
+              <tr><td>アプリ移動</td><td>Bridgeパス切れ</td><td>Application Support配下へ固定配置し、起動時に署名とバージョンを検証する。</td></tr>
+              <tr><td>OpenCode Plugin API変更</td><td>イベント欠落</td><td>Plugin自身のバージョンを記録し、接続テストと明示的なエラー表示を行う。</td></tr>
+              <tr><td>Hook未設定</td><td>検出されない</td><td>メニューと設定に「未連携」を表示し、CPU判定へ黙って戻さない。</td></tr>
+              <tr><td>承認待ちを識別できない</td><td>不要なスリープ防止</td><td>公開イベントがあるproviderのみwaitingへ遷移し、制約をUIに隠さない。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="order">
+        <h2>着手順</h2>
+        <p>最初に状態モデルとBridgeを完成させ、テスト用イベントでCoordinatorまで通す。その後、Antigravity、Claude Code、Codex、OpenCodeの順で実プロバイダを接続する。</p>
+        <ol>
+          <li><strong>Antigravity:</strong> <code>Stop.fullyIdle</code>でバックグラウンドタスク終了を明確に検証できる。</li>
+          <li><strong>Claude Code:</strong> 開始、正常終了、失敗、セッション終了の組み合わせを検証する。</li>
+          <li><strong>Codex:</strong> StopとInterruptを含むターン境界を検証する。</li>
+          <li><strong>OpenCode:</strong> Plugin配布とsession.statusのバージョン差を吸収する。</li>
+        </ol>
+        <p>4つの連携が動いた後にCoordinatorを切り替え、最後にCPU判定を削除する。この順序なら、移行中に既存のエージェントモードを壊さない。</p>
+      </section>
+
+      <section id="references">
+        <h2>実装時の一次資料</h2>
+        <ul class="source-list">
+          <li><a href="https://learn.chatgpt.com/docs/hooks">Codex Hooks</a></li>
+          <li><a href="https://code.claude.com/docs/en/hooks">Claude Code Hooks</a></li>
+          <li><a href="https://opencode.ai/docs/plugins/">OpenCode Plugins</a></li>
+          <li><a href="https://opencode.ai/docs/server/">OpenCode Server API</a></li>
+          <li><a href="https://antigravity.google/docs/hooks">Antigravity Hooks</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <aside>
+      <nav class="toc" aria-label="目次">
+        <div class="toc-title">On this page</div>
+        <a href="#summary">決定事項</a>
+        <a href="#current">現状と置き換える範囲</a>
+        <a href="#scope">スコープ</a>
+        <a href="#architecture">アーキテクチャ</a>
+        <a href="#providers">プロバイダ別イベント</a>
+        <a href="#state">状態モデル</a>
+        <a href="#installation">Hookの導入と削除</a>
+        <a href="#ui">UI変更</a>
+        <a href="#files">コード構成</a>
+        <a href="#phases">実装フェーズ</a>
+        <a href="#acceptance">受け入れ条件</a>
+        <a href="#risks">リスクと対策</a>
+        <a href="#order">着手順</a>
+        <a href="#references">一次資料</a>
+      </nav>
+    </aside>
+  </div>
+
+  <textarea id="markdownSource" hidden># Awake Hook Only エージェント検出 実装計画
+
+## 決定
+- Codex・Claude Code・Antigravityは公式Hookを使う。
+- OpenCodeはPluginイベントをHook相当として扱う。
+- CPU使用率、プロセス存在、ログ更新時刻は実行判定に使わない。
+- Gemini CLIは対象外。
+- 状態はprovider + sessionID単位で管理する。
+
+## アーキテクチャ
+Provider Hook / Plugin → AwakeHookBridge → Session Store → AgentEventMonitor → AwakeCoordinator → SleepManager
+
+## 実装フェーズ
+1. 状態モデル、Session Store、AwakeHookBridge
+2. Codex / Claude Code / OpenCode / Antigravityアダプタ
+3. 安全なHook導入・検証・解除
+4. CoordinatorとUIをイベント判定へ切り替え
+5. CPU判定を削除し、4プロバイダで受け入れ確認
+
+## 重要な制約
+- Hook未連携時は検出しない。CPU判定へ黙って戻さない。
+- HookBridgeは入力不正や保存失敗でもエージェントを阻害しない。
+- プロンプト、応答、パス、ツール引数を保存しない。
+- 既存設定は全置換せず、Awake所有エントリだけを変更する。
+- カスタムプロセスは後続対応とし、既存データは保持する。</textarea>
+  <div id="toast" role="status">Markdownをコピーしました</div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    document.getElementById('copyMarkdown').addEventListener('click', async () => {
+      const text = document.getElementById('markdownSource').value;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        const area = document.getElementById('markdownSource');
+        area.hidden = false;
+        area.select();
+        document.execCommand('copy');
+        area.hidden = true;
+      }
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    });
+
+    document.querySelectorAll('[data-comparison]').forEach(widget => {
+      widget.querySelectorAll('[data-panel]').forEach(button => {
+        button.addEventListener('click', () => {
+          const target = button.dataset.panel;
+          widget.querySelectorAll('[data-panel]').forEach(item => item.classList.toggle('active', item === button));
+          widget.querySelectorAll('.comparison-panel').forEach(panel => {
+            panel.hidden = panel.dataset.name !== target;
+          });
+        });
+      });
+    });
+
+    const flowDetails = {
+      provider: 'Codex・Claude Code・AntigravityはHookを実行し、OpenCodeはPluginイベントを転送する。プロンプト本文やツール出力は送らない。',
+      bridge: 'プロバイダ固有JSONからprovider、sessionID、state、occurredAt、sourcePIDだけを抽出する。失敗時も短時間で終了する。',
+      store: 'セッションごとの状態ファイルを一時ファイル経由で原子的に更新する。ディレクトリ権限はユーザー限定にする。',
+      monitor: 'ファイル変更を監視し、重複・古いイベントを除外する。1件でもactiveならhasActiveSessionをtrueにする。',
+      coordinator: '最初のactiveでスリープ防止を開始し、最後のactive終了で解除する。低バッテリーなど既存の安全制御を優先する。'
+    };
+    document.querySelectorAll('.flow-step').forEach(step => {
+      step.addEventListener('click', () => {
+        document.querySelectorAll('.flow-step').forEach(item => item.classList.remove('active'));
+        step.classList.add('active');
+        document.getElementById('flowDetail').textContent = flowDetails[step.dataset.detail];
+      });
+    });
+
+    const providers = ['Codex', 'Claude Code', 'OpenCode', 'Antigravity'];
+    const agentCard = document.getElementById('agentCard');
+    const mockCount = document.getElementById('mockCount');
+    const renderMock = state => {
+      let live = [];
+      if (state === 'active') live = ['Codex', 'OpenCode'];
+      const rows = providers.map(name => {
+        let dotClass = '';
+        let valueClass = '';
+        let value = '待機';
+        let sub = 'Hook連携済み';
+        if (live.includes(name)) { dotClass = 'live'; valueClass = 'live'; value = name === 'Codex' ? '2セッション' : '実行中'; }
+        if (state === 'unlinked' && (name === 'OpenCode' || name === 'Antigravity')) { dotClass = 'warn'; valueClass = 'warn'; value = '未連携'; sub = '設定で連携が必要'; }
+        if (state === 'error' && name === 'Claude Code') { dotClass = 'warn'; valueClass = 'warn'; value = '要修復'; sub = 'Bridgeのパスが無効'; }
+        return `<div class="agent-row"><span class="dot ${dotClass}"></span><span class="agent-name">${name}<span class="agent-sub">${sub}</span></span><span class="agent-value ${valueClass}">${value}</span></div>`;
+      }).join('');
+      agentCard.innerHTML = rows;
+      const count = state === 'active' ? 3 : 0;
+      mockCount.textContent = `${count}件実行中`;
+      mockCount.style.color = state === 'error' || state === 'unlinked' ? '#e0a951' : '#4add78';
+    };
+    renderMock('idle');
+    document.querySelectorAll('#stateTabs button').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('#stateTabs button').forEach(item => item.classList.toggle('active', item === button));
+        renderMock(button.dataset.state);
+      });
+    });
+
+    const tasks = Array.from(document.querySelectorAll('.task input'));
+    const updateProgress = () => {
+      const done = tasks.filter(task => task.checked).length;
+      const percent = tasks.length ? (done / tasks.length) * 100 : 0;
+      document.getElementById('progressFill').style.width = `${percent}%`;
+      document.getElementById('progressText').textContent = `${done} / ${tasks.length} tasks`;
+    };
+    tasks.forEach(task => task.addEventListener('change', updateProgress));
+    updateProgress();
+  </script>
+</body>
+</html>
