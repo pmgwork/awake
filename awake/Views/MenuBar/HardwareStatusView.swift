@@ -72,11 +72,6 @@ struct HardwareStatusView: View {
                     .font(.system(size: 9))
                     .foregroundColor(.red)
                     .fixedSize(horizontal: false, vertical: true)
-            } else if !sleepManager.activeMechanisms.isEmpty {
-                Text(sleepManager.activeMechanisms.joined(separator: " · "))
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
             }
         }
     }

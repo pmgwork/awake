@@ -25,6 +25,8 @@ public final class SettingsStore: ObservableObject {
         static let notificationsEnabled = "pmgwork.awake.notificationsEnabled"
         static let showTemperatureInMenuBar = "pmgwork.awake.showTemperatureInMenuBar"
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
+        static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
+        static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
     }
 
     @Published public var monitoredAgents: [MonitoredAgent] {
@@ -111,6 +113,18 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published public var preventDisplaySleep: Bool {
+        didSet {
+            UserDefaults.standard.set(preventDisplaySleep, forKey: Keys.preventDisplaySleep)
+        }
+    }
+
+    @Published public var preventScreenSaver: Bool {
+        didSet {
+            UserDefaults.standard.set(preventScreenSaver, forKey: Keys.preventScreenSaver)
+        }
+    }
+
     private var isSynchronizingLaunchAtLogin = false
 
     private init() {
@@ -179,6 +193,8 @@ public final class SettingsStore: ObservableObject {
         }
 
         self.notificationsEnabled = UserDefaults.standard.bool(forKey: Keys.notificationsEnabled)
+        self.preventDisplaySleep = UserDefaults.standard.bool(forKey: Keys.preventDisplaySleep)
+        self.preventScreenSaver = UserDefaults.standard.bool(forKey: Keys.preventScreenSaver)
     }
 
     private func saveAgents() {

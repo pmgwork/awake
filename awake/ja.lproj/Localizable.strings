@@ -139,6 +139,16 @@
 "Fan test ends after 60 seconds and returns to the current cooling policy." = "ファンテストは60秒後に終了し、現在の冷却ポリシーへ戻ります。";
 "Manually stopped by user." = "ユーザーが手動で停止しました。";
 "Notifications are disabled in System Settings." = "通知はシステム設定で無効になっています。";
+"Display During Sessions" = "セッション中の画面";
+"These preferences apply only while Awake is actively preventing system sleep." = "これらの設定はAwakeがシステムスリープを防止している間だけ適用されます。";
+"Prevent Display Sleep" = "ディスプレイのスリープを防止";
+"Keeps connected displays on without waking a display that is already asleep." = "接続中のディスプレイをオンに保ち、すでにスリープ中の画面は起こしません。";
+"Prevent Screen Saver" = "スクリーンセーバーを防止";
+"Stops the macOS screen saver while an Awake session is active." = "Awakeセッション中はmacOSのスクリーンセーバーを停止します。";
+"By default, Awake prevents only system sleep. Display and screen saver behavior changes only when enabled above; screen locking remains managed by macOS." = "初期状態ではシステムスリープのみを防止します。上の設定を有効にした場合だけディスプレイとスクリーンセーバーの動作を変更し、画面ロックはmacOSが管理します。";
+"Display sleep prevention could not be enabled." = "ディスプレイのスリープ防止を有効にできませんでした。";
+"The running screen saver could not be stopped." = "実行中のスクリーンセーバーを停止できませんでした。";
+"Display Control Problem" = "画面制御で問題が発生しました";
 "Awake On" = "Awake オン";
 "Awake Off" = "Awake オフ";
 "Could not restore automatic fan control. Restart the Mac if manual control remains active." = "ファンを自動制御へ戻せませんでした。手動制御が続く場合はMacを再起動してください。";

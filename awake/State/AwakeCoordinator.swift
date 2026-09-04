@@ -28,6 +28,7 @@ public final class AwakeCoordinator: ObservableObject {
     public let processMonitor = ProcessMonitor.shared
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
+    public let screenBehaviorManager = ScreenBehaviorManager.shared
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
@@ -171,6 +172,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     // MARK: - State Machine Evaluation
     public func evaluateState() {
+        defer { applyScreenBehaviorPolicy() }
         // Global battery fail-safe: turn off Awake in every mode and restore
         // automatic fan control before the battery reaches a critical level.
         if isLowBatteryCutoffActive {
@@ -372,6 +374,29 @@ public final class AwakeCoordinator: ObservableObject {
                 )
             }
             .store(in: &cancellables)
+
+        Publishers.CombineLatest(
+            settings.$preventDisplaySleep,
+            settings.$preventScreenSaver
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.applyScreenBehaviorPolicy()
+        }
+        .store(in: &cancellables)
+
+        screenBehaviorManager.$lastError
+            .compactMap { $0 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { error in
+                AwakeCoordinator.shared.sendNotification(
+                    title: L10n.string("Display Control Problem"),
+                    body: error,
+                    identifier: "awake-screen-behavior-error"
+                )
+            }
+            .store(in: &cancellables)
     }
 
     private func startHeartbeat() {
@@ -390,6 +415,14 @@ public final class AwakeCoordinator: ObservableObject {
         settings.stopAtLowBattery &&
             !powerMonitor.isOnACPower &&
             (powerMonitor.batteryLevel ?? 100) <= 20
+    }
+
+    private func applyScreenBehaviorPolicy() {
+        screenBehaviorManager.update(
+            sessionActive: isActive && currentExecutionState != .idle,
+            preventDisplaySleep: settings.preventDisplaySleep,
+            preventScreenSaver: settings.preventScreenSaver
+        )
     }
 
     private var notificationDescriptionForCurrentMode: String {
