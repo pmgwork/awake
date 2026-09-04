@@ -40,8 +40,14 @@ public struct MonitoredAgent: Identifiable, Codable, Equatable, Hashable {
             isPreset: true
         ),
         MonitoredAgent(
+            name: "OpenCode",
+            processNames: ["opencode", "opencode2"],
+            isEnabled: true,
+            isPreset: true
+        ),
+        MonitoredAgent(
             name: "Antigravity",
-            processNames: ["antigravity", "agy", "gemini"],
+            processNames: ["antigravity", "agy"],
             isEnabled: true,
             isPreset: true
         )

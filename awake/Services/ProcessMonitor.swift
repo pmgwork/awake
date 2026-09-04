@@ -111,7 +111,9 @@ public final class ProcessMonitor: ObservableObject {
     private var timer: Timer?
     private let scanQueue = DispatchQueue(label: "pmgwork.awake.processmonitor", qos: .utility)
     private var monitoredAgents: [MonitoredAgent] = []
-    private nonisolated static let activityAwareProcessNames: Set<String> = ["codex", "agy", "claude"]
+    private nonisolated static let activityAwareProcessNames: Set<String> = [
+        "codex", "agy", "claude", "opencode", "opencode2",
+    ]
 
     private init() {
         startScanning()
@@ -215,8 +217,10 @@ public final class ProcessMonitor: ObservableObject {
                     if target.isEmpty { continue }
 
                     if procName == target || lastPathComponent == target {
-                        // The Claude desktop app is not a Claude Code generation session.
-                        if target == "claude" && procPath.contains(".app/contents/macos/") {
+                        // Desktop shells are not active CLI generation sessions.
+                        if ["claude", "opencode", "opencode2"].contains(target)
+                            && procPath.contains(".app/contents/macos/")
+                        {
                             continue
                         }
                         matched = true

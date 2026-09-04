@@ -47,7 +47,10 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = NSHostingController(
-            rootView: MenuBarView(coordinator: coordinator) { [weak self] in
+            rootView: MenuBarView(
+                coordinator: coordinator,
+                settings: coordinator.settings
+            ) { [weak self] in
                 self?.popover.performClose(nil)
                 SettingsWindowController.shared.showSettings(coordinator: AwakeCoordinator.shared)
             }

@@ -29,13 +29,6 @@ struct HardwareStatusView: View {
                 )
 
                 statusRow(
-                    icon: lidMonitor.lidState.systemImage,
-                    title: "Lid",
-                    value: L10n.string(lidMonitor.lidState.rawValue),
-                    valueColor: lidMonitor.isLidClosed ? .orange : .primary
-                )
-
-                statusRow(
                     icon: displayIcon,
                     title: "Display",
                     value: displayValue,

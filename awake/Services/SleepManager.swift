@@ -39,7 +39,6 @@ public final class SleepManager: ObservableObject {
     @Published public private(set) var isSleepPrevented: Bool = false
     @Published public private(set) var isClosedLidMode: Bool = false
     @Published public private(set) var health: SleepPreventionHealth = .inactive
-    @Published public private(set) var activeMechanisms: [String] = []
     @Published public private(set) var lastError: String?
 
     private init() {
@@ -167,7 +166,6 @@ public final class SleepManager: ObservableObject {
         isSleepPrevented = false
         isClosedLidMode = false
         health = .inactive
-        activeMechanisms = []
         lastError = nil
     }
 
@@ -210,37 +208,22 @@ public final class SleepManager: ObservableObject {
         expectsCaffeinate: Bool,
         expectsBatteryHelper: Bool
     ) {
-        var mechanisms: [String] = []
         var failures: [String] = []
 
-        if assertionID != 0 {
-            mechanisms.append(L10n.string("Idle Sleep Assertion"))
-        } else {
+        if assertionID == 0 {
             failures.append(L10n.string("Idle sleep assertion could not be created."))
         }
 
-        if expectsClosedLidAssertion {
-            if closedLidAssertionID != 0 {
-                mechanisms.append(L10n.string("Closed-Lid Assertion"))
-            } else {
-                failures.append(L10n.string("Closed-lid sleep assertion could not be created."))
-            }
+        if expectsClosedLidAssertion && closedLidAssertionID == 0 {
+            failures.append(L10n.string("Closed-lid sleep assertion could not be created."))
         }
 
-        if expectsCaffeinate {
-            if caffeinateProcess?.isRunning == true {
-                mechanisms.append("caffeinate")
-            } else {
-                failures.append(L10n.string("The caffeinate fallback is not running."))
-            }
+        if expectsCaffeinate && caffeinateProcess?.isRunning != true {
+            failures.append(L10n.string("The caffeinate fallback is not running."))
         }
 
-        if expectsBatteryHelper {
-            if batteryAssertionProcess?.isRunning == true {
-                mechanisms.append(L10n.string("Battery Helper"))
-            } else {
-                failures.append(L10n.string("The battery closed-lid helper is not running."))
-            }
+        if expectsBatteryHelper && batteryAssertionProcess?.isRunning != true {
+            failures.append(L10n.string("The battery closed-lid helper is not running."))
         }
 
         let isEffective: Bool
@@ -254,7 +237,6 @@ public final class SleepManager: ObservableObject {
             isEffective = assertionID != 0
         }
 
-        activeMechanisms = mechanisms
         isSleepPrevented = isEffective
         lastError = failures.isEmpty ? nil : failures.joined(separator: " ")
 

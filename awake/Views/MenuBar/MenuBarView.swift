@@ -7,24 +7,17 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var coordinator: AwakeCoordinator
+    @ObservedObject var settings: SettingsStore
     var openSettingsAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ModeSelectorView(
                 coordinator: coordinator,
-                settings: coordinator.settings
+                settings: settings
             )
 
             Divider()
-
-            RunningAgentsView(
-                processMonitor: coordinator.processMonitor,
-                settings: coordinator.settings
-            )
-
-            Divider()
-
             HardwareStatusView(
                 lidMonitor: coordinator.lidMonitor,
                 displayMonitor: coordinator.displayMonitor,
@@ -33,6 +26,15 @@ struct MenuBarView: View {
                 fanController: coordinator.fanController,
                 sleepManager: coordinator.sleepManager
             )
+
+            if settings.selectedMode == .whileAgentRunning {
+                Divider()
+
+                RunningAgentsView(
+                    processMonitor: coordinator.processMonitor,
+                    settings: settings
+                )
+            }
 
             Divider()
 

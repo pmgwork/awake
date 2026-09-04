@@ -132,7 +132,19 @@ public final class SettingsStore: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: Keys.monitoredAgents),
            let decoded = try? JSONDecoder().decode([MonitoredAgent].self, from: data),
            !decoded.isEmpty {
-            self.monitoredAgents = decoded
+            let existingProcessNames = Set(decoded.flatMap(\.processNames).map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            })
+            let missingPresets = MonitoredAgent.defaultPresets.filter { preset in
+                let presetProcessNames = Set(preset.processNames.map { $0.lowercased() })
+                return presetProcessNames.isDisjoint(with: existingProcessNames)
+            }
+            let migratedAgents = decoded + missingPresets
+            self.monitoredAgents = migratedAgents
+            if !missingPresets.isEmpty,
+               let migratedData = try? JSONEncoder().encode(migratedAgents) {
+                UserDefaults.standard.set(migratedData, forKey: Keys.monitoredAgents)
+            }
         } else {
             self.monitoredAgents = MonitoredAgent.defaultPresets
         }

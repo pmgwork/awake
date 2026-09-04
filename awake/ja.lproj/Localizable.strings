@@ -117,9 +117,6 @@
 "Degraded" = "一部失敗";
 "Failed" = "失敗";
 "Sleep Prevention" = "スリープ防止";
-"Idle Sleep Assertion" = "アイドルスリープ抑止";
-"Closed-Lid Assertion" = "閉蓋スリープ抑止";
-"Battery Helper" = "バッテリーヘルパー";
 "Idle sleep assertion could not be created." = "アイドルスリープ抑止を作成できませんでした。";
 "Closed-lid sleep assertion could not be created." = "閉蓋スリープ抑止を作成できませんでした。";
 "The caffeinate fallback is not running." = "caffeinateによる代替処理が動作していません。";
