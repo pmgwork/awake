@@ -156,7 +156,7 @@ struct GeneralSettingsView: View {
 
                 // Version info
                 HStack {
-                    Text("Awake v1.0.0")
+                    Text(L10n.format("Awake v%@", appVersion))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -167,5 +167,9 @@ struct GeneralSettingsView: View {
         .onAppear {
             notificationManager.refreshAuthorizationStatus()
         }
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 }

@@ -47,7 +47,9 @@ struct RunningAgentsView: View {
                                 .foregroundColor(isRunning ? .primary : .secondary)
                             Spacer()
                             if isRunning {
-                                Text(sessionCount == 1 ? "Running" : "\(sessionCount) sessions")
+                                Text(sessionCount == 1
+                                     ? L10n.string("Running")
+                                     : L10n.format("%d sessions", sessionCount))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.green)
                             } else if integrationStatus != .linked {

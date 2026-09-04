@@ -23,7 +23,7 @@ public nonisolated enum AgentProvider: String, Codable, CaseIterable, Identifiab
     }
 
     public var integrationKind: String {
-        self == .openCode ? "Plugin" : "Hook"
+        self == .openCode ? L10n.string("Plugin") : L10n.string("Hook")
     }
 
     public static func infer(name: String, processNames: [String]) -> AgentProvider? {

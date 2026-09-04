@@ -15,10 +15,10 @@ public enum HookIntegrationStatus: String, Sendable {
 
     public var label: String {
         switch self {
-        case .unlinked: return "Not linked"
-        case .linked: return "Linked"
-        case .needsRepair: return "Needs repair"
-        case .unverified: return "Not tested"
+        case .unlinked: return L10n.string("Not linked")
+        case .linked: return L10n.string("Linked")
+        case .needsRepair: return L10n.string("Needs repair")
+        case .unverified: return L10n.string("Not tested")
         }
     }
 }
@@ -503,13 +503,13 @@ public final class HookIntegrationManager: ObservableObject {
 
         public var errorDescription: String? {
             switch self {
-            case .bundledBridgeMissing: return "The bundled AwakeHookBridge is missing."
-            case .invalidBridgeSignature: return "AwakeHookBridge failed signature validation."
-            case .bridgeUnavailable: return "AwakeHookBridge is not installed or is damaged."
-            case .bridgeFailed: return "AwakeHookBridge did not complete successfully."
-            case .pluginResourceMissing: return "The OpenCode plugin resource is missing."
-            case .testEventNotReceived: return "Awake did not receive the integration test event."
-            case let .invalidConfiguration(path): return "The provider configuration is invalid: \(path)"
+            case .bundledBridgeMissing: return L10n.string("The bundled AwakeHookBridge is missing.")
+            case .invalidBridgeSignature: return L10n.string("AwakeHookBridge failed signature validation.")
+            case .bridgeUnavailable: return L10n.string("AwakeHookBridge is not installed or is damaged.")
+            case .bridgeFailed: return L10n.string("AwakeHookBridge did not complete successfully.")
+            case .pluginResourceMissing: return L10n.string("The OpenCode plugin resource is missing.")
+            case .testEventNotReceived: return L10n.string("Awake did not receive the integration test event.")
+            case let .invalidConfiguration(path): return L10n.format("The provider configuration is invalid: %@", path)
             }
         }
     }

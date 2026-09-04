@@ -81,7 +81,7 @@ struct AgentSettingsView: View {
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(eventMonitor.activeSessionCount) active sessions")
+                    Text(L10n.format("%d active sessions", eventMonitor.activeSessionCount))
                         .font(.caption)
                         .foregroundColor(eventMonitor.hasActiveSession ? .green : .secondary)
                 }
@@ -93,7 +93,10 @@ struct AgentSettingsView: View {
                         Text(provider.displayName).font(.caption.weight(.medium))
                         Spacer()
                         if let date = eventMonitor.lastEventAtByProvider[provider] {
-                            Text("Last event \(date.formatted(.relative(presentation: .named)))")
+                            Text(L10n.format(
+                                "Last event %@",
+                                date.formatted(.relative(presentation: .named))
+                            ))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         } else {
@@ -111,7 +114,7 @@ struct AgentSettingsView: View {
         .padding(20)
         .disabled(integrationManager.isWorking)
         .confirmationDialog(
-            pendingAction?.title ?? "Hook Integration",
+            pendingAction?.title ?? L10n.string("Hook Integration"),
             isPresented: Binding(
                 get: { pendingAction != nil },
                 set: { if !$0 { pendingAction = nil } }
@@ -156,13 +159,13 @@ struct AgentSettingsView: View {
             Spacer()
 
             if activeCount > 0 {
-                Text("\(activeCount) active")
+                Text(L10n.format("%d active", activeCount))
                     .font(.caption2.bold())
                     .foregroundColor(.green)
             }
 
             if status == .unlinked || status == .needsRepair {
-                Button(status == .needsRepair ? "Repair" : "Link") {
+                Button(status == .needsRepair ? L10n.string("Repair") : L10n.string("Link")) {
                     pendingAction = PendingAction(provider: provider, kind: .install)
                 }
             } else {
@@ -185,12 +188,23 @@ struct AgentSettingsView: View {
         let provider: AgentProvider
         let kind: Kind
         var id: String { "\(provider.rawValue)-\(kind)" }
-        var title: String { kind == .install ? "Link \(provider.displayName)?" : "Unlink \(provider.displayName)?" }
-        var buttonTitle: String { kind == .install ? "Update Configuration" : "Remove Awake Integration" }
+        var title: String {
+            kind == .install
+                ? L10n.format("Link %@?", provider.displayName)
+                : L10n.format("Unlink %@?", provider.displayName)
+        }
+        var buttonTitle: String {
+            kind == .install
+                ? L10n.string("Update Configuration")
+                : L10n.string("Remove Awake Integration")
+        }
         var message: String {
             kind == .install
-                ? "Awake will back up and update only its own \(provider.integrationKind) entry in your user configuration."
-                : "Only the configuration and files owned by Awake will be removed."
+                ? L10n.format(
+                    "Awake will back up and update only its own %@ entry in your user configuration.",
+                    provider.integrationKind
+                )
+                : L10n.string("Only the configuration and files owned by Awake will be removed.")
         }
     }
 }

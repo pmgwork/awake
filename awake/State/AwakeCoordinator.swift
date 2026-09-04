@@ -17,7 +17,7 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
     @Published public private(set) var lastStateChange: Date = Date()
-    @Published public private(set) var statusMessage: String = "Idle"
+    @Published public private(set) var statusMessage: String = L10n.string("Idle")
 
     // Sub-services
     public let settings = SettingsStore.shared
