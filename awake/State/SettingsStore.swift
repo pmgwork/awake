@@ -27,6 +27,7 @@ public final class SettingsStore: ObservableObject {
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
+        static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
     }
 
     @Published public var monitoredAgents: [MonitoredAgent] {
@@ -34,6 +35,8 @@ public final class SettingsStore: ObservableObject {
             saveAgents()
         }
     }
+
+    @Published public private(set) var providerLastTestedAt: [AgentProvider: Date] = [:]
 
     @Published public var selectedMode: KeepAwakeModeType {
         didSet {
@@ -132,17 +135,14 @@ public final class SettingsStore: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: Keys.monitoredAgents),
            let decoded = try? JSONDecoder().decode([MonitoredAgent].self, from: data),
            !decoded.isEmpty {
-            let existingProcessNames = Set(decoded.flatMap(\.processNames).map {
-                $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            })
+            let existingProviders = Set(decoded.compactMap(\.provider))
             let missingPresets = MonitoredAgent.defaultPresets.filter { preset in
-                let presetProcessNames = Set(preset.processNames.map { $0.lowercased() })
-                return presetProcessNames.isDisjoint(with: existingProcessNames)
+                guard let provider = preset.provider else { return false }
+                return !existingProviders.contains(provider)
             }
             let migratedAgents = decoded + missingPresets
             self.monitoredAgents = migratedAgents
-            if !missingPresets.isEmpty,
-               let migratedData = try? JSONEncoder().encode(migratedAgents) {
+            if let migratedData = try? JSONEncoder().encode(migratedAgents) {
                 UserDefaults.standard.set(migratedData, forKey: Keys.monitoredAgents)
             }
         } else {
@@ -205,8 +205,22 @@ public final class SettingsStore: ObservableObject {
         }
 
         self.notificationsEnabled = UserDefaults.standard.bool(forKey: Keys.notificationsEnabled)
-        self.preventDisplaySleep = UserDefaults.standard.bool(forKey: Keys.preventDisplaySleep)
-        self.preventScreenSaver = UserDefaults.standard.bool(forKey: Keys.preventScreenSaver)
+        if UserDefaults.standard.object(forKey: Keys.preventDisplaySleep) != nil {
+            self.preventDisplaySleep = UserDefaults.standard.bool(forKey: Keys.preventDisplaySleep)
+        } else {
+            self.preventDisplaySleep = true
+        }
+
+        if UserDefaults.standard.object(forKey: Keys.preventScreenSaver) != nil {
+            self.preventScreenSaver = UserDefaults.standard.bool(forKey: Keys.preventScreenSaver)
+        } else {
+            self.preventScreenSaver = true
+        }
+
+        if let data = UserDefaults.standard.data(forKey: Keys.providerLastTestedAt),
+           let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {
+            self.providerLastTestedAt = decoded
+        }
     }
 
     private func saveAgents() {
@@ -232,11 +246,11 @@ public final class SettingsStore: ObservableObject {
         monitoredAgents.remove(atOffsets: indexSet)
     }
 
-    public func deleteAgent(id: UUID) {
+    public func deleteAgent(id: String) {
         monitoredAgents.removeAll { $0.id == id }
     }
 
-    public func toggleAgent(id: UUID) {
+    public func toggleAgent(id: String) {
         if let index = monitoredAgents.firstIndex(where: { $0.id == id }) {
             monitoredAgents[index].isEnabled.toggle()
         }
@@ -249,6 +263,28 @@ public final class SettingsStore: ObservableObject {
         closedLidFanMode = .maximum
         onlyOnACPower = false
         stopAtLowBattery = true
+        preventDisplaySleep = true
+        preventScreenSaver = true
+    }
+
+    public func markProviderTested(_ provider: AgentProvider, at date: Date = Date()) {
+        providerLastTestedAt[provider] = date
+        saveProviderTestDates()
+    }
+
+    public func clearProviderTest(_ provider: AgentProvider) {
+        providerLastTestedAt.removeValue(forKey: provider)
+        saveProviderTestDates()
+    }
+
+    private func saveProviderTestDates() {
+        if let data = try? JSONEncoder().encode(providerLastTestedAt) {
+            UserDefaults.standard.set(data, forKey: Keys.providerLastTestedAt)
+        }
+    }
+
+    public var enabledProviders: Set<AgentProvider> {
+        Set(monitoredAgents.filter(\.isEnabled).compactMap(\.provider))
     }
 
     @discardableResult

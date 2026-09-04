@@ -21,7 +21,8 @@ struct SettingsView: View {
 
             AgentSettingsView(
                 settings: coordinator.settings,
-                processMonitor: coordinator.processMonitor
+                eventMonitor: coordinator.eventMonitor,
+                integrationManager: coordinator.hookIntegrationManager
             )
             .tabItem {
                 Label("Agents", systemImage: "cpu")

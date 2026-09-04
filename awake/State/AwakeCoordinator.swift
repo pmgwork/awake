@@ -25,7 +25,8 @@ public final class AwakeCoordinator: ObservableObject {
     public let lidMonitor = LidMonitor.shared
     public let displayMonitor = DisplayMonitor.shared
     public let powerMonitor = PowerMonitor.shared
-    public let processMonitor = ProcessMonitor.shared
+    public let eventMonitor = AgentEventMonitor.shared
+    public let hookIntegrationManager = HookIntegrationManager.shared
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
@@ -40,7 +41,7 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private init() {
-        processMonitor.updateMonitoredAgents(settings.monitoredAgents)
+        eventMonitor.updateEnabledProviders(settings.enabledProviders)
         setupSubscriptions()
         startHeartbeat()
         restorePersistedTimerIfNeeded()
@@ -66,7 +67,7 @@ public final class AwakeCoordinator: ObservableObject {
         switch settings.selectedMode {
         case .whileAgentRunning:
             isActive = true
-            statusMessage = processMonitor.hasRunningAgent
+            statusMessage = eventMonitor.hasActiveSession
                 ? L10n.string("Agent Running: Keep Awake Active")
                 : L10n.string("Waiting for Monitored Agent...")
         case .indefinitely:
@@ -90,7 +91,7 @@ public final class AwakeCoordinator: ObservableObject {
     public func stopKeepAwake(reason: String? = nil, manual: Bool = false) {
         guard isActive else { return }
 
-        if manual && settings.selectedMode == .whileAgentRunning && processMonitor.hasRunningAgent {
+        if manual && settings.selectedMode == .whileAgentRunning && eventMonitor.hasActiveSession {
             suppressAgentAutoStartUntilExit = true
         }
 
@@ -125,8 +126,8 @@ public final class AwakeCoordinator: ObservableObject {
         }
 
         settings.selectedMode = mode
-        suppressAgentAutoStartUntilExit = mode == .whileAgentRunning && processMonitor.hasRunningAgent
-        wasAgentRunning = mode == .whileAgentRunning && processMonitor.hasRunningAgent
+        suppressAgentAutoStartUntilExit = mode == .whileAgentRunning && eventMonitor.hasActiveSession
+        wasAgentRunning = mode == .whileAgentRunning && eventMonitor.hasActiveSession
         evaluateState()
     }
 
@@ -158,8 +159,8 @@ public final class AwakeCoordinator: ObservableObject {
         }
         switch settings.selectedMode {
         case .whileAgentRunning:
-            if processMonitor.hasRunningAgent {
-                return L10n.format("Running (%@)", processMonitor.runningAgentNames.joined(separator: ", "))
+            if eventMonitor.hasActiveSession {
+                return L10n.format("Running (%@)", eventMonitor.activeProviderNames.sorted().joined(separator: ", "))
             } else {
                 return L10n.string("Active (Waiting for Agent)")
             }
@@ -188,14 +189,14 @@ public final class AwakeCoordinator: ObservableObject {
 
         // Check Agent Mode completion
         if isActive && settings.selectedMode == .whileAgentRunning {
-            if wasAgentRunning && !processMonitor.hasRunningAgent {
+            if wasAgentRunning && !eventMonitor.hasActiveSession {
                 // All monitored agents just stopped!
                 NSLog("[AwakeCoordinator] Monitored agents terminated. Stopping Keep Awake.")
                 wasAgentRunning = false
                 stopKeepAwake(reason: L10n.string("All monitored agents finished."))
                 return
             }
-            wasAgentRunning = processMonitor.hasRunningAgent
+            wasAgentRunning = eventMonitor.hasActiveSession
         }
 
         // Check Timer completion
@@ -218,7 +219,7 @@ public final class AwakeCoordinator: ObservableObject {
             return
         }
 
-        if settings.selectedMode == .whileAgentRunning && !processMonitor.hasRunningAgent {
+        if settings.selectedMode == .whileAgentRunning && !eventMonitor.hasActiveSession {
             transition(to: .idle)
             statusMessage = L10n.string("Waiting for Monitored Agent...")
             sleepManager.disableSleepPrevention()
@@ -291,12 +292,12 @@ public final class AwakeCoordinator: ObservableObject {
         settings.$monitoredAgents
             .receive(on: DispatchQueue.main)
             .sink { agents in
-                AwakeCoordinator.shared.processMonitor.updateMonitoredAgents(agents)
+                AwakeCoordinator.shared.eventMonitor.updateEnabledProviders(Set(agents.filter(\.isEnabled).compactMap(\.provider)))
             }
             .store(in: &cancellables)
 
-        // Observe process monitor changes
-        processMonitor.$hasRunningAgent
+        // Observe normalized Hook / Plugin session changes.
+        eventMonitor.$hasActiveSession
             .receive(on: DispatchQueue.main)
             .sink { running in
                 let coordinator = AwakeCoordinator.shared

@@ -31,7 +31,8 @@ struct MenuBarView: View {
                 Divider()
 
                 RunningAgentsView(
-                    processMonitor: coordinator.processMonitor,
+                    eventMonitor: coordinator.eventMonitor,
+                    integrationManager: coordinator.hookIntegrationManager,
                     settings: settings
                 )
             }

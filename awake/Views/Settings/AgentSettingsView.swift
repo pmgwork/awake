@@ -7,98 +7,99 @@ import SwiftUI
 
 struct AgentSettingsView: View {
     @ObservedObject var settings: SettingsStore
-    @ObservedObject var processMonitor: ProcessMonitor
+    @ObservedObject var eventMonitor: AgentEventMonitor
+    @ObservedObject var integrationManager: HookIntegrationManager
 
-    @State private var showingAddSheet: Bool = false
-    @State private var newAgentName: String = ""
-    @State private var newProcessNames: String = ""
+    @State private var pendingAction: PendingAction?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header Description
             VStack(alignment: .leading, spacing: 4) {
-                Text("Monitored AI Agents")
+                Text("AI Agent Hook Integrations")
                     .font(.headline)
-                Text("Select which AI Agent CLI processes will automatically keep your Mac awake while running.")
+                Text("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
 
-            // Agents List
             List {
-                Section(header: Text("Preset Agents")) {
-                    ForEach(settings.monitoredAgents.filter { $0.isPreset }) { agent in
-                        agentRow(agent: agent)
+                Section(header: Text("Supported Providers")) {
+                    ForEach(settings.monitoredAgents.filter { $0.isPreset && $0.provider != nil }) { agent in
+                        providerRow(agent)
                     }
                 }
 
                 let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
-                Section(header: Text("Custom Agents")) {
-                    if customAgents.isEmpty {
-                        Text("No custom agents added.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
+                if !customAgents.isEmpty {
+                    Section(header: Text("Saved Custom Agents")) {
                         ForEach(customAgents) { agent in
-                            agentRow(agent: agent, canDelete: true)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(agent.name).font(.system(size: 13, weight: .medium))
+                                    Text("Hook integration is required; custom agents are not available in this release.")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button {
+                                    settings.deleteAgent(id: agent.id)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
             }
             .listStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(height: 220)
+            .frame(height: 285)
 
-            // Add Custom Process Button
             HStack {
-                Button(action: {
-                    showingAddSheet = true
-                }) {
-                    Label("Add Process...", systemImage: "plus")
-                }
-
+                Button("Reset Provider Selection") { settings.resetToDefaults() }
+                    .foregroundColor(.secondary)
                 Spacer()
-
-                Button("Reset to Presets") {
-                    settings.resetToDefaults()
+                Button {
+                    eventMonitor.reloadNow()
+                    integrationManager.refreshStatuses()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
-                .foregroundColor(.secondary)
+            }
+
+            if let error = integrationManager.lastError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.red)
             }
 
             Divider()
 
-            // Live Process Detector Preview
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Live Process Detection Preview")
+                    Text("Hook Event Status")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                     Spacer()
-                    Button(action: {
-                        processMonitor.scanNow()
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if processMonitor.runningAgentNames.isEmpty {
-                    Text("No monitored agent processes currently detected running.")
+                    Text("\(eventMonitor.activeSessionCount) active sessions")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    ForEach(Array(processMonitor.runningAgentNames).sorted(), id: \.self) { name in
-                        HStack {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 6, height: 6)
-                            Text(name)
-                                .font(.caption.weight(.medium))
-                            if let pids = processMonitor.activeProcesses[name] {
-                                Text("PID: \(pids.map { "\($0)" }.joined(separator: ", "))")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                        .foregroundColor(eventMonitor.hasActiveSession ? .green : .secondary)
+                }
+                ForEach(AgentProvider.allCases) { provider in
+                    HStack {
+                        Circle()
+                            .fill(eventMonitor.activeSessionCountByProvider[provider, default: 0] > 0 ? Color.green : Color.gray.opacity(0.5))
+                            .frame(width: 6, height: 6)
+                        Text(provider.displayName).font(.caption.weight(.medium))
+                        Spacer()
+                        if let date = eventMonitor.lastEventAtByProvider[provider] {
+                            Text("Last event \(date.formatted(.relative(presentation: .named)))")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("No events received")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -108,84 +109,88 @@ struct AgentSettingsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .padding(20)
-        .sheet(isPresented: $showingAddSheet) {
-            addCustomAgentSheet
+        .disabled(integrationManager.isWorking)
+        .confirmationDialog(
+            pendingAction?.title ?? "Hook Integration",
+            isPresented: Binding(
+                get: { pendingAction != nil },
+                set: { if !$0 { pendingAction = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let action = pendingAction {
+                Button(action.buttonTitle, role: action.kind == .uninstall ? .destructive : nil) {
+                    if action.kind == .uninstall {
+                        integrationManager.uninstall(action.provider)
+                    } else {
+                        integrationManager.install(action.provider)
+                    }
+                    pendingAction = nil
+                }
+                Button("Cancel", role: .cancel) { pendingAction = nil }
+            }
+        } message: {
+            Text(pendingAction?.message ?? "")
         }
     }
 
-    private func agentRow(agent: MonitoredAgent, canDelete: Bool = false) -> some View {
-        HStack {
+    private func providerRow(_ agent: MonitoredAgent) -> some View {
+        let provider = agent.provider!
+        let status = integrationManager.status(for: provider)
+        let activeCount = eventMonitor.activeSessionCountByProvider[provider, default: 0]
+        return HStack(spacing: 12) {
             Toggle(isOn: Binding(
                 get: { agent.isEnabled },
                 set: { _ in settings.toggleAgent(id: agent.id) }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(agent.name)
+                    Text(provider.displayName)
                         .font(.system(size: 13, weight: .medium))
-                    Text(agent.processNames.joined(separator: ", "))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                    Text("\(provider.integrationKind) · \(status.label)")
+                        .font(.system(size: 10))
+                        .foregroundColor(status == .linked ? .secondary : .orange)
                 }
             }
             .toggleStyle(.checkbox)
 
             Spacer()
 
-            if canDelete {
-                Button(action: {
-                    settings.deleteAgent(id: agent.id)
-                }) {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            if activeCount > 0 {
+                Text("\(activeCount) active")
+                    .font(.caption2.bold())
+                    .foregroundColor(.green)
+            }
+
+            if status == .unlinked || status == .needsRepair {
+                Button(status == .needsRepair ? "Repair" : "Link") {
+                    pendingAction = PendingAction(provider: provider, kind: .install)
                 }
-                .buttonStyle(.plain)
+            } else {
+                Button("Test") { integrationManager.test(provider) }
+                Menu {
+                    Button("Reinstall") { pendingAction = PendingAction(provider: provider, kind: .install) }
+                    Button("Unlink", role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 22)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
-    private var addCustomAgentSheet: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Add Custom Monitored Agent")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Agent Display Name:")
-                    .font(.caption.bold())
-                TextField("e.g. My Custom Agent", text: $newAgentName)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Executable Process Names (comma separated):")
-                    .font(.caption.bold())
-                TextField("e.g. my-agent, custom-cli", text: $newProcessNames)
-                    .textFieldStyle(.roundedBorder)
-                Text("Matches the command name or path basename in Terminal/CLI.")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    showingAddSheet = false
-                    newAgentName = ""
-                    newProcessNames = ""
-                }
-                Button("Add") {
-                    let names = newProcessNames.split(separator: ",").map { String($0) }
-                    settings.addCustomAgent(name: newAgentName, processNames: names)
-                    showingAddSheet = false
-                    newAgentName = ""
-                    newProcessNames = ""
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(newAgentName.trimmingCharacters(in: .whitespaces).isEmpty || newProcessNames.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
+    private struct PendingAction: Identifiable {
+        enum Kind { case install, uninstall }
+        let provider: AgentProvider
+        let kind: Kind
+        var id: String { "\(provider.rawValue)-\(kind)" }
+        var title: String { kind == .install ? "Link \(provider.displayName)?" : "Unlink \(provider.displayName)?" }
+        var buttonTitle: String { kind == .install ? "Update Configuration" : "Remove Awake Integration" }
+        var message: String {
+            kind == .install
+                ? "Awake will back up and update only its own \(provider.integrationKind) entry in your user configuration."
+                : "Only the configuration and files owned by Awake will be removed."
         }
-        .padding(20)
-        .frame(width: 380)
     }
 }
