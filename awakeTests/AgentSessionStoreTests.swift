@@ -17,26 +17,29 @@ final class AgentSessionStoreTests: XCTestCase {
     }
 
     func testOlderEventCannotReplaceNewerSessionState() throws {
+        let now = Date()
         let newer = AgentHookEvent(
             provider: .codex,
             sessionID: "session-1",
             state: .idle,
             reason: "Stop",
-            occurredAt: Date(timeIntervalSince1970: 200)
+            occurredAt: now
         )
         let older = AgentHookEvent(
             provider: .codex,
             sessionID: "session-1",
             state: .active,
             reason: "UserPromptSubmit",
-            occurredAt: Date(timeIntervalSince1970: 100)
+            occurredAt: now.addingTimeInterval(-100)
         )
 
         try store.save(newer)
         try store.save(older)
 
         let events = store.loadValidEvents(cleaningInvalidFiles: false)
-        XCTAssertEqual(events, [newer])
+        XCTAssertEqual(events.map(\.sessionID), ["session-1"])
+        XCTAssertEqual(events.map(\.state), [.idle])
+        XCTAssertEqual(events.map(\.reason), ["Stop"])
     }
 
     func testMultipleSessionsAreAggregatedIndependently() {
@@ -89,5 +92,72 @@ final class AgentSessionStoreTests: XCTestCase {
         XCTAssertEqual(agent.id, AgentProvider.claude.rawValue)
         XCTAssertEqual(agent.provider, .claude)
         XCTAssertFalse(agent.isEnabled)
+    }
+
+    func testFreshActiveSessionWithoutPIDIsKept() throws {
+        let event = AgentHookEvent(
+            provider: .codex,
+            sessionID: "fresh-no-pid",
+            state: .active,
+            reason: "UserPromptSubmit",
+            occurredAt: Date()
+        )
+        try store.save(event)
+
+        let events = store.loadValidEvents()
+        XCTAssertEqual(events.map(\.sessionID), ["fresh-no-pid"])
+        XCTAssertEqual(events.map(\.state), [.active])
+    }
+
+    func testExpiredActiveSessionWithoutPIDIsDropped() throws {
+        let event = AgentHookEvent(
+            provider: .codex,
+            sessionID: "orphan-no-pid",
+            state: .active,
+            reason: "UserPromptSubmit",
+            occurredAt: Date().addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
+        )
+        try store.save(event)
+
+        let events = store.loadValidEvents()
+        XCTAssertTrue(events.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .codex, sessionID: "orphan-no-pid").path))
+    }
+
+    func testExpiredWaitingForInputIsDropped() throws {
+        let event = AgentHookEvent(
+            provider: .claude,
+            sessionID: "orphan-waiting",
+            state: .waitingForInput,
+            reason: "idle_prompt",
+            occurredAt: Date().addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
+        )
+        try store.save(event)
+
+        let events = store.loadValidEvents()
+        XCTAssertTrue(events.isEmpty)
+    }
+
+    func testIntegrationTestTrafficNeverBecomesActive() {
+        let active = AgentHookEvent(
+            provider: .codex,
+            sessionID: "\(AgentHookEvent.integrationTestSessionIDPrefix)test-123",
+            state: .active,
+            reason: "integration-test"
+        )
+        let sessions = AgentEventMonitor.activeSessions(
+            from: [active],
+            enabledProviders: Set(AgentProvider.allCases)
+        )
+        XCTAssertTrue(sessions.isEmpty)
+    }
+
+    func testRemoveByProviderAndSessionID() throws {
+        let event = AgentHookEvent(provider: .claude, sessionID: "to-remove", state: .active, reason: "start")
+        try store.save(event)
+        XCTAssertEqual(store.loadValidEvents().count, 1)
+
+        store.remove(provider: .claude, sessionID: "to-remove")
+        XCTAssertTrue(store.loadValidEvents().isEmpty)
     }
 }

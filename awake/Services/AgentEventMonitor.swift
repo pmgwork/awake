@@ -93,6 +93,8 @@ public final class AgentEventMonitor: ObservableObject {
     ) -> [AgentSession] {
         var newestBySession: [String: AgentHookEvent] = [:]
         for event in events where enabledProviders.contains(event.provider) {
+            // Synthetic Test-button traffic must never drive sleep prevention.
+            guard !event.isIntegrationTest else { continue }
             if let current = newestBySession[event.sessionKey], current.occurredAt > event.occurredAt {
                 continue
             }

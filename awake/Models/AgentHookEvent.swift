@@ -8,6 +8,11 @@ import Foundation
 public nonisolated struct AgentHookEvent: Codable, Equatable, Sendable {
     public static let currentSchemaVersion = 1
 
+    /// Session-ID prefix reserved for `HookIntegrationManager.test()` traffic.
+    /// The monitor never treats these synthetic events as real agent activity,
+    /// so tapping Test cannot auto-start Keep Awake.
+    public static let integrationTestSessionIDPrefix = "awake-integration-test-"
+
     public let schemaVersion: Int
     public let provider: AgentProvider
     public let sessionID: String
@@ -41,4 +46,10 @@ public nonisolated struct AgentHookEvent: Codable, Equatable, Sendable {
     }
 
     public var sessionKey: String { "\(provider.rawValue):\(sessionID)" }
+
+    /// Synthetic verification traffic from the Test button. Never real activity.
+    public var isIntegrationTest: Bool {
+        sessionID.hasPrefix(Self.integrationTestSessionIDPrefix)
+            || reason.hasPrefix("integration-test")
+    }
 }

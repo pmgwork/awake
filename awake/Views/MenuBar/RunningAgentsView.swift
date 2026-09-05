@@ -13,7 +13,7 @@ struct RunningAgentsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Monitored Agents")
+                Text(L10n.string("Monitored Agents"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
@@ -27,7 +27,7 @@ struct RunningAgentsView: View {
 
             let enabledAgents = settings.monitoredAgents.filter { $0.isEnabled && $0.provider != nil }
             if enabledAgents.isEmpty {
-                Text("No agents enabled. Configure in Settings.")
+                Text(L10n.string("No agents enabled. Configure in Settings."))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)

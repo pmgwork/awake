@@ -15,15 +15,15 @@ struct AgentSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("AI Agent Hook Integrations")
+                Text(L10n.string("AI Agent Hook Integrations"))
                     .font(.headline)
-                Text("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active.")
+                Text(L10n.string("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active."))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
 
             List {
-                Section(header: Text("Supported Providers")) {
+                Section(header: Text(L10n.string("Supported Providers"))) {
                     ForEach(settings.monitoredAgents.filter { $0.isPreset && $0.provider != nil }) { agent in
                         providerRow(agent)
                     }
@@ -31,12 +31,12 @@ struct AgentSettingsView: View {
 
                 let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
                 if !customAgents.isEmpty {
-                    Section(header: Text("Saved Custom Agents")) {
+                    Section(header: Text(L10n.string("Saved Custom Agents"))) {
                         ForEach(customAgents) { agent in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(agent.name).font(.system(size: 13, weight: .medium))
-                                    Text("Hook integration is required; custom agents are not available in this release.")
+                                    Text(L10n.string("Hook integration is required; custom agents are not available in this release."))
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
                                 }
@@ -56,14 +56,14 @@ struct AgentSettingsView: View {
             .frame(height: 285)
 
             HStack {
-                Button("Reset Provider Selection") { settings.resetToDefaults() }
+                Button(L10n.string("Reset Provider Selection")) { settings.resetToDefaults() }
                     .foregroundColor(.secondary)
                 Spacer()
                 Button {
                     eventMonitor.reloadNow()
                     integrationManager.refreshStatuses()
                 } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+                    Label(L10n.string("Refresh"), systemImage: "arrow.clockwise")
                 }
             }
 
@@ -77,7 +77,7 @@ struct AgentSettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Hook Event Status")
+                    Text(L10n.string("Hook Event Status"))
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                     Spacer()
@@ -100,7 +100,7 @@ struct AgentSettingsView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         } else {
-                            Text("No events received")
+                            Text(L10n.string("No events received"))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -130,7 +130,7 @@ struct AgentSettingsView: View {
                     }
                     pendingAction = nil
                 }
-                Button("Cancel", role: .cancel) { pendingAction = nil }
+                Button(L10n.string("Cancel"), role: .cancel) { pendingAction = nil }
             }
         } message: {
             Text(pendingAction?.message ?? "")
@@ -169,10 +169,10 @@ struct AgentSettingsView: View {
                     pendingAction = PendingAction(provider: provider, kind: .install)
                 }
             } else {
-                Button("Test") { integrationManager.test(provider) }
+                Button(L10n.string("Test")) { integrationManager.test(provider) }
                 Menu {
-                    Button("Reinstall") { pendingAction = PendingAction(provider: provider, kind: .install) }
-                    Button("Unlink", role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
+                    Button(L10n.string("Reinstall")) { pendingAction = PendingAction(provider: provider, kind: .install) }
+                    Button(L10n.string("Unlink"), role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }

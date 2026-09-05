@@ -80,13 +80,17 @@ public final class HookIntegrationManager: ObservableObject {
     public func test(_ provider: AgentProvider) {
         perform {
             guard bridgeIsValid else { throw IntegrationError.bridgeUnavailable }
-            let sessionID = "awake-integration-test-\(UUID().uuidString)"
+            let sessionID = "\(AgentHookEvent.integrationTestSessionIDPrefix)\(UUID().uuidString)"
             try runBridge(provider: provider, sessionID: sessionID, state: .active, reason: "integration-test")
             let found = AgentSessionStore.shared.loadValidEvents(cleaningInvalidFiles: false).contains {
                 $0.provider == provider && $0.sessionID == sessionID && $0.state == .active
             }
             guard found else { throw IntegrationError.testEventNotReceived }
             try runBridge(provider: provider, sessionID: sessionID, state: .idle, reason: "integration-test-complete")
+            // Remove the synthetic session explicitly so no residue depends on
+            // monitor poll timing. The monitor also ignores test traffic, so
+            // this can never auto-start Keep Awake.
+            AgentSessionStore.shared.remove(provider: provider, sessionID: sessionID)
             settings.markProviderTested(provider)
             AgentEventMonitor.shared.reloadNow()
         }

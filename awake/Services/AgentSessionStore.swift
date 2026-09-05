@@ -10,6 +10,13 @@ import Darwin
 public nonisolated final class AgentSessionStore: @unchecked Sendable {
     public static let shared = AgentSessionStore()
 
+    /// Safety net for orphaned non-terminal sessions (e.g. a missed Stop event
+    /// combined with an unverifiable sourcePID). Deliberately generous: short
+    /// TTLs are forbidden because long model runs can go hook-silent, so this
+    /// only bounds sessions with zero events for a full day. Any fresh event
+    /// for the session re-asserts it.
+    public static let orphanSessionTTL: TimeInterval = 24 * 60 * 60
+
     public let directoryURL: URL
     private let fileManager: FileManager
 
@@ -58,7 +65,7 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         return url
     }
 
-    public func loadValidEvents(cleaningInvalidFiles: Bool = true) -> [AgentHookEvent] {
+    public func loadValidEvents(cleaningInvalidFiles: Bool = true, now: Date = Date()) -> [AgentHookEvent] {
         guard (try? prepareDirectory()) != nil else { return [] }
         let urls = (try? fileManager.contentsOfDirectory(
             at: directoryURL,
@@ -79,6 +86,11 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
                 if cleaningInvalidFiles { try? fileManager.removeItem(at: url) }
                 continue
             }
+            if (event.state == .active || event.state == .waitingForInput),
+               now.timeIntervalSince(event.occurredAt) > Self.orphanSessionTTL {
+                if cleaningInvalidFiles { try? fileManager.removeItem(at: url) }
+                continue
+            }
             if let current = newestBySession[event.sessionKey], current.occurredAt > event.occurredAt {
                 continue
             }
@@ -88,7 +100,11 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
     }
 
     public func remove(_ event: AgentHookEvent) {
-        try? fileManager.removeItem(at: fileURL(provider: event.provider, sessionID: event.sessionID))
+        remove(provider: event.provider, sessionID: event.sessionID)
+    }
+
+    public func remove(provider: AgentProvider, sessionID: String) {
+        try? fileManager.removeItem(at: fileURL(provider: provider, sessionID: sessionID))
     }
 
     public func removeAll() {
