@@ -357,8 +357,11 @@ public final class HookIntegrationManager: ObservableObject {
         let url = configurationURL(for: provider)
         guard let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .utf8) else { return false }
-        if provider == .openCode { return text.contains(openCodePluginDirectoryURL.path) }
-        return text.contains("--owner \(Self.ownerMarker)") || (provider == .antigravity && text.contains("\"\(Self.ownerMarker)\""))
+        // JSONSerialization escapes "/" as "\/", so normalize before path matching.
+        // The owner marker itself contains no slashes and is unaffected.
+        let normalized = text.replacingOccurrences(of: "\\/", with: "/")
+        if provider == .openCode { return normalized.contains(openCodePluginDirectoryURL.path) }
+        return normalized.contains("--owner \(Self.ownerMarker)") || (provider == .antigravity && normalized.contains("\"\(Self.ownerMarker)\""))
     }
 
     private func configurationIsValid(for provider: AgentProvider) -> Bool {
@@ -369,8 +372,10 @@ public final class HookIntegrationManager: ObservableObject {
     private func entryReferencesCurrentPath(for provider: AgentProvider) -> Bool {
         let url = configurationURL(for: provider)
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return false }
+        // Written JSON escapes "/" as "\/", so compare against the unescaped form.
+        let normalized = text.replacingOccurrences(of: "\\/", with: "/")
         let expected = provider == .openCode ? openCodePluginDirectoryURL.path : bridgeDestinationURL.path
-        return text.contains(expected)
+        return normalized.contains(expected)
     }
 
     private var openCodePluginIsValid: Bool {

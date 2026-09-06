@@ -169,15 +169,18 @@ struct AgentSettingsView: View {
                     pendingAction = PendingAction(provider: provider, kind: .install)
                 }
             } else {
-                Button(L10n.string("Test")) { integrationManager.test(provider) }
-                Menu {
-                    Button(L10n.string("Reinstall")) { pendingAction = PendingAction(provider: provider, kind: .install) }
-                    Button(L10n.string("Unlink"), role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                HStack(spacing: 6) {
+                    Button(L10n.string("Test")) { integrationManager.test(provider) }
+                    Menu {
+                        Button(L10n.string("Reinstall")) { pendingAction = PendingAction(provider: provider, kind: .install) }
+                        Button(L10n.string("Unlink"), role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .frame(width: 22, height: 22)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-                .menuStyle(.borderlessButton)
-                .frame(width: 22)
             }
         }
         .padding(.vertical, 3)
