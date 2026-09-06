@@ -13,7 +13,7 @@ struct ModeSelectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Keep Awake Mode")
+            Text(L10n.string("Keep Awake Mode"))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -22,19 +22,19 @@ struct ModeSelectorView: View {
                 // While Agent is Running
                 modeButton(
                     type: .whileAgentRunning,
-                    title: "While Agent is Running"
+                    title: L10n.string("While Agent is Running")
                 )
 
                 // Indefinitely
                 modeButton(
                     type: .indefinitely,
-                    title: "Indefinitely"
+                    title: L10n.string("Indefinitely")
                 )
 
                 // For Duration (Timer)
                 modeButton(
                     type: .timer,
-                    title: "For Duration"
+                    title: L10n.string("For Duration")
                 )
 
                 if settings.selectedMode == .timer {
@@ -52,7 +52,7 @@ struct ModeSelectorView: View {
         }
     }
 
-    private func modeButton(type: KeepAwakeModeType, title: LocalizedStringKey) -> some View {
+    private func modeButton(type: KeepAwakeModeType, title: String) -> some View {
         Button(action: {
             coordinator.selectMode(type)
         }) {

@@ -1,14 +1,20 @@
-import { Plugin } from "@opencode-ai/plugin"
+// Awake session-lifecycle reporter (pmgwork.awake).
+//
+// Dependency-free on purpose: "@opencode-ai/plugin" cannot be resolved from
+// outside the OpenCode config directory, and a failing import makes OpenCode
+// refuse to load the whole plugin. The default export below already satisfies
+// the loader contract (an id plus a setup function); Plugin.define is only a
+// typing helper, so a plain object is used instead.
 
 const bridge = "__AWAKE_BRIDGE_PATH__"
 
-export default Plugin.define({
+const AwakePlugin = {
   id: "pmgwork.awake",
   setup(ctx) {
     const controller = new AbortController()
-    const active = new Set<string>()
+    const active = new Set()
 
-    const send = async (sessionID: string, state: "active" | "idle", reason: string) => {
+    const send = async (sessionID, state, reason) => {
       if (!sessionID) return
       if (state === "active") active.add(sessionID)
       else active.delete(sessionID)
@@ -27,15 +33,18 @@ export default Plugin.define({
     void (async () => {
       try {
         for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
-          const value = event as any
-          const properties = value.properties ?? {}
+          const properties = event.properties ?? {}
           const sessionID = properties.sessionID ?? properties.session_id
             ?? properties.session?.id ?? properties.info?.id ?? ""
-          if (value.type === "session.error") {
+          if (event.type === "session.error") {
             await send(sessionID, "idle", "session.error")
             continue
           }
-          if (value.type !== "session.status") continue
+          if (event.type === "session.idle") {
+            await send(sessionID, "idle", "session.idle")
+            continue
+          }
+          if (event.type !== "session.status") continue
           const statusValue = properties.status
           const status = typeof statusValue === "string"
             ? statusValue
@@ -53,4 +62,6 @@ export default Plugin.define({
       for (const sessionID of active) void send(sessionID, "idle", "plugin.unload")
     }
   },
-})
+}
+
+export default AwakePlugin

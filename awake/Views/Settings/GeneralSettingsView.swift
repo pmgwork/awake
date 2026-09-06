@@ -16,9 +16,9 @@ struct GeneralSettingsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 // Header
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("General Preferences")
+                    Text(L10n.string("General Preferences"))
                         .font(.headline)
-                    Text("Configure startup and menu bar display settings.")
+                    Text(L10n.string("Configure startup and menu bar display settings."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -27,9 +27,9 @@ struct GeneralSettingsView: View {
                     // Launch at Login
                     Toggle(isOn: $settings.launchAtLogin) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Launch Awake at Login")
+                            Text(L10n.string("Launch Awake at Login"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Automatically start in the menu bar when logging in to your Mac.")
+                            Text(L10n.string("Automatically start in the menu bar when logging in to your Mac."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -38,9 +38,9 @@ struct GeneralSettingsView: View {
 
                     Toggle(isOn: $settings.notificationsEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Enable Notifications")
+                            Text(L10n.string("Enable Notifications"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Notify when Keep Awake starts, stops, or when agents finish.")
+                            Text(L10n.string("Notify when Keep Awake starts, stops, or when agents finish."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -50,7 +50,7 @@ struct GeneralSettingsView: View {
                     if settings.notificationsEnabled
                         && notificationManager.authorizationStatus == .denied
                     {
-                        Text("Notifications are disabled in System Settings.")
+                        Text(L10n.string("Notifications are disabled in System Settings."))
                             .font(.system(size: 10))
                             .foregroundColor(.orange)
                             .padding(.leading, 20)
@@ -59,11 +59,9 @@ struct GeneralSettingsView: View {
                     // Show Timer in Menu Bar
                     Toggle(isOn: $settings.showTimerInMenuBar) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Show Remaining Time in Menu Bar")
+                            Text(L10n.string("Show Remaining Time in Menu Bar"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text(
-                                "Displays the countdown next to the menu bar icon when Timer mode is active."
-                            )
+                            Text(L10n.string("Displays the countdown next to the menu bar icon when Timer mode is active."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         }
@@ -72,11 +70,9 @@ struct GeneralSettingsView: View {
 
                     Toggle(isOn: $settings.stopAtLowBattery) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Stop Awake at 20% Battery")
+                            Text(L10n.string("Stop Awake at 20% Battery"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text(
-                                "Turns off Awake in every mode and restores automatic fan control at 20% when unplugged."
-                            )
+                            Text(L10n.string("Turns off Awake in every mode and restores automatic fan control at 20% when unplugged."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         }
@@ -88,22 +84,18 @@ struct GeneralSettingsView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Display During Sessions")
+                        Text(L10n.string("Display During Sessions"))
                             .font(.headline)
-                        Text(
-                            "These preferences apply only while Awake is actively preventing system sleep."
-                        )
+                        Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     }
 
                     Toggle(isOn: $settings.preventDisplaySleep) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Prevent Display Sleep")
+                            Text(L10n.string("Prevent Display Sleep"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text(
-                                "Keeps connected displays on without waking a display that is already asleep."
-                            )
+                            Text(L10n.string("Keeps connected displays on without waking a display that is already asleep."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         }
@@ -112,11 +104,9 @@ struct GeneralSettingsView: View {
 
                     Toggle(isOn: $settings.preventScreenSaver) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Prevent Screen Saver & Automatic Lock")
+                            Text(L10n.string("Prevent Screen Saver & Automatic Lock"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text(
-                                "Prevents the screen saver and automatic idle lock while Awake is active. Manual locking remains available."
-                            )
+                            Text(L10n.string("Prevents the screen saver and automatic idle lock while Awake is active. Manual locking remains available."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -138,13 +128,11 @@ struct GeneralSettingsView: View {
                     HStack {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.accentColor)
-                        Text("About Sleep & Screen Lock")
+                        Text(L10n.string("About Sleep & Screen Lock"))
                             .font(.system(size: 12, weight: .semibold))
                     }
 
-                    Text(
-                        "By default, Awake keeps the system and display awake and prevents automatic idle locking. Disable both options above to restore normal display and locking behavior."
-                    )
+                    Text(L10n.string("By default, Awake keeps the system and display awake and prevents automatic idle locking. Disable both options above to restore normal display and locking behavior."))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 }

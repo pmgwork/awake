@@ -26,6 +26,16 @@ public nonisolated enum AgentProvider: String, Codable, CaseIterable, Identifiab
         self == .openCode ? L10n.string("Plugin") : L10n.string("Hook")
     }
 
+    /// Command names used to detect a local install of the provider tool.
+    public var toolNames: [String] {
+        switch self {
+        case .codex: return ["codex"]
+        case .claude: return ["claude"]
+        case .openCode: return ["opencode", "opencode2"]
+        case .antigravity: return ["antigravity", "agy"]
+        }
+    }
+
     public static func infer(name: String, processNames: [String]) -> AgentProvider? {
         let candidates = Set(([name] + processNames).map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

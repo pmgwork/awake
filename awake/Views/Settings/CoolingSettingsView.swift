@@ -20,9 +20,9 @@ struct CoolingSettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Header
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Closed-Lid Cooling & Thermal Management")
+                    Text(L10n.string("Closed-Lid Cooling & Thermal Management"))
                         .font(.headline)
-                    Text("Controls fan speed when MacBook lid is closed during unattended AI Agent workloads.")
+                    Text(L10n.string("Controls fan speed when MacBook lid is closed during unattended AI Agent workloads."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -31,9 +31,9 @@ struct CoolingSettingsView: View {
                     // Closed Lid Cooling Toggle
                     Toggle(isOn: $settings.closedLidCoolingEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Enable Closed-Lid Cooling")
+                            Text(L10n.string("Enable Closed-Lid Cooling"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Spins up fans to prevent heat accumulation when the lid is closed.")
+                            Text(L10n.string("Spins up fans to prevent heat accumulation when the lid is closed."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -43,9 +43,9 @@ struct CoolingSettingsView: View {
                     // Exclude Normal Clamshell Toggle
                     Toggle(isOn: $settings.excludeNormalClamshell) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Exclude Normal Clamshell (Recommended)")
+                            Text(L10n.string("Exclude Normal Clamshell (Recommended)"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Do not intervene when an external display is connected (leaves control to macOS).")
+                            Text(L10n.string("Do not intervene when an external display is connected (leaves control to macOS)."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -55,7 +55,7 @@ struct CoolingSettingsView: View {
 
                     // Fan Mode Picker
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Closed-Lid Fan Mode:")
+                        Text(L10n.string("Closed-Lid Fan Mode:"))
                             .font(.system(size: 12, weight: .medium))
 
                         Picker("", selection: $settings.closedLidFanMode) {
@@ -71,9 +71,9 @@ struct CoolingSettingsView: View {
                     // AC Power Only Toggle
                     Toggle(isOn: $settings.onlyOnACPower) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Closed-Lid Cooling only on AC Power")
+                            Text(L10n.string("Closed-Lid Cooling only on AC Power"))
                                 .font(.system(size: 13, weight: .medium))
-                            Text("Avoids heavy battery drain by only activating Closed-Lid Cooling when plugged in.")
+                            Text(L10n.string("Avoids heavy battery drain by only activating Closed-Lid Cooling when plugged in."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -133,7 +133,7 @@ struct CoolingSettingsView: View {
                 // Live Fan Diagnostics & Manual Test
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Fan Speed Diagnostics & Test")
+                        Text(L10n.string("Fan Speed Diagnostics & Test"))
                             .font(.system(size: 12, weight: .semibold))
                         Spacer()
                         Text(fanController.currentStatus.formattedRPM)
@@ -142,17 +142,17 @@ struct CoolingSettingsView: View {
                     }
 
                     HStack(spacing: 8) {
-                        Button("Test 100% Spin") {
+                        Button(L10n.string("Test 100% Spin")) {
                             fanController.testFanSpeed(mode: .maximum)
                         }
                         .font(.system(size: 11))
 
-                        Button("Test 75% Spin") {
+                        Button(L10n.string("Test 75% Spin")) {
                             fanController.testFanSpeed(mode: .aggressive)
                         }
                         .font(.system(size: 11))
 
-                        Button("Restore Auto") {
+                        Button(L10n.string("Restore Auto")) {
                             fanController.testFanSpeed(mode: .auto)
                         }
                         .font(.system(size: 11))
@@ -160,7 +160,7 @@ struct CoolingSettingsView: View {
                     }
 
                     if fanController.isTestModeActive {
-                        Text("Fan test ends after 60 seconds and returns to the current cooling policy.")
+                        Text(L10n.string("Fan test ends after 60 seconds and returns to the current cooling policy."))
                             .font(.system(size: 10))
                             .foregroundColor(.orange)
                     }

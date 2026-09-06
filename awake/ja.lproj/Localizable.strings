@@ -202,3 +202,4 @@
 "Awake did not receive the integration test event." = "連携テストのイベントを受信できませんでした。";
 "The provider configuration is invalid: %@" = "プロバイダー設定が無効です：%@";
 "Awake v%@" = "Awake v%@";
+"CLI not installed" = "CLIがインストールされていません";

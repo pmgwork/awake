@@ -65,7 +65,7 @@ struct MenuBarView: View {
                 Button(action: openSettingsAction) {
                     HStack(spacing: 4) {
                         Image(systemName: "gearshape")
-                        Text("Settings...")
+                        Text(L10n.string("Settings..."))
                     }
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
@@ -77,7 +77,7 @@ struct MenuBarView: View {
                 Button(action: {
                     NSApplication.shared.terminate(nil)
                 }) {
-                    Text("Quit")
+                    Text(L10n.string("Quit"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }

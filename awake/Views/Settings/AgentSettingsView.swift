@@ -13,13 +13,11 @@ struct AgentSettingsView: View {
     @State private var pendingAction: PendingAction?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.string("AI Agent Hook Integrations"))
                     .font(.headline)
-                Text(L10n.string("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
             }
 
             List {
@@ -112,6 +110,7 @@ struct AgentSettingsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .padding(20)
+        }
         .disabled(integrationManager.isWorking)
         .confirmationDialog(
             pendingAction?.title ?? L10n.string("Hook Integration"),
@@ -140,6 +139,7 @@ struct AgentSettingsView: View {
     private func providerRow(_ agent: MonitoredAgent) -> some View {
         let provider = agent.provider!
         let status = integrationManager.status(for: provider)
+        let toolInstalled = integrationManager.isToolInstalled(provider)
         let activeCount = eventMonitor.activeSessionCountByProvider[provider, default: 0]
         return HStack(spacing: 12) {
             Toggle(isOn: Binding(
@@ -149,9 +149,9 @@ struct AgentSettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(provider.displayName)
                         .font(.system(size: 13, weight: .medium))
-                    Text("\(provider.integrationKind) · \(status.label)")
+                    Text(toolInstalled ? "\(provider.integrationKind) · \(status.label)" : L10n.string("CLI not installed"))
                         .font(.system(size: 10))
-                        .foregroundColor(status == .linked ? .secondary : .orange)
+                        .foregroundColor(toolInstalled ? (status == .linked ? .secondary : .orange) : .secondary)
                 }
             }
             .toggleStyle(.checkbox)
@@ -168,11 +168,14 @@ struct AgentSettingsView: View {
                 Button(status == .needsRepair ? L10n.string("Repair") : L10n.string("Link")) {
                     pendingAction = PendingAction(provider: provider, kind: .install)
                 }
+                .disabled(!toolInstalled)
+                .help(toolInstalled ? "" : L10n.string("CLI not installed"))
             } else {
                 HStack(spacing: 6) {
                     Button(L10n.string("Test")) { integrationManager.test(provider) }
                     Menu {
                         Button(L10n.string("Reinstall")) { pendingAction = PendingAction(provider: provider, kind: .install) }
+                            .disabled(!toolInstalled)
                         Button(L10n.string("Unlink"), role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
                     } label: {
                         Image(systemName: "ellipsis.circle")

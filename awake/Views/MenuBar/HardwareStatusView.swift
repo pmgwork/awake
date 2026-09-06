@@ -15,7 +15,7 @@ struct HardwareStatusView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Mac Status")
+            Text(L10n.string("Mac Status"))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)

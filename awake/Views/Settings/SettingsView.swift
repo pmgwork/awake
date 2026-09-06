@@ -16,7 +16,7 @@ struct SettingsView: View {
                 screenBehaviorManager: coordinator.screenBehaviorManager
             )
             .tabItem {
-                Label("General", systemImage: "gearshape")
+                Label(L10n.string("General"), systemImage: "gearshape")
             }
 
             AgentSettingsView(
@@ -25,7 +25,7 @@ struct SettingsView: View {
                 integrationManager: coordinator.hookIntegrationManager
             )
             .tabItem {
-                Label("Agents", systemImage: "cpu")
+                Label(L10n.string("Agents"), systemImage: "cpu")
             }
 
             CoolingSettingsView(
@@ -34,7 +34,7 @@ struct SettingsView: View {
                 thermalMonitor: coordinator.thermalMonitor
             )
             .tabItem {
-                Label("Cooling", systemImage: "wind")
+                Label(L10n.string("Cooling"), systemImage: "wind")
             }
         }
         .frame(minWidth: 480, idealWidth: 500, minHeight: 480, idealHeight: 550)

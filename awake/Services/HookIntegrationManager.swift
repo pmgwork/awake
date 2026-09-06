@@ -30,6 +30,7 @@ public final class HookIntegrationManager: ObservableObject {
     @Published public private(set) var statuses: [AgentProvider: HookIntegrationStatus] = [:]
     @Published public private(set) var isWorking = false
     @Published public private(set) var lastError: String?
+    @Published public private(set) var toolAvailability: [AgentProvider: Bool] = [:]
 
     private static let ownerMarker = "pmgwork.awake"
     private let fileManager: FileManager
@@ -49,6 +50,10 @@ public final class HookIntegrationManager: ObservableObject {
 
     public func status(for provider: AgentProvider) -> HookIntegrationStatus {
         statuses[provider] ?? .unlinked
+    }
+
+    public func isToolInstalled(_ provider: AgentProvider) -> Bool {
+        toolAvailability[provider] ?? false
     }
 
     public func install(_ provider: AgentProvider) {
@@ -97,6 +102,7 @@ public final class HookIntegrationManager: ObservableObject {
     }
 
     public func refreshStatuses() {
+        refreshToolAvailability()
         var result: [AgentProvider: HookIntegrationStatus] = [:]
         for provider in AgentProvider.allCases {
             let hasEntry = installedEntryExists(for: provider)
@@ -380,9 +386,59 @@ public final class HookIntegrationManager: ObservableObject {
 
     private var openCodePluginIsValid: Bool {
         guard let source = try? String(contentsOf: openCodePluginURL, encoding: .utf8) else { return false }
-        return source.contains("pmgwork.awake")
-            && source.contains(bridgeDestinationURL.path)
-            && !source.contains("__AWAKE_BRIDGE_PATH__")
+        // Plugins written by older builds escaped "/" as "\/" via
+        // JSONSerialization. Normalize so existing installs heal on refresh.
+        let normalized = source.replacingOccurrences(of: "\\/", with: "/")
+        // AwakePlugin is the dependency-free format. Older templates imported
+        // "@opencode-ai/plugin", which OpenCode cannot resolve here, so they
+        // must be reinstalled via Repair.
+        return normalized.contains("pmgwork.awake")
+            && normalized.contains("AwakePlugin")
+            && normalized.contains(bridgeDestinationURL.path)
+            && !normalized.contains("__AWAKE_BRIDGE_PATH__")
+    }
+
+    private func refreshToolAvailability() {
+        var result: [AgentProvider: Bool] = [:]
+        for provider in AgentProvider.allCases {
+            result[provider] = provider.toolNames.contains(where: toolExists(named:))
+        }
+        toolAvailability = result
+    }
+
+    private func toolExists(named name: String) -> Bool {
+        for directory in Self.toolSearchDirectories(homeURL: homeURL) {
+            let url = directory.appendingPathComponent(name, isDirectory: false)
+            if fileManager.isExecutableFile(atPath: url.path) { return true }
+        }
+        return false
+    }
+
+    private static func toolSearchDirectories(homeURL: URL) -> [URL] {
+        // GUI apps often launch with a minimal PATH, so well-known install
+        // locations are checked in addition to PATH entries.
+        var seen = Set<String>()
+        var result: [URL] = []
+        func add(_ url: URL) {
+            let path = url.path
+            guard !path.isEmpty, seen.insert(path).inserted else { return }
+            result.append(url)
+        }
+        let pathValue = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        for component in pathValue.split(separator: ":") {
+            add(URL(fileURLWithPath: String(component), isDirectory: true))
+        }
+        add(URL(fileURLWithPath: "/opt/homebrew/bin", isDirectory: true))
+        add(URL(fileURLWithPath: "/usr/local/bin", isDirectory: true))
+        add(homeURL.appendingPathComponent(".local/bin", isDirectory: true))
+        // Tool-specific default locations and version-manager shims, which are
+        // typically on PATH in a terminal but not for GUI-launched apps.
+        add(homeURL.appendingPathComponent(".opencode/bin", isDirectory: true))
+        add(homeURL.appendingPathComponent(".proto/shims", isDirectory: true))
+        add(homeURL.appendingPathComponent(".local/share/mise/shims", isDirectory: true))
+        add(homeURL.appendingPathComponent(".volta/bin", isDirectory: true))
+        add(homeURL.appendingPathComponent(".bun/bin", isDirectory: true))
+        return result
     }
 
     private func runBridge(provider: AgentProvider, sessionID: String, state: AgentSessionState, reason: String) throws {
@@ -454,9 +510,29 @@ public final class HookIntegrationManager: ObservableObject {
     }
 
     private func javaScriptEscaped(_ value: String) -> String {
-        let data = try? JSONSerialization.data(withJSONObject: [value])
-        let encoded = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
-        return String(encoded.dropFirst().dropLast().dropFirst().dropLast())
+        // Escape for a double-quoted JavaScript string literal. Unlike
+        // JSONSerialization, a forward slash must NOT be escaped: the written
+        // plugin is later validated with a raw-path substring check.
+        var result = ""
+        result.reserveCapacity(value.count)
+        for scalar in value.unicodeScalars {
+            switch scalar {
+            case "\\": result += "\\\\"
+            case "\"": result += "\\\""
+            case "\n": result += "\\n"
+            case "\r": result += "\\r"
+            case "\t": result += "\\t"
+            case "\u{08}": result += "\\b"
+            case "\u{0C}": result += "\\f"
+            default:
+                if scalar.value < 0x20 {
+                    result += String(format: "\\u%04X", scalar.value)
+                } else {
+                    result.unicodeScalars.append(scalar)
+                }
+            }
+        }
+        return result
     }
 
     private func stripJSONC(_ text: String) -> String {
