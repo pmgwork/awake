@@ -23,9 +23,9 @@ struct ModeSelectorView: View {
                     get: { settings.selectedMode },
                     set: { coordinator.selectMode($0) }
                 )) {
-                    Text(L10n.string("While Agent is Running")).tag(KeepAwakeModeType.whileAgentRunning)
                     Text(L10n.string("Indefinitely")).tag(KeepAwakeModeType.indefinitely)
                     Text(L10n.string("For Duration")).tag(KeepAwakeModeType.timer)
+                    Text(L10n.string("While Agent is Running")).tag(KeepAwakeModeType.whileAgentRunning)
                 }
                 .labelsHidden()
                 .pickerStyle(.radioGroup)

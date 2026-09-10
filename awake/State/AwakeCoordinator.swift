@@ -34,7 +34,6 @@ public final class AwakeCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
     private var wasAgentRunning: Bool = false
-    private var suppressAgentAutoStartUntilExit: Bool = false
 
     private enum PersistenceKeys {
         static let timerEndDate = "pmgwork.awake.activeTimerEndDate"
@@ -54,6 +53,14 @@ public final class AwakeCoordinator: ObservableObject {
     // MARK: - User Intent Actions
     public func startKeepAwake() {
         guard !isActive else { return }
+        if settings.selectedMode == .whileAgentRunning {
+            guard settings.agentMonitoringEnabled, eventMonitor.hasActiveSession else {
+                statusMessage = settings.agentMonitoringEnabled
+                    ? L10n.string("Waiting for Monitored Agent...")
+                    : L10n.string("Agent Monitoring Paused")
+                return
+            }
+        }
         guard !isLowBatteryCutoffActive else {
             statusMessage = L10n.string("Keep Awake Blocked (Battery 20% or Lower)")
             sendNotification(
@@ -91,10 +98,6 @@ public final class AwakeCoordinator: ObservableObject {
     public func stopKeepAwake(reason: String? = nil, manual: Bool = false) {
         guard isActive else { return }
 
-        if manual && settings.selectedMode == .whileAgentRunning && eventMonitor.hasActiveSession {
-            suppressAgentAutoStartUntilExit = true
-        }
-
         let stopReason = reason ?? L10n.string("Awake is no longer preventing system sleep.")
         isActive = false
         remainingTimerSeconds = 0
@@ -113,8 +116,36 @@ public final class AwakeCoordinator: ObservableObject {
         if isActive {
             stopKeepAwake(reason: L10n.string("Manually stopped by user."), manual: true)
         } else {
-            suppressAgentAutoStartUntilExit = false
             startKeepAwake()
+        }
+    }
+
+    public func togglePrimaryAction() {
+        if settings.selectedMode == .whileAgentRunning {
+            setAgentMonitoringEnabled(!settings.agentMonitoringEnabled)
+        } else {
+            toggleKeepAwake()
+        }
+    }
+
+    public func setAgentMonitoringEnabled(_ enabled: Bool) {
+        guard settings.agentMonitoringEnabled != enabled else { return }
+        settings.agentMonitoringEnabled = enabled
+
+        if enabled {
+            statusMessage = L10n.string("Waiting for Monitored Agent...")
+            if eventMonitor.hasActiveSession {
+                startKeepAwake()
+            } else {
+                evaluateState()
+            }
+        } else {
+            if isActive && settings.selectedMode == .whileAgentRunning {
+                stopKeepAwake(reason: L10n.string("Agent monitoring was paused."), manual: true)
+            } else {
+                statusMessage = L10n.string("Agent Monitoring Paused")
+                evaluateState()
+            }
         }
     }
 
@@ -126,9 +157,12 @@ public final class AwakeCoordinator: ObservableObject {
         }
 
         settings.selectedMode = mode
-        suppressAgentAutoStartUntilExit = mode == .whileAgentRunning && eventMonitor.hasActiveSession
         wasAgentRunning = mode == .whileAgentRunning && eventMonitor.hasActiveSession
-        evaluateState()
+        if mode == .whileAgentRunning && settings.agentMonitoringEnabled && eventMonitor.hasActiveSession {
+            startKeepAwake()
+        } else {
+            evaluateState()
+        }
     }
 
     public func setTimerDuration(_ duration: TimeInterval) {
@@ -155,6 +189,11 @@ public final class AwakeCoordinator: ObservableObject {
 
     public var formattedMenuStatus: String {
         if !isActive {
+            if settings.selectedMode == .whileAgentRunning {
+                return settings.agentMonitoringEnabled
+                    ? L10n.string("Monitoring (Waiting for Agent)")
+                    : L10n.string("Agent Monitoring Paused")
+            }
             return L10n.string("Idle")
         }
         switch settings.selectedMode {
@@ -301,14 +340,11 @@ public final class AwakeCoordinator: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { running in
                 let coordinator = AwakeCoordinator.shared
-                if !running {
-                    coordinator.suppressAgentAutoStartUntilExit = false
-                }
                 if !coordinator.isActive &&
                     coordinator.settings.selectedMode == .whileAgentRunning &&
+                    coordinator.settings.agentMonitoringEnabled &&
                     running &&
-                    !coordinator.isLowBatteryCutoffActive &&
-                    !coordinator.suppressAgentAutoStartUntilExit {
+                    !coordinator.isLowBatteryCutoffActive {
                     NSLog("[AwakeCoordinator] Monitored agent detected, auto-starting Keep Awake.")
                     coordinator.startKeepAwake()
                 }

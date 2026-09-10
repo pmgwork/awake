@@ -40,17 +40,17 @@ struct MenuBarView: View {
             Divider()
 
             Button(action: {
-                coordinator.toggleKeepAwake()
+                coordinator.togglePrimaryAction()
             }) {
                 Label(
-                    coordinator.isActive ? L10n.string("Stop Keep Awake") : L10n.string("Start Keep Awake"),
-                    systemImage: coordinator.isActive ? "stop.fill" : "play.fill"
+                    primaryActionTitle,
+                    systemImage: primaryActionSystemImage
                 )
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .tint(coordinator.isActive ? .red : .accentColor)
+            .tint(primaryActionTint)
 
             // Bottom Footer
             HStack {
@@ -79,5 +79,28 @@ struct MenuBarView: View {
         }
         .padding(12)
         .frame(width: 280)
+    }
+
+    private var primaryActionTitle: String {
+        if settings.selectedMode == .whileAgentRunning {
+            return settings.agentMonitoringEnabled
+                ? L10n.string("Pause Agent Monitoring")
+                : L10n.string("Resume Agent Monitoring")
+        }
+        return coordinator.isActive ? L10n.string("Stop Keep Awake") : L10n.string("Start Keep Awake")
+    }
+
+    private var primaryActionSystemImage: String {
+        if settings.selectedMode == .whileAgentRunning {
+            return settings.agentMonitoringEnabled ? "pause.fill" : "play.fill"
+        }
+        return coordinator.isActive ? "stop.fill" : "play.fill"
+    }
+
+    private var primaryActionTint: Color {
+        if settings.selectedMode == .whileAgentRunning {
+            return settings.agentMonitoringEnabled ? .orange : .accentColor
+        }
+        return coordinator.isActive ? .red : .accentColor
     }
 }

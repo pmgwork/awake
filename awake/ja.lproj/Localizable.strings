@@ -162,6 +162,15 @@
 "Active (Waiting for Agent)" = "有効（エージェント待機中）";
 "Active (Indefinitely)" = "有効（無期限）";
 "Active (%@)" = "有効（%@）";
+"Agent Monitoring Paused" = "エージェント監視を一時停止中";
+"Agent monitoring was paused." = "エージェント監視を一時停止しました。";
+"Monitoring (Waiting for Agent)" = "監視中（エージェント待機中）";
+"Pause Agent Monitoring" = "エージェント監視を一時停止";
+"Resume Agent Monitoring" = "エージェント監視を再開";
+"Monitoring" = "監視中";
+"Monitoring Paused" = "監視一時停止中";
+"Left-click for menu, right-click to pause agent monitoring" = "左クリックでメニュー、右クリックでエージェント監視を一時停止";
+"Left-click for menu, right-click to resume agent monitoring" = "左クリックでメニュー、右クリックでエージェント監視を再開";
 
 "AI Agent Hook Integrations" = "AIエージェント連携";
 "Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active." = "Awakeは連携済みエージェントのライフサイクルイベントにのみ反応します。CLIプロセスの実行だけでは有効になりません。";
@@ -237,7 +246,7 @@
 "Supported: Codex, Claude Code, OpenCode (plugin), Antigravity." = "対応：Codex、Claude Code、OpenCode（プラグイン）、Antigravity。";
 "Open Agent Settings..." = "エージェント設定を開く…";
 "You're Ready" = "準備完了";
-"Left-click the menu-bar cup for status, right-click to toggle Awake. You can revisit settings anytime from Settings...." = "メニューバーのカップを左クリックで状態表示、右クリックでON／OFF切替。設定はいつでも「設定…」から変更できます。";
+"Left-click the menu-bar cup for status, right-click to toggle Awake. You can revisit settings anytime from Settings...." = "メニューバーのカップを左クリックで状態表示。右クリックはエージェント監視の一時停止／再開、またはAwakeのON／OFFに使えます。設定はいつでも「設定…」から変更できます。";
 "Back" = "戻る";
 "Next" = "次へ";
 "Skip" = "スキップ";

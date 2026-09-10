@@ -15,6 +15,7 @@ public final class SettingsStore: ObservableObject {
     private enum Keys {
         static let monitoredAgents = "pmgwork.awake.monitoredAgents"
         static let selectedMode = "pmgwork.awake.selectedMode"
+        static let agentMonitoringEnabled = "pmgwork.awake.agentMonitoringEnabled"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
         static let closedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
         static let excludeNormalClamshell = "pmgwork.awake.excludeNormalClamshell"
@@ -44,6 +45,12 @@ public final class SettingsStore: ObservableObject {
     @Published public var selectedMode: KeepAwakeModeType {
         didSet {
             UserDefaults.standard.set(selectedMode.rawValue, forKey: Keys.selectedMode)
+        }
+    }
+
+    @Published public var agentMonitoringEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(agentMonitoringEnabled, forKey: Keys.agentMonitoringEnabled)
         }
     }
 
@@ -174,6 +181,12 @@ public final class SettingsStore: ObservableObject {
             self.selectedMode = .whileAgentRunning
         }
 
+        if UserDefaults.standard.object(forKey: Keys.agentMonitoringEnabled) != nil {
+            self.agentMonitoringEnabled = UserDefaults.standard.bool(forKey: Keys.agentMonitoringEnabled)
+        } else {
+            self.agentMonitoringEnabled = true
+        }
+
         // Timer Duration (default 2 hours)
         let savedDuration = UserDefaults.standard.double(forKey: Keys.selectedTimerDuration)
         self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 2 * 60 * 60
@@ -285,6 +298,7 @@ public final class SettingsStore: ObservableObject {
 
     public func resetToDefaults() {
         monitoredAgents = MonitoredAgent.defaultPresets
+        agentMonitoringEnabled = true
         closedLidCoolingEnabled = true
         excludeNormalClamshell = true
         closedLidFanMode = .maximum

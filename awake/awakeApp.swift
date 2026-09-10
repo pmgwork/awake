@@ -64,7 +64,6 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.imagePosition = .imageOnly
         button.imageScaling = .scaleProportionallyDown
-        button.toolTip = L10n.string("Left-click for menu, right-click to toggle Awake")
         button.setAccessibilityLabel("Awake")
     }
 
@@ -102,15 +101,17 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
         if NSApp.currentEvent?.type == .rightMouseUp {
-            coordinator.toggleKeepAwake()
+            coordinator.togglePrimaryAction()
             return
         }
 
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            NSApp.activate(ignoringOtherApps: true)
             resizePopoverToFitContent()
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
@@ -127,16 +128,22 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem.button else { return }
 
         let image = NSImage(named: NSImage.Name(iconName))
-        image?.isTemplate = true
         image?.size = NSSize(width: 21, height: 16.8)
-        button.image = image
+        if isAgentMonitoring, let image {
+            button.image = image.tinted(with: .systemOrange)
+        } else {
+            image?.isTemplate = true
+            button.image = image
+        }
+        button.contentTintColor = nil
+        button.toolTip = settingsToolTip
 
         let shouldShowTimer = coordinator.isActive &&
             coordinator.settings.selectedMode == .timer &&
             coordinator.settings.showTimerInMenuBar
         button.title = shouldShowTimer ? coordinator.formattedRemainingTime : ""
         button.imagePosition = shouldShowTimer ? .imageLeading : .imageOnly
-        button.setAccessibilityValue(coordinator.isActive ? L10n.string("On") : L10n.string("Off"))
+        button.setAccessibilityValue(accessibilityStatus)
     }
 
     private var iconName: String {
@@ -154,5 +161,41 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         case .normalClamshell:
             return "MenuBarCupActive"
         }
+    }
+
+    private var isAgentMonitoring: Bool {
+        coordinator.settings.selectedMode == .whileAgentRunning &&
+            coordinator.settings.agentMonitoringEnabled
+    }
+
+    private var settingsToolTip: String {
+        if coordinator.settings.selectedMode == .whileAgentRunning {
+            return coordinator.settings.agentMonitoringEnabled
+                ? L10n.string("Left-click for menu, right-click to pause agent monitoring")
+                : L10n.string("Left-click for menu, right-click to resume agent monitoring")
+        }
+        return L10n.string("Left-click for menu, right-click to toggle Awake")
+    }
+
+    private var accessibilityStatus: String {
+        if coordinator.settings.selectedMode == .whileAgentRunning && !coordinator.isActive {
+            return coordinator.settings.agentMonitoringEnabled
+                ? L10n.string("Monitoring")
+                : L10n.string("Monitoring Paused")
+        }
+        return coordinator.isActive ? L10n.string("On") : L10n.string("Off")
+    }
+}
+
+private extension NSImage {
+    func tinted(with color: NSColor) -> NSImage {
+        let result = NSImage(size: size, flipped: false) { rect in
+            self.draw(in: rect)
+            color.setFill()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        result.isTemplate = false
+        return result
     }
 }
