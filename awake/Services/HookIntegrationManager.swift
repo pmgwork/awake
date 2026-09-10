@@ -331,17 +331,32 @@ public final class HookIntegrationManager: ObservableObject {
         var source = try String(contentsOf: sourceURL, encoding: .utf8)
         source = source.replacingOccurrences(of: "__AWAKE_BRIDGE_PATH__", with: javaScriptEscaped(bridgeURL.path))
         try atomicWrite(Data(source.utf8), to: openCodePluginURL, permissions: 0o600)
+        // V2 beta loaders require a directory. The manifest also lets V1
+        // resolve that directory to the shared entrypoint.
+        let manifest = """
+        {"name":"awake-opencode-plugin","version":"1.0.0","private":true,"type":"module","main":"./index.ts","exports":"./index.ts"}
+        """
+        try atomicWrite(Data(manifest.utf8), to: openCodePluginDirectoryURL.appendingPathComponent("package.json"), permissions: 0o600)
 
         let configURL = configurationURL(for: .openCode)
         var root = try readJSONObject(at: configURL, allowsJSONC: true)
-        let pluginsValue = root["plugins"]
-        guard pluginsValue == nil || pluginsValue is [Any] else {
-            throw IntegrationError.invalidConfiguration(configURL.path)
+        // V1 reads plugin; V2 also accepts it. If native V2 plugins already
+        // exists, keep our entry there too because that field takes precedence.
+        for key in ["plugin", "plugins"] {
+            let value = root[key]
+            guard value == nil || value is [Any] else {
+                throw IntegrationError.invalidConfiguration(configURL.path)
+            }
+            if key == "plugins" && value == nil { continue }
+            var plugins = value as? [Any] ?? []
+            plugins.removeAll { isOwnedOpenCodePlugin($0) }
+            if key == "plugins" && plugins.isEmpty {
+                root.removeValue(forKey: key)
+                continue
+            }
+            plugins.append(openCodePluginDirectoryURL.absoluteString)
+            root[key] = plugins
         }
-        var plugins = pluginsValue as? [Any] ?? []
-        plugins.removeAll { ($0 as? String) == openCodePluginDirectoryURL.path }
-        plugins.append(openCodePluginDirectoryURL.path)
-        root["plugins"] = plugins
         try writeJSONObject(root, to: configURL)
     }
 
@@ -349,14 +364,22 @@ public final class HookIntegrationManager: ObservableObject {
         let configURL = configurationURL(for: .openCode)
         if fileManager.fileExists(atPath: configURL.path) {
             var root = try readJSONObject(at: configURL, allowsJSONC: true)
-            if var plugins = root["plugins"] as? [Any] {
-                plugins.removeAll { ($0 as? String) == openCodePluginDirectoryURL.path }
-                if plugins.isEmpty { root.removeValue(forKey: "plugins") }
-                else { root["plugins"] = plugins }
+            for key in ["plugin", "plugins"] {
+                if var plugins = root[key] as? [Any] {
+                    plugins.removeAll { isOwnedOpenCodePlugin($0) }
+                    if plugins.isEmpty { root.removeValue(forKey: key) }
+                    else { root[key] = plugins }
+                }
             }
             try writeJSONObject(root, to: configURL)
         }
         try? fileManager.removeItem(at: openCodePluginDirectoryURL)
+    }
+
+    private func isOwnedOpenCodePlugin(_ value: Any) -> Bool {
+        guard let path = value as? String else { return false }
+        return [openCodePluginDirectoryURL.path, openCodePluginDirectoryURL.absoluteString, openCodePluginURL.path,
+                openCodePluginURL.absoluteString].contains(path)
     }
 
     private func installedEntryExists(for provider: AgentProvider) -> Bool {
@@ -366,7 +389,11 @@ public final class HookIntegrationManager: ObservableObject {
         // JSONSerialization escapes "/" as "\/", so normalize before path matching.
         // The owner marker itself contains no slashes and is unaffected.
         let normalized = text.replacingOccurrences(of: "\\/", with: "/")
-        if provider == .openCode { return normalized.contains(openCodePluginDirectoryURL.path) }
+        if provider == .openCode {
+            return normalized.contains(openCodePluginDirectoryURL.path)
+                || normalized.contains(openCodePluginURL.absoluteString)
+                || normalized.contains(openCodePluginDirectoryURL.absoluteString)
+        }
         return normalized.contains("--owner \(Self.ownerMarker)") || (provider == .antigravity && normalized.contains("\"\(Self.ownerMarker)\""))
     }
 
@@ -382,18 +409,24 @@ public final class HookIntegrationManager: ObservableObject {
         let normalized = text.replacingOccurrences(of: "\\/", with: "/")
         let expected = provider == .openCode ? openCodePluginDirectoryURL.path : bridgeDestinationURL.path
         return normalized.contains(expected)
+            || (provider == .openCode && normalized.contains(openCodePluginURL.absoluteString))
+            || (provider == .openCode && normalized.contains(openCodePluginDirectoryURL.absoluteString))
     }
 
     private var openCodePluginIsValid: Bool {
+        guard let manifest = try? readJSONObject(at: openCodePluginDirectoryURL.appendingPathComponent("package.json")),
+              manifest["main"] as? String == "./index.ts" else { return false }
         guard let source = try? String(contentsOf: openCodePluginURL, encoding: .utf8) else { return false }
         // Plugins written by older builds escaped "/" as "\/" via
         // JSONSerialization. Normalize so existing installs heal on refresh.
         let normalized = source.replacingOccurrences(of: "\\/", with: "/")
-        // AwakePlugin is the dependency-free format. Older templates imported
-        // "@opencode-ai/plugin", which OpenCode cannot resolve here, so they
-        // must be reinstalled via Repair.
+        // Require the V2 event payload reader so older templates that silently
+        // ignored session events are reinstalled via Repair.
         return normalized.contains("pmgwork.awake")
             && normalized.contains("AwakePlugin")
+            && normalized.contains("event.data ?? event.properties")
+            && normalized.contains("async server()")
+            && normalized.contains("session.execution.started")
             && normalized.contains(bridgeDestinationURL.path)
             && !normalized.contains("__AWAKE_BRIDGE_PATH__")
     }
