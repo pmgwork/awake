@@ -1,0 +1,173 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.44706,0.25098,0.15294,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.69885,0.39799,0.24756,1.00000"
+              }
+            }
+          ],
+          "image-name" : "menu-bar-cup.svg",
+          "name" : "menu-bar-cup",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 42,
+            "translation-in-points" : [
+              20,
+              14
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "display-p3:0.44829,0.25024,0.15290,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.68025,0.57578,0.52714,1.00000"
+              }
+            }
+          ],
+          "image-name" : "menu-bar-cup.svg",
+          "name" : "menu-bar-cup",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 42,
+            "translation-in-points" : [
+              20,
+              14
+            ]
+          }
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "display-p3:0.44829,0.25024,0.15290,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.68025,0.57578,0.52714,1.00000"
+              }
+            }
+          ],
+          "image-name" : "menu-bar-cup.svg",
+          "name" : "menu-bar-cup",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 42,
+            "translation-in-points" : [
+              20,
+              14
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "display-p3:0.44829,0.25024,0.15290,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.68025,0.57578,0.52714,1.00000"
+              }
+            }
+          ],
+          "image-name" : "menu-bar-cup.svg",
+          "name" : "menu-bar-cup",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 42,
+            "translation-in-points" : [
+              20,
+              14
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
