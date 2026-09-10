@@ -87,7 +87,8 @@
 "Aggressive (~75%)" = "強冷却（約75%）";
 "Closed-Lid Cooling only on AC Power" = "AC電源接続時のみ閉蓋冷却";
 "Avoids heavy battery drain by only activating Closed-Lid Cooling when plugged in." = "電源接続時のみ冷却を有効にし、バッテリー消費を抑えます。";
-"Stop Awake at 20% Battery" = "バッテリー20%でAwakeを停止";
+"Disable Sleep Prevention at 20% Battery or Below When Unplugged" = "電源未接続で残量20%以下のとき、スリープ防止を無効にする";
+"Stops active sleep prevention and blocks it from starting while this condition applies. Agent detection continues, but the menu bar cup has no steam." = "この条件に当てはまる間は、スリープ防止を停止し、新たな開始も行いません。エージェントの実行検出は続きますが、メニューバーのカップに湯気は付きません。";
 "Stops Keep Awake and restores automatic fan control at 20% when unplugged." = "未接続時に残量が20%になると、スリープ防止を停止してファンを自動制御へ戻します。";
 "Turns off Awake in every mode and restores automatic fan control at 20% when unplugged." = "電源未接続時に残量が20%になると、すべてのモードでAwakeを停止し、ファンを自動制御へ戻します。";
 "Fan Control Access Authorized" = "ファン制御を利用可能";

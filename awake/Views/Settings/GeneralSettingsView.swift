@@ -21,7 +21,10 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
                 }
                 Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
-                Toggle(L10n.string("Stop Awake at 20% Battery"), isOn: $settings.stopAtLowBattery)
+                Toggle(L10n.string("Disable Sleep Prevention at 20% Battery or Below When Unplugged"), isOn: $settings.stopAtLowBattery)
+                Text(L10n.string("Stops active sleep prevention and blocks it from starting while this condition applies. Agent detection continues, but the menu bar cup has no steam."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text(L10n.string("General Preferences"))
             }
