@@ -128,7 +128,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
         let image = NSImage(named: NSImage.Name(iconName))
         image?.isTemplate = true
-        image?.size = NSSize(width: 19.5, height: 15.5)
+        image?.size = NSSize(width: 21, height: 16.8)
         button.image = image
 
         let shouldShowTimer = coordinator.isActive &&
