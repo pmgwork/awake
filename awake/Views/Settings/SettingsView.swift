@@ -13,7 +13,8 @@ struct SettingsView: View {
             GeneralSettingsView(
                 settings: coordinator.settings,
                 notificationManager: NotificationManager.shared,
-                screenBehaviorManager: coordinator.screenBehaviorManager
+                screenBehaviorManager: coordinator.screenBehaviorManager,
+                updateService: AppUpdateService.shared
             )
             .tabItem {
                 Label(L10n.string("General"), systemImage: "gearshape")

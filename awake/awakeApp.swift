@@ -30,6 +30,31 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         configurePopover()
         observeStatusChanges()
         updateStatusItem()
+        if !coordinator.settings.hasCompletedOnboarding {
+            DispatchQueue.main.async { [weak self] in
+                self?.showOnboardingIfNeeded()
+            }
+        } else {
+            scheduleAutomaticUpdateCheck()
+        }
+    }
+
+    private func scheduleAutomaticUpdateCheck() {
+        guard coordinator.settings.automaticallyCheckForUpdates else { return }
+        // Avoid hammering the API on every restart: at most once per 24h.
+        if let last = coordinator.settings.lastUpdateCheckAt,
+           Date().timeIntervalSince(last) < 24 * 60 * 60 {
+            return
+        }
+        // Small delay so menu-bar startup stays snappy.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            AppUpdateService.shared.checkForUpdates(userInitiated: false)
+        }
+    }
+
+    private func showOnboardingIfNeeded() {
+        guard !coordinator.settings.hasCompletedOnboarding else { return }
+        OnboardingWindowController.shared.showOnboarding(coordinator: coordinator)
     }
 
     private func configureStatusItem() {

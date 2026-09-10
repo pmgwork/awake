@@ -20,7 +20,8 @@ struct HardwareStatusView: View {
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
 
-            VStack(spacing: 5) {
+            GroupBox {
+                VStack(spacing: 5) {
                 statusRow(
                     icon: sleepPreventionIcon,
                     title: "Sleep Prevention",
@@ -55,10 +56,8 @@ struct HardwareStatusView: View {
                     value: powerMonitor.powerSourceState.displayName,
                     valueColor: powerMonitor.isOnACPower ? .primary : .orange
                 )
+                }
             }
-            .padding(8)
-            .background(Color.secondary.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
 
             if let error = sleepManager.lastError {
                 Text(error)

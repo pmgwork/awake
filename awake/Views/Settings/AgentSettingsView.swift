@@ -13,104 +13,77 @@ struct AgentSettingsView: View {
     @State private var pendingAction: PendingAction?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("AI Agent Hook Integrations"))
-                    .font(.headline)
+        Form {
+            Section {
+                ForEach(settings.monitoredAgents.filter { $0.isPreset && $0.provider != nil }) { agent in
+                    providerRow(agent)
+                }
+            } header: {
+                Text(L10n.string("Supported Providers"))
+            } footer: {
+                Text(L10n.string("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active."))
             }
 
-            List {
-                Section(header: Text(L10n.string("Supported Providers"))) {
-                    ForEach(settings.monitoredAgents.filter { $0.isPreset && $0.provider != nil }) { agent in
-                        providerRow(agent)
-                    }
-                }
-
-                let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
-                if !customAgents.isEmpty {
-                    Section(header: Text(L10n.string("Saved Custom Agents"))) {
-                        ForEach(customAgents) { agent in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(agent.name).font(.system(size: 13, weight: .medium))
-                                    Text(L10n.string("Hook integration is required; custom agents are not available in this release."))
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Button {
-                                    settings.deleteAgent(id: agent.id)
-                                } label: {
-                                    Image(systemName: "trash")
-                                }
-                                .buttonStyle(.plain)
+            let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
+            if !customAgents.isEmpty {
+                Section(L10n.string("Saved Custom Agents")) {
+                    ForEach(customAgents) { agent in
+                        LabeledContent {
+                            Button(L10n.string("Delete"), role: .destructive) {
+                                settings.deleteAgent(id: agent.id)
+                            }
+                        } label: {
+                            VStack(alignment: .leading) {
+                                Text(agent.name)
+                                Text(L10n.string("Hook integration is required; custom agents are not available in this release."))
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
                 }
             }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(height: 285)
 
-            HStack {
-                Button(L10n.string("Reset Provider Selection")) { settings.resetToDefaults() }
-                    .foregroundColor(.secondary)
-                Spacer()
+            Section {
+                if eventMonitor.hasActiveSession {
+                    ForEach(activeProviders) { provider in
+                        LabeledContent {
+                            Text(L10n.format(
+                                "%d active",
+                                eventMonitor.activeSessionCountByProvider[provider, default: 0]
+                            ))
+                            .foregroundStyle(.green)
+                        } label: {
+                            Label(provider.displayName, systemImage: "bolt.fill")
+                        }
+                    }
+                } else {
+                    Text(L10n.string("No active agent sessions."))
+                        .foregroundStyle(.secondary)
+                }
+
                 Button {
                     eventMonitor.reloadNow()
                     integrationManager.refreshStatuses()
                 } label: {
                     Label(L10n.string("Refresh"), systemImage: "arrow.clockwise")
                 }
+            } header: {
+                Text(L10n.string("Current Activity"))
+            } footer: {
+                if let latestEventDate {
+                    Text(L10n.format("Last event %@", latestEventDate.formatted(.relative(presentation: .named))))
+                }
             }
 
             if let error = integrationManager.lastError {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundColor(.red)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(L10n.string("Hook Event Status"))
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(L10n.format("%d active sessions", eventMonitor.activeSessionCount))
-                        .font(.caption)
-                        .foregroundColor(eventMonitor.hasActiveSession ? .green : .secondary)
-                }
-                ForEach(AgentProvider.allCases) { provider in
-                    HStack {
-                        Circle()
-                            .fill(eventMonitor.activeSessionCountByProvider[provider, default: 0] > 0 ? Color.green : Color.gray.opacity(0.5))
-                            .frame(width: 6, height: 6)
-                        Text(provider.displayName).font(.caption.weight(.medium))
-                        Spacer()
-                        if let date = eventMonitor.lastEventAtByProvider[provider] {
-                            Text(L10n.format(
-                                "Last event %@",
-                                date.formatted(.relative(presentation: .named))
-                            ))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text(L10n.string("No events received"))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                Section {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
                 }
             }
-            .padding(10)
-            .background(Color.secondary.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .padding(20)
-        }
+        .formStyle(.grouped)
         .disabled(integrationManager.isWorking)
         .confirmationDialog(
             pendingAction?.title ?? L10n.string("Hook Integration"),
@@ -141,52 +114,78 @@ struct AgentSettingsView: View {
         let status = integrationManager.status(for: provider)
         let toolInstalled = integrationManager.isToolInstalled(provider)
         let activeCount = eventMonitor.activeSessionCountByProvider[provider, default: 0]
+        let canMonitor = toolInstalled && (status == .linked || status == .unverified)
         return HStack(spacing: 12) {
-            Toggle(isOn: Binding(
-                get: { agent.isEnabled },
-                set: { _ in settings.toggleAgent(id: agent.id) }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(provider.displayName)
-                        .font(.system(size: 13, weight: .medium))
-                    Text(toolInstalled ? "\(provider.integrationKind) · \(status.label)" : L10n.string("CLI not installed"))
-                        .font(.system(size: 10))
-                        .foregroundColor(toolInstalled ? (status == .linked ? .secondary : .orange) : .secondary)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(provider.displayName)
+                    .fontWeight(.medium)
+                Text(providerStatusText(provider, status: status, installed: toolInstalled, activeCount: activeCount))
+                    .font(.callout)
+                    .foregroundStyle(activeCount > 0 ? .green : .secondary)
             }
-            .toggleStyle(.checkbox)
 
             Spacer()
 
-            if activeCount > 0 {
-                Text(L10n.format("%d active", activeCount))
-                    .font(.caption2.bold())
-                    .foregroundColor(.green)
-            }
+            Toggle(L10n.format("Monitor %@", provider.displayName), isOn: Binding(
+                get: { canMonitor && agent.isEnabled },
+                set: { enabled in
+                    guard canMonitor, enabled != agent.isEnabled else { return }
+                    settings.toggleAgent(id: agent.id)
+                }
+            ))
+            .labelsHidden()
+            .disabled(!canMonitor)
+            .help(canMonitor
+                  ? L10n.format("Monitor %@", provider.displayName)
+                  : L10n.string("Link this provider before enabling monitoring."))
 
-            if status == .unlinked || status == .needsRepair {
-                Button(status == .needsRepair ? L10n.string("Repair") : L10n.string("Link")) {
-                    pendingAction = PendingAction(provider: provider, kind: .install)
-                }
-                .disabled(!toolInstalled)
-                .help(toolInstalled ? "" : L10n.string("CLI not installed"))
-            } else {
-                HStack(spacing: 6) {
-                    Button(L10n.string("Test")) { integrationManager.test(provider) }
-                    Menu {
-                        Button(L10n.string("Reinstall")) { pendingAction = PendingAction(provider: provider, kind: .install) }
-                            .disabled(!toolInstalled)
-                        Button(L10n.string("Unlink"), role: .destructive) { pendingAction = PendingAction(provider: provider, kind: .uninstall) }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .frame(width: 22, height: 22)
+            Menu {
+                if status == .unlinked || status == .needsRepair {
+                    Button(status == .needsRepair ? L10n.string("Repair") : L10n.string("Link")) {
+                        pendingAction = PendingAction(provider: provider, kind: .install)
                     }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
+                } else {
+                    Button(L10n.string("Test")) { integrationManager.test(provider) }
+                    Divider()
+                    Button(L10n.string("Reinstall")) {
+                        pendingAction = PendingAction(provider: provider, kind: .install)
+                    }
+                    Button(L10n.string("Unlink"), role: .destructive) {
+                        pendingAction = PendingAction(provider: provider, kind: .uninstall)
+                    }
                 }
+            } label: {
+                Label(L10n.string("Actions"), systemImage: "ellipsis.circle")
             }
+            .labelStyle(.iconOnly)
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .disabled(!toolInstalled)
+            .help(toolInstalled ? L10n.string("Actions") : L10n.string("CLI not installed"))
         }
-        .padding(.vertical, 3)
+    }
+
+    private var activeProviders: [AgentProvider] {
+        AgentProvider.allCases.filter {
+            eventMonitor.activeSessionCountByProvider[$0, default: 0] > 0
+        }
+    }
+
+    private var latestEventDate: Date? {
+        eventMonitor.lastEventAtByProvider.values.max()
+    }
+
+    private func providerStatusText(
+        _ provider: AgentProvider,
+        status: HookIntegrationStatus,
+        installed: Bool,
+        activeCount: Int
+    ) -> String {
+        guard installed else { return L10n.string("CLI not installed") }
+        let integration = "\(provider.integrationKind) · \(status.label)"
+        guard activeCount > 0 else { return integration }
+        return "\(L10n.format("%d active", activeCount)) · \(integration)"
     }
 
     private struct PendingAction: Identifiable {

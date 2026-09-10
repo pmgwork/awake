@@ -28,6 +28,9 @@ public final class SettingsStore: ObservableObject {
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
+        static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
+        static let automaticallyCheckForUpdates = "pmgwork.awake.automaticallyCheckForUpdates"
+        static let lastUpdateCheckAt = "pmgwork.awake.lastUpdateCheckAt"
     }
 
     @Published public var monitoredAgents: [MonitoredAgent] {
@@ -128,6 +131,20 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published public var hasCompletedOnboarding: Bool {
+        didSet {
+            UserDefaults.standard.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding)
+        }
+    }
+
+    @Published public var automaticallyCheckForUpdates: Bool {
+        didSet {
+            UserDefaults.standard.set(automaticallyCheckForUpdates, forKey: Keys.automaticallyCheckForUpdates)
+        }
+    }
+
+    @Published public private(set) var lastUpdateCheckAt: Date?
+
     private var isSynchronizingLaunchAtLogin = false
 
     private init() {
@@ -221,6 +238,16 @@ public final class SettingsStore: ObservableObject {
            let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {
             self.providerLastTestedAt = decoded
         }
+
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: Keys.hasCompletedOnboarding)
+
+        if UserDefaults.standard.object(forKey: Keys.automaticallyCheckForUpdates) != nil {
+            self.automaticallyCheckForUpdates = UserDefaults.standard.bool(forKey: Keys.automaticallyCheckForUpdates)
+        } else {
+            self.automaticallyCheckForUpdates = true
+        }
+
+        self.lastUpdateCheckAt = UserDefaults.standard.object(forKey: Keys.lastUpdateCheckAt) as? Date
     }
 
     private func saveAgents() {
@@ -270,6 +297,19 @@ public final class SettingsStore: ObservableObject {
     public func markProviderTested(_ provider: AgentProvider, at date: Date = Date()) {
         providerLastTestedAt[provider] = date
         saveProviderTestDates()
+    }
+
+    public func completeOnboarding() {
+        hasCompletedOnboarding = true
+    }
+
+    public func resetOnboardingForTesting() {
+        hasCompletedOnboarding = false
+    }
+
+    public func recordUpdateCheck(at date: Date = Date()) {
+        lastUpdateCheckAt = date
+        UserDefaults.standard.set(date, forKey: Keys.lastUpdateCheckAt)
     }
 
     public func clearProviderTest(_ provider: AgentProvider) {

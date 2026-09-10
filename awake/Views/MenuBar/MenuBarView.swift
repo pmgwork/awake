@@ -39,26 +39,18 @@ struct MenuBarView: View {
 
             Divider()
 
-            // Primary Toggle Action Button
             Button(action: {
                 coordinator.toggleKeepAwake()
             }) {
-                HStack {
-                    Spacer()
-                    Image(systemName: coordinator.isActive ? "stop.fill" : "play.fill")
-                        .font(.system(size: 12, weight: .bold))
-                    Text(coordinator.isActive
-                         ? L10n.string("Stop Keep Awake")
-                         : L10n.string("Start Keep Awake"))
-                        .font(.system(size: 13, weight: .semibold))
-                    Spacer()
-                }
-                .padding(.vertical, 8)
-                .background(coordinator.isActive ? Color.red.opacity(0.85) : Color.accentColor)
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                Label(
+                    coordinator.isActive ? L10n.string("Stop Keep Awake") : L10n.string("Start Keep Awake"),
+                    systemImage: coordinator.isActive ? "stop.fill" : "play.fill"
+                )
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(coordinator.isActive ? .red : .accentColor)
 
             // Bottom Footer
             HStack {
@@ -70,7 +62,7 @@ struct MenuBarView: View {
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
 
                 Spacer()
 
@@ -81,7 +73,7 @@ struct MenuBarView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
             }
             .padding(.top, 2)
         }

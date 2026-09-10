@@ -11,6 +11,7 @@
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1000000000000000000000F /* OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* OpenCodeAwakePlugin.ts */; };
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
+		A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* AppUpdateServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +37,7 @@
 		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000010 /* OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -119,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
+				A1000000000000000000001E /* AppUpdateServiceTests.swift */,
 			);
 			path = awakeTests;
 			sourceTree = "<group>";
@@ -260,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
+				A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

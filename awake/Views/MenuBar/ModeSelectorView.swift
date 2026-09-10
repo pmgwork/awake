@@ -19,23 +19,16 @@ struct ModeSelectorView: View {
                 .textCase(.uppercase)
 
             VStack(alignment: .leading, spacing: 6) {
-                // While Agent is Running
-                modeButton(
-                    type: .whileAgentRunning,
-                    title: L10n.string("While Agent is Running")
-                )
-
-                // Indefinitely
-                modeButton(
-                    type: .indefinitely,
-                    title: L10n.string("Indefinitely")
-                )
-
-                // For Duration (Timer)
-                modeButton(
-                    type: .timer,
-                    title: L10n.string("For Duration")
-                )
+                Picker("", selection: Binding(
+                    get: { settings.selectedMode },
+                    set: { coordinator.selectMode($0) }
+                )) {
+                    Text(L10n.string("While Agent is Running")).tag(KeepAwakeModeType.whileAgentRunning)
+                    Text(L10n.string("Indefinitely")).tag(KeepAwakeModeType.indefinitely)
+                    Text(L10n.string("For Duration")).tag(KeepAwakeModeType.timer)
+                }
+                .labelsHidden()
+                .pickerStyle(.radioGroup)
 
                 if settings.selectedMode == .timer {
                     timerPresetsGrid
@@ -52,28 +45,6 @@ struct ModeSelectorView: View {
         }
     }
 
-    private func modeButton(type: KeepAwakeModeType, title: String) -> some View {
-        Button(action: {
-            coordinator.selectMode(type)
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: settings.selectedMode == type ? "largecircle.fill.circle" : "circle")
-                    .foregroundColor(settings.selectedMode == type ? .accentColor : .secondary)
-                    .font(.system(size: 13))
-
-                Text(title)
-                    .font(.system(size: 13, weight: settings.selectedMode == type ? .medium : .regular))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-            }
-            .padding(.vertical, 2)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
     private var timerPresetsGrid: some View {
         VStack(alignment: .leading, spacing: 6) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -83,14 +54,10 @@ struct ModeSelectorView: View {
                             coordinator.setTimerDuration(preset.duration)
                         }) {
                             Text(preset.title)
-                                .font(.system(size: 10, weight: settings.selectedTimerDuration == preset.duration ? .bold : .regular))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(settings.selectedTimerDuration == preset.duration ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.1))
-                                .foregroundColor(settings.selectedTimerDuration == preset.duration ? .accentColor : .primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(settings.selectedTimerDuration == preset.duration ? .accentColor : nil)
                     }
                 }
             }
