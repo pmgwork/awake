@@ -16,6 +16,8 @@ public final class SettingsStore: ObservableObject {
         static let monitoredAgents = "pmgwork.awake.monitoredAgents"
         static let selectedMode = "pmgwork.awake.selectedMode"
         static let agentMonitoringEnabled = "pmgwork.awake.agentMonitoringEnabled"
+        static let downloadMonitoringEnabled = "pmgwork.awake.downloadMonitoringEnabled"
+        static let downloadFolderPath = "pmgwork.awake.downloadFolderPath"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
         static let closedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
         static let excludeNormalClamshell = "pmgwork.awake.excludeNormalClamshell"
@@ -51,6 +53,18 @@ public final class SettingsStore: ObservableObject {
     @Published public var agentMonitoringEnabled: Bool {
         didSet {
             UserDefaults.standard.set(agentMonitoringEnabled, forKey: Keys.agentMonitoringEnabled)
+        }
+    }
+
+    @Published public var downloadMonitoringEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(downloadMonitoringEnabled, forKey: Keys.downloadMonitoringEnabled)
+        }
+    }
+
+    @Published public var downloadFolderPath: String {
+        didSet {
+            UserDefaults.standard.set(downloadFolderPath, forKey: Keys.downloadFolderPath)
         }
     }
 
@@ -187,6 +201,14 @@ public final class SettingsStore: ObservableObject {
             self.agentMonitoringEnabled = true
         }
 
+        if UserDefaults.standard.object(forKey: Keys.downloadMonitoringEnabled) != nil {
+            self.downloadMonitoringEnabled = UserDefaults.standard.bool(forKey: Keys.downloadMonitoringEnabled)
+        } else {
+            self.downloadMonitoringEnabled = true
+        }
+        self.downloadFolderPath = UserDefaults.standard.string(forKey: Keys.downloadFolderPath)
+            ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
+
         // Timer Duration (default 2 hours)
         let savedDuration = UserDefaults.standard.double(forKey: Keys.selectedTimerDuration)
         self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 2 * 60 * 60
@@ -299,6 +321,8 @@ public final class SettingsStore: ObservableObject {
     public func resetToDefaults() {
         monitoredAgents = MonitoredAgent.defaultPresets
         agentMonitoringEnabled = true
+        downloadMonitoringEnabled = true
+        downloadFolderPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
         closedLidCoolingEnabled = true
         excludeNormalClamshell = true
         closedLidFanMode = .maximum

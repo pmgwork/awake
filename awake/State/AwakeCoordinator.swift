@@ -26,6 +26,7 @@ public final class AwakeCoordinator: ObservableObject {
     public let displayMonitor = DisplayMonitor.shared
     public let powerMonitor = PowerMonitor.shared
     public let eventMonitor = AgentEventMonitor.shared
+    public let downloadMonitor = DownloadMonitor.shared
     public let hookIntegrationManager = HookIntegrationManager.shared
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
@@ -34,6 +35,7 @@ public final class AwakeCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
     private var wasAgentRunning: Bool = false
+    private var wasDownloading: Bool = false
 
     private enum PersistenceKeys {
         static let timerEndDate = "pmgwork.awake.activeTimerEndDate"
@@ -41,6 +43,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     private init() {
         eventMonitor.updateEnabledProviders(settings.enabledProviders)
+        downloadMonitor.updateFolder(path: settings.downloadFolderPath)
         setupSubscriptions()
         startHeartbeat()
         restorePersistedTimerIfNeeded()
@@ -58,6 +61,14 @@ public final class AwakeCoordinator: ObservableObject {
                 statusMessage = settings.agentMonitoringEnabled
                     ? L10n.string("Waiting for Monitored Agent...")
                     : L10n.string("Agent Monitoring Paused")
+                return
+            }
+        }
+        if settings.selectedMode == .whileDownloading {
+            guard settings.downloadMonitoringEnabled, downloadMonitor.isDownloading else {
+                statusMessage = settings.downloadMonitoringEnabled
+                    ? L10n.string("Waiting for Download...")
+                    : L10n.string("Download Monitoring Paused")
                 return
             }
         }
@@ -85,6 +96,9 @@ public final class AwakeCoordinator: ObservableObject {
             setTimerEndDate(Date().addingTimeInterval(settings.selectedTimerDuration))
             updateRemainingTimerSeconds()
             statusMessage = L10n.format("Keep Awake Active (Timer: %@)", formattedRemainingTime)
+        case .whileDownloading:
+            isActive = true
+            statusMessage = L10n.string("Download Running: Keep Awake Active")
         }
 
         evaluateState()
@@ -121,9 +135,12 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     public func togglePrimaryAction() {
-        if settings.selectedMode == .whileAgentRunning {
+        switch settings.selectedMode {
+        case .whileAgentRunning:
             setAgentMonitoringEnabled(!settings.agentMonitoringEnabled)
-        } else {
+        case .whileDownloading:
+            setDownloadMonitoringEnabled(!settings.downloadMonitoringEnabled)
+        case .indefinitely, .timer:
             toggleKeepAwake()
         }
     }
@@ -149,6 +166,25 @@ public final class AwakeCoordinator: ObservableObject {
         }
     }
 
+    public func setDownloadMonitoringEnabled(_ enabled: Bool) {
+        guard settings.downloadMonitoringEnabled != enabled else { return }
+        settings.downloadMonitoringEnabled = enabled
+
+        if enabled {
+            statusMessage = L10n.string("Waiting for Download...")
+            if downloadMonitor.isDownloading {
+                startKeepAwake()
+            } else {
+                evaluateState()
+            }
+        } else if isActive && settings.selectedMode == .whileDownloading {
+            stopKeepAwake(reason: L10n.string("Download monitoring was paused."), manual: true)
+        } else {
+            statusMessage = L10n.string("Download Monitoring Paused")
+            evaluateState()
+        }
+    }
+
     public func selectMode(_ mode: KeepAwakeModeType) {
         guard settings.selectedMode != mode else { return }
 
@@ -158,7 +194,10 @@ public final class AwakeCoordinator: ObservableObject {
 
         settings.selectedMode = mode
         wasAgentRunning = mode == .whileAgentRunning && eventMonitor.hasActiveSession
+        wasDownloading = mode == .whileDownloading && downloadMonitor.isDownloading
         if mode == .whileAgentRunning && settings.agentMonitoringEnabled && eventMonitor.hasActiveSession {
+            startKeepAwake()
+        } else if mode == .whileDownloading && settings.downloadMonitoringEnabled && downloadMonitor.isDownloading {
             startKeepAwake()
         } else {
             evaluateState()
@@ -194,6 +233,11 @@ public final class AwakeCoordinator: ObservableObject {
                     ? L10n.string("Monitoring (Waiting for Agent)")
                     : L10n.string("Agent Monitoring Paused")
             }
+            if settings.selectedMode == .whileDownloading {
+                return settings.downloadMonitoringEnabled
+                    ? L10n.string("Monitoring (Waiting for Download)")
+                    : L10n.string("Download Monitoring Paused")
+            }
             return L10n.string("Idle")
         }
         switch settings.selectedMode {
@@ -207,6 +251,8 @@ public final class AwakeCoordinator: ObservableObject {
             return L10n.string("Active (Indefinitely)")
         case .timer:
             return L10n.format("Active (%@)", formattedRemainingTime)
+        case .whileDownloading:
+            return L10n.format("Downloading (%d)", downloadMonitor.activeDownloadCount)
         }
     }
 
@@ -238,6 +284,16 @@ public final class AwakeCoordinator: ObservableObject {
             wasAgentRunning = eventMonitor.hasActiveSession
         }
 
+        if isActive && settings.selectedMode == .whileDownloading {
+            if wasDownloading && !downloadMonitor.isDownloading {
+                NSLog("[AwakeCoordinator] Downloads completed. Stopping Keep Awake.")
+                wasDownloading = false
+                stopKeepAwake(reason: L10n.string("All downloads finished."))
+                return
+            }
+            wasDownloading = downloadMonitor.isDownloading
+        }
+
         // Check Timer completion
         if isActive && settings.selectedMode == .timer {
             updateRemainingTimerSeconds()
@@ -261,6 +317,15 @@ public final class AwakeCoordinator: ObservableObject {
         if settings.selectedMode == .whileAgentRunning && !eventMonitor.hasActiveSession {
             transition(to: .idle)
             statusMessage = L10n.string("Waiting for Monitored Agent...")
+            sleepManager.disableSleepPrevention()
+            if !fanController.isTestModeActive {
+                fanController.restoreAuto()
+            }
+            return
+        }
+        if settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading {
+            transition(to: .idle)
+            statusMessage = L10n.string("Waiting for Download...")
             sleepManager.disableSleepPrevention()
             if !fanController.isTestModeActive {
                 fanController.restoreAuto()
@@ -349,6 +414,30 @@ public final class AwakeCoordinator: ObservableObject {
                     coordinator.startKeepAwake()
                 }
                 coordinator.evaluateState()
+            }
+            .store(in: &cancellables)
+
+        downloadMonitor.$isDownloading
+            .receive(on: DispatchQueue.main)
+            .sink { downloading in
+                let coordinator = AwakeCoordinator.shared
+                if !coordinator.isActive &&
+                    coordinator.settings.selectedMode == .whileDownloading &&
+                    coordinator.settings.downloadMonitoringEnabled &&
+                    downloading &&
+                    !coordinator.isLowBatteryCutoffActive {
+                    NSLog("[AwakeCoordinator] Download detected, auto-starting Keep Awake.")
+                    coordinator.startKeepAwake()
+                }
+                coordinator.evaluateState()
+            }
+            .store(in: &cancellables)
+
+        settings.$downloadFolderPath
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { path in
+                AwakeCoordinator.shared.downloadMonitor.updateFolder(path: path)
             }
             .store(in: &cancellables)
 
@@ -470,6 +559,8 @@ public final class AwakeCoordinator: ObservableObject {
             return L10n.string("Mode: Indefinitely")
         case .timer:
             return L10n.format("Mode: Timer (%@)", formattedRemainingTime)
+        case .whileDownloading:
+            return L10n.string("Mode: While Downloading")
         }
     }
 

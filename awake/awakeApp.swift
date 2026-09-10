@@ -129,7 +129,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
         let image = NSImage(named: NSImage.Name(iconName))
         image?.size = NSSize(width: 21, height: 16.8)
-        if isAgentMonitoring, let image {
+        if isAutomaticMonitoring, let image {
             button.image = image.tinted(with: .systemOrange)
         } else {
             image?.isTemplate = true
@@ -163,9 +163,15 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private var isAgentMonitoring: Bool {
-        coordinator.settings.selectedMode == .whileAgentRunning &&
-            coordinator.settings.agentMonitoringEnabled
+    private var isAutomaticMonitoring: Bool {
+        switch coordinator.settings.selectedMode {
+        case .whileAgentRunning:
+            return coordinator.settings.agentMonitoringEnabled
+        case .whileDownloading:
+            return coordinator.settings.downloadMonitoringEnabled
+        case .indefinitely, .timer:
+            return false
+        }
     }
 
     private var settingsToolTip: String {
@@ -174,12 +180,22 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
                 ? L10n.string("Left-click for menu, right-click to pause agent monitoring")
                 : L10n.string("Left-click for menu, right-click to resume agent monitoring")
         }
+        if coordinator.settings.selectedMode == .whileDownloading {
+            return coordinator.settings.downloadMonitoringEnabled
+                ? L10n.string("Left-click for menu, right-click to pause download monitoring")
+                : L10n.string("Left-click for menu, right-click to resume download monitoring")
+        }
         return L10n.string("Left-click for menu, right-click to toggle Awake")
     }
 
     private var accessibilityStatus: String {
         if coordinator.settings.selectedMode == .whileAgentRunning && !coordinator.isActive {
             return coordinator.settings.agentMonitoringEnabled
+                ? L10n.string("Monitoring")
+                : L10n.string("Monitoring Paused")
+        }
+        if coordinator.settings.selectedMode == .whileDownloading && !coordinator.isActive {
+            return coordinator.settings.downloadMonitoringEnabled
                 ? L10n.string("Monitoring")
                 : L10n.string("Monitoring Paused")
         }

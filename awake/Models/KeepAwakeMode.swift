@@ -9,6 +9,7 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
     case whileAgentRunning = "whileAgentRunning"
     case indefinitely = "indefinitely"
     case timer = "timer"
+    case whileDownloading = "whileDownloading"
 
     public var id: String { rawValue }
 
@@ -20,6 +21,8 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
             return L10n.string("Indefinitely")
         case .timer:
             return L10n.string("For Duration")
+        case .whileDownloading:
+            return L10n.string("While Downloading")
         }
     }
 
@@ -31,6 +34,8 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
             return "ずっと"
         case .timer:
             return "時間制限"
+        case .whileDownloading:
+            return "ダウンロード中"
         }
     }
 
@@ -42,6 +47,8 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
             return "infinity"
         case .timer:
             return "timer"
+        case .whileDownloading:
+            return "arrow.down.circle"
         }
     }
 }

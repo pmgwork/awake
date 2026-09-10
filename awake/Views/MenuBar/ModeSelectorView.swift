@@ -25,6 +25,7 @@ struct ModeSelectorView: View {
                 )) {
                     Text(L10n.string("Indefinitely")).tag(KeepAwakeModeType.indefinitely)
                     Text(L10n.string("For Duration")).tag(KeepAwakeModeType.timer)
+                    Text(L10n.string("While Downloading")).tag(KeepAwakeModeType.whileDownloading)
                     Text(L10n.string("While Agent is Running")).tag(KeepAwakeModeType.whileAgentRunning)
                 }
                 .labelsHidden()

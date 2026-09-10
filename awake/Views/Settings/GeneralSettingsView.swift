@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import AppKit
 
 struct GeneralSettingsView: View {
     @ObservedObject var settings: SettingsStore
@@ -39,6 +40,26 @@ struct GeneralSettingsView: View {
                 Text(L10n.string("Display During Sessions"))
             } footer: {
                 Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))
+            }
+
+            Section {
+                LabeledContent {
+                    HStack {
+                        Text(settings.downloadFolderPath)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Button(L10n.string("Choose...")) {
+                            chooseDownloadFolder()
+                        }
+                    }
+                } label: {
+                    Text(L10n.string("Monitored Folder"))
+                }
+            } header: {
+                Text(L10n.string("Download Monitoring"))
+            } footer: {
+                Text(L10n.string("Awake detects unfinished Chrome, Safari, Firefox, Edge, Brave, and Opera downloads in this folder."))
             }
 
             Section {
@@ -92,6 +113,19 @@ struct GeneralSettingsView: View {
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+    }
+
+    private func chooseDownloadFolder() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.string("Choose Download Folder")
+        panel.prompt = L10n.string("Choose")
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: settings.downloadFolderPath, isDirectory: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            settings.downloadFolderPath = url.path
+        }
     }
 
     @ViewBuilder

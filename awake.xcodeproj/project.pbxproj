@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* main.swift */; };
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		A1000000000000000000000F /* OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* OpenCodeAwakePlugin.ts */; };
+		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
 		A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* AppUpdateServiceTests.swift */; };
 /* End PBXBuildFile section */
@@ -31,48 +31,6 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXFileReference section */
-		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000010 /* OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
-		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
-		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		D198EB4B303EB1D10004E0F5 /* awake */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = awake;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		D198EB46303EB1D10004E0F5 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A10000000000000000000007 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A10000000000000000000015 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXCopyFilesBuildPhase section */
 		A10000000000000000000008 /* Embed Hook Bridge */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -87,28 +45,49 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 
+/* Begin PBXFileReference section */
+		A10000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
+		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D198EB4B303EB1D10004E0F5 /* awake */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = awake;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000015 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D198EB46303EB1D10004E0F5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
-		D198EB40303EB1D10004E0F5 = {
-			isa = PBXGroup;
-			children = (
-				D198EB4B303EB1D10004E0F5 /* awake */,
-				A10000000000000000000009 /* AwakeHookBridge */,
-				A10000000000000000000010 /* OpenCodeAwakePlugin.ts */,
-				A10000000000000000000014 /* awakeTests */,
-				D198EB4A303EB1D10004E0F5 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		D198EB4A303EB1D10004E0F5 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D198EB49303EB1D10004E0F5 /* awake.app */,
-				A10000000000000000000004 /* AwakeHookBridge */,
-				A10000000000000000000013 /* awakeTests.xctest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 		A10000000000000000000009 /* AwakeHookBridge */ = {
 			isa = PBXGroup;
 			children = (
@@ -126,33 +105,30 @@
 			path = awakeTests;
 			sourceTree = "<group>";
 		};
+		D198EB40303EB1D10004E0F5 = {
+			isa = PBXGroup;
+			children = (
+				D198EB4B303EB1D10004E0F5 /* awake */,
+				A10000000000000000000009 /* AwakeHookBridge */,
+				A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */,
+				A10000000000000000000014 /* awakeTests */,
+				D198EB4A303EB1D10004E0F5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D198EB4A303EB1D10004E0F5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D198EB49303EB1D10004E0F5 /* awake.app */,
+				A10000000000000000000004 /* AwakeHookBridge */,
+				A10000000000000000000013 /* awakeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D198EB48303EB1D10004E0F5 /* awake */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D198EB54303EB1D20004E0F5 /* Build configuration list for PBXNativeTarget "awake" */;
-			buildPhases = (
-				D198EB45303EB1D10004E0F5 /* Sources */,
-				D198EB46303EB1D10004E0F5 /* Frameworks */,
-				D198EB47303EB1D10004E0F5 /* Resources */,
-				A10000000000000000000008 /* Embed Hook Bridge */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A1000000000000000000000A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				D198EB4B303EB1D10004E0F5 /* awake */,
-			);
-			name = awake;
-			packageProductDependencies = (
-			);
-			productName = awake;
-			productReference = D198EB49303EB1D10004E0F5 /* awake.app */;
-			productType = "com.apple.product-type.application";
-		};
 		A10000000000000000000006 /* AwakeHookBridge */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A1000000000000000000000B /* Build configuration list for PBXNativeTarget "AwakeHookBridge" */;
@@ -189,6 +165,30 @@
 			productName = awakeTests;
 			productReference = A10000000000000000000013 /* awakeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D198EB48303EB1D10004E0F5 /* awake */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D198EB54303EB1D20004E0F5 /* Build configuration list for PBXNativeTarget "awake" */;
+			buildPhases = (
+				D198EB45303EB1D10004E0F5 /* Sources */,
+				D198EB46303EB1D10004E0F5 /* Frameworks */,
+				D198EB47303EB1D10004E0F5 /* Resources */,
+				A10000000000000000000008 /* Embed Hook Bridge */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000000000000000000A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D198EB4B303EB1D10004E0F5 /* awake */,
+			);
+			name = awake;
+			packageProductDependencies = (
+			);
+			productName = awake;
+			productReference = D198EB49303EB1D10004E0F5 /* awake.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -236,20 +236,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000000000000000000000F /* OpenCodeAwakePlugin.ts in Resources */,
+				A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D198EB45303EB1D10004E0F5 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		A1000000000000000000000C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -264,6 +257,13 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D198EB45303EB1D10004E0F5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,6 +283,60 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A1000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeHookBridge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeHookBridge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A10000000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.awakeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/awake.app/Contents/MacOS/awake";
+			};
+			name = Debug;
+		};
+		A1000000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.awakeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/awake.app/Contents/MacOS/awake";
+			};
+			name = Release;
+		};
 		D198EB52303EB1D20004E0F5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -471,81 +525,9 @@
 			};
 			name = Release;
 		};
-		A1000000000000000000000D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MMQS9J58YW;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeHookBridge;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		A1000000000000000000000E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MMQS9J58YW;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeHookBridge;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-		A10000000000000000000019 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MMQS9J58YW;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.awakeTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/awake.app/Contents/MacOS/awake";
-			};
-			name = Debug;
-		};
-		A1000000000000000000001A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MMQS9J58YW;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.awakeTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/awake.app/Contents/MacOS/awake";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D198EB44303EB1D10004E0F5 /* Build configuration list for PBXProject "awake" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D198EB52303EB1D20004E0F5 /* Debug */,
-				D198EB53303EB1D20004E0F5 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D198EB54303EB1D20004E0F5 /* Build configuration list for PBXNativeTarget "awake" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D198EB55303EB1D20004E0F5 /* Debug */,
-				D198EB56303EB1D20004E0F5 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		A1000000000000000000000B /* Build configuration list for PBXNativeTarget "AwakeHookBridge" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -560,6 +542,24 @@
 			buildConfigurations = (
 				A10000000000000000000019 /* Debug */,
 				A1000000000000000000001A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D198EB44303EB1D10004E0F5 /* Build configuration list for PBXProject "awake" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D198EB52303EB1D20004E0F5 /* Debug */,
+				D198EB53303EB1D20004E0F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D198EB54303EB1D20004E0F5 /* Build configuration list for PBXNativeTarget "awake" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D198EB55303EB1D20004E0F5 /* Debug */,
+				D198EB56303EB1D20004E0F5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

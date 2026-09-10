@@ -5,6 +5,7 @@
 "While Agent is Running" = "エージェント実行中";
 "Indefinitely" = "無期限";
 "For Duration" = "時間を指定";
+"While Downloading" = "ダウンロード中";
 "Start Keep Awake" = "スリープ防止を開始";
 "Stop Keep Awake" = "スリープ防止を停止";
 "Settings..." = "設定…";
@@ -130,6 +131,7 @@
 "All monitored agents finished." = "監視対象のエージェントがすべて終了しました。";
 "Timer period completed." = "タイマーが終了しました。";
 "Mode: Timer (%@)" = "モード：タイマー（%@）";
+"Mode: While Downloading" = "モード：ダウンロード中";
 "Ends at %@" = "%@に終了";
 "Returns to Auto in %d seconds" = "%d秒後に自動制御へ戻ります";
 "Fan test automatically returns to Auto after 60 seconds." = "ファンテストは60秒後に自動制御へ戻ります。";
@@ -171,6 +173,26 @@
 "Monitoring Paused" = "監視一時停止中";
 "Left-click for menu, right-click to pause agent monitoring" = "左クリックでメニュー、右クリックでエージェント監視を一時停止";
 "Left-click for menu, right-click to resume agent monitoring" = "左クリックでメニュー、右クリックでエージェント監視を再開";
+"Waiting for Download..." = "ダウンロードを待機中…";
+"Download Monitoring Paused" = "ダウンロード監視を一時停止中";
+"Download monitoring was paused." = "ダウンロード監視を一時停止しました。";
+"Download Running: Keep Awake Active" = "ダウンロード中：スリープ防止が有効";
+"Monitoring (Waiting for Download)" = "監視中（ダウンロード待機中）";
+"Downloading (%d)" = "ダウンロード中（%d件）";
+"All downloads finished." = "すべてのダウンロードが完了しました。";
+"Pause Download Monitoring" = "ダウンロード監視を一時停止";
+"Resume Download Monitoring" = "ダウンロード監視を再開";
+"Left-click for menu, right-click to pause download monitoring" = "左クリックでメニュー、右クリックでダウンロード監視を一時停止";
+"Left-click for menu, right-click to resume download monitoring" = "左クリックでメニュー、右クリックでダウンロード監視を再開";
+"Downloads" = "ダウンロード";
+"%d downloading" = "%d件ダウンロード中";
+"No active downloads." = "進行中のダウンロードはありません。";
+"Download Monitoring" = "ダウンロード監視";
+"Monitored Folder" = "監視フォルダ";
+"Choose..." = "選択…";
+"Choose" = "選択";
+"Choose Download Folder" = "ダウンロードフォルダを選択";
+"Awake detects unfinished Chrome, Safari, Firefox, Edge, Brave, and Opera downloads in this folder." = "このフォルダ内にあるChrome、Safari、Firefox、Edge、Brave、Operaの未完了ダウンロードを検出します。";
 
 "AI Agent Hook Integrations" = "AIエージェント連携";
 "Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active." = "Awakeは連携済みエージェントのライフサイクルイベントにのみ反応します。CLIプロセスの実行だけでは有効になりません。";
