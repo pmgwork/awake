@@ -21,12 +21,27 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
                 }
                 Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
-                Toggle(L10n.string("Disable Sleep Prevention at 20% Battery or Below When Unplugged"), isOn: $settings.stopAtLowBattery)
-                Text(L10n.string("Stops active sleep prevention and blocks it from starting while this condition applies. Agent detection continues, but the menu bar cup has no steam."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Picker(L10n.string("Battery Cutoff When Unplugged"), selection: $settings.lowBatteryThreshold) {
+                    Text(L10n.string("Off")).tag(0)
+                    ForEach([5, 10, 15, 20, 25], id: \.self) { threshold in
+                        Text("\(threshold)%").tag(threshold)
+                    }
+                }
             } header: {
                 Text(L10n.string("General Preferences"))
+            }
+
+            Section {
+                Picker(L10n.string("Keep Awake After Completion"), selection: $settings.completionGraceDuration) {
+                    Text(L10n.string("No Grace Period")).tag(TimeInterval(0))
+                    Text(L10n.string("1 minute")).tag(TimeInterval(60))
+                    Text(L10n.string("3 minutes")).tag(TimeInterval(180))
+                    Text(L10n.string("5 minutes")).tag(TimeInterval(300))
+                }
+            } header: {
+                Text(L10n.string("Completion Grace Period"))
+            } footer: {
+                Text(L10n.string("Applies to agents and downloads."))
             }
 
             Section {
@@ -62,7 +77,7 @@ struct GeneralSettingsView: View {
             } header: {
                 Text(L10n.string("Download Monitoring"))
             } footer: {
-                Text(L10n.string("Awake detects unfinished Chrome, Safari, Firefox, Edge, Brave, and Opera downloads in this folder."))
+                Text(L10n.string("Detects unfinished downloads in this folder."))
             }
 
             Section {

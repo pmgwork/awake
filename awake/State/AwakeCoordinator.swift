@@ -16,6 +16,8 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var currentExecutionState: AppExecutionState = .idle
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
+    @Published public private(set) var completionGraceEndDate: Date?
+    @Published public private(set) var remainingGraceSeconds: Int = 0
     @Published public private(set) var lastStateChange: Date = Date()
     @Published public private(set) var statusMessage: String = L10n.string("Idle")
 
@@ -34,8 +36,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
-    private var wasAgentRunning: Bool = false
-    private var wasDownloading: Bool = false
+    private var completionGrace = CompletionGracePeriod()
 
     private enum PersistenceKeys {
         static let timerEndDate = "pmgwork.awake.activeTimerEndDate"
@@ -73,12 +74,7 @@ public final class AwakeCoordinator: ObservableObject {
             }
         }
         guard !isLowBatteryCutoffActive else {
-            statusMessage = L10n.string("Keep Awake Blocked (Battery 20% or Lower)")
-            sendNotification(
-                title: L10n.string("Keep Awake Blocked"),
-                body: statusMessage,
-                identifier: "awake-low-battery-blocked"
-            )
+            statusMessage = L10n.format("Keep Awake Blocked (Battery %d%% or Lower)", settings.lowBatteryThreshold)
             return
         }
 
@@ -102,33 +98,34 @@ public final class AwakeCoordinator: ObservableObject {
         }
 
         evaluateState()
-        sendNotification(
-            title: L10n.string("Keep Awake Activated"),
-            body: notificationDescriptionForCurrentMode,
-            identifier: "awake-activated-\(UUID().uuidString)"
-        )
     }
 
-    public func stopKeepAwake(reason: String? = nil, manual: Bool = false) {
+    // Only download completion, timer expiry, and battery cutoff opt into notifications.
+    public func stopKeepAwake(reason: String? = nil, notify: Bool = false) {
         guard isActive else { return }
 
         let stopReason = reason ?? L10n.string("Awake is no longer preventing system sleep.")
         isActive = false
+        completionGrace.reset()
+        completionGraceEndDate = nil
+        remainingGraceSeconds = 0
         remainingTimerSeconds = 0
         setTimerEndDate(nil)
         statusMessage = L10n.string("Keep Awake Stopped")
 
         evaluateState()
-        sendNotification(
-            title: L10n.string("Keep Awake Deactivated"),
-            body: stopReason,
-            identifier: "awake-deactivated-\(UUID().uuidString)"
-        )
+        if notify {
+            sendNotification(
+                title: L10n.string("Keep Awake Deactivated"),
+                body: stopReason,
+                identifier: "awake-deactivated-\(UUID().uuidString)"
+            )
+        }
     }
 
     public func toggleKeepAwake() {
         if isActive {
-            stopKeepAwake(reason: L10n.string("Manually stopped by user."), manual: true)
+            stopKeepAwake(reason: L10n.string("Manually stopped by user."))
         } else {
             startKeepAwake()
         }
@@ -158,7 +155,7 @@ public final class AwakeCoordinator: ObservableObject {
             }
         } else {
             if isActive && settings.selectedMode == .whileAgentRunning {
-                stopKeepAwake(reason: L10n.string("Agent monitoring was paused."), manual: true)
+                stopKeepAwake(reason: L10n.string("Agent monitoring was paused."))
             } else {
                 statusMessage = L10n.string("Agent Monitoring Paused")
                 evaluateState()
@@ -178,7 +175,7 @@ public final class AwakeCoordinator: ObservableObject {
                 evaluateState()
             }
         } else if isActive && settings.selectedMode == .whileDownloading {
-            stopKeepAwake(reason: L10n.string("Download monitoring was paused."), manual: true)
+            stopKeepAwake(reason: L10n.string("Download monitoring was paused."))
         } else {
             statusMessage = L10n.string("Download Monitoring Paused")
             evaluateState()
@@ -189,12 +186,10 @@ public final class AwakeCoordinator: ObservableObject {
         guard settings.selectedMode != mode else { return }
 
         if isActive {
-            stopKeepAwake(reason: nil)
+            stopKeepAwake()
         }
 
         settings.selectedMode = mode
-        wasAgentRunning = mode == .whileAgentRunning && eventMonitor.hasActiveSession
-        wasDownloading = mode == .whileDownloading && downloadMonitor.isDownloading
         if mode == .whileAgentRunning && settings.agentMonitoringEnabled && eventMonitor.hasActiveSession {
             startKeepAwake()
         } else if mode == .whileDownloading && settings.downloadMonitoringEnabled && downloadMonitor.isDownloading {
@@ -227,6 +222,9 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     public var formattedMenuStatus: String {
+        if completionGraceEndDate != nil {
+            return formattedGraceStatus
+        }
         if !isActive {
             if settings.selectedMode == .whileAgentRunning {
                 return settings.agentMonitoringEnabled
@@ -257,6 +255,10 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     // MARK: - State Machine Evaluation
+    public var formattedGraceStatus: String {
+        L10n.format("Releasing in %@", String(format: "%d:%02d", remainingGraceSeconds / 60, remainingGraceSeconds % 60))
+    }
+
     public func evaluateState() {
         defer { applyScreenBehaviorPolicy() }
         // Global battery fail-safe: turn off Awake in every mode and restore
@@ -267,31 +269,30 @@ public final class AwakeCoordinator: ObservableObject {
             }
             if isActive, let batteryLevel = powerMonitor.batteryLevel {
                 NSLog("[AwakeCoordinator] Battery reached %d%%. Turning Awake off.", batteryLevel)
-                stopKeepAwake(reason: L10n.format("Battery reached %d%%. Awake was turned off.", batteryLevel))
+                stopKeepAwake(reason: L10n.format("Battery reached %d%%. Awake was turned off.", batteryLevel), notify: true)
                 return
             }
         }
 
-        // Check Agent Mode completion
-        if isActive && settings.selectedMode == .whileAgentRunning {
-            if wasAgentRunning && !eventMonitor.hasActiveSession {
-                // All monitored agents just stopped!
-                NSLog("[AwakeCoordinator] Monitored agents terminated. Stopping Keep Awake.")
-                wasAgentRunning = false
-                stopKeepAwake(reason: L10n.string("All monitored agents finished."))
-                return
+        if isActive && (settings.selectedMode == .whileAgentRunning || settings.selectedMode == .whileDownloading) {
+            let isAgentMode = settings.selectedMode == .whileAgentRunning
+            let isRunning = isAgentMode ? eventMonitor.hasActiveSession : downloadMonitor.isDownloading
+            let now = Date()
+            completionGrace.update(isRunning: isRunning, now: now)
+            completionGraceEndDate = completionGrace.endDate(duration: settings.completionGraceDuration)
+            remainingGraceSeconds = completionGrace.remainingSeconds(duration: settings.completionGraceDuration, now: now)
+            if isRunning {
+                statusMessage = L10n.string(isAgentMode ? "Agent Running: Keep Awake Active" : "Download Running: Keep Awake Active")
+            } else {
+                statusMessage = formattedGraceStatus
+                if remainingGraceSeconds == 0 {
+                    stopKeepAwake(
+                        reason: L10n.string(isAgentMode ? "All monitored agents finished." : "All downloads finished."),
+                        notify: !isAgentMode
+                    )
+                    return
+                }
             }
-            wasAgentRunning = eventMonitor.hasActiveSession
-        }
-
-        if isActive && settings.selectedMode == .whileDownloading {
-            if wasDownloading && !downloadMonitor.isDownloading {
-                NSLog("[AwakeCoordinator] Downloads completed. Stopping Keep Awake.")
-                wasDownloading = false
-                stopKeepAwake(reason: L10n.string("All downloads finished."))
-                return
-            }
-            wasDownloading = downloadMonitor.isDownloading
         }
 
         // Check Timer completion
@@ -299,7 +300,7 @@ public final class AwakeCoordinator: ObservableObject {
             updateRemainingTimerSeconds()
             if remainingTimerSeconds <= 0 {
                 NSLog("[AwakeCoordinator] Timer expired. Stopping Keep Awake.")
-                stopKeepAwake(reason: L10n.string("Timer period completed."))
+                stopKeepAwake(reason: L10n.string("Timer period completed."), notify: true)
                 return
             }
         }
@@ -314,7 +315,7 @@ public final class AwakeCoordinator: ObservableObject {
             return
         }
 
-        if settings.selectedMode == .whileAgentRunning && !eventMonitor.hasActiveSession {
+        if settings.selectedMode == .whileAgentRunning && !eventMonitor.hasActiveSession && completionGraceEndDate == nil {
             transition(to: .idle)
             statusMessage = L10n.string("Waiting for Monitored Agent...")
             sleepManager.disableSleepPrevention()
@@ -323,7 +324,7 @@ public final class AwakeCoordinator: ObservableObject {
             }
             return
         }
-        if settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading {
+        if settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading && completionGraceEndDate == nil {
             transition(to: .idle)
             statusMessage = L10n.string("Waiting for Download...")
             sleepManager.disableSleepPrevention()
@@ -473,34 +474,6 @@ public final class AwakeCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        fanController.$controlError
-            .compactMap { $0 }
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { error in
-                AwakeCoordinator.shared.sendNotification(
-                    title: L10n.string("Fan Control Failed"),
-                    body: error,
-                    identifier: "awake-fan-control-error"
-                )
-            }
-            .store(in: &cancellables)
-
-        sleepManager.$health
-            .removeDuplicates()
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { health in
-                guard health == .degraded || health == .failed else { return }
-                let coordinator = AwakeCoordinator.shared
-                coordinator.sendNotification(
-                    title: L10n.string("Sleep Prevention Problem"),
-                    body: coordinator.sleepManager.lastError ?? health.displayName,
-                    identifier: "awake-sleep-prevention-error"
-                )
-            }
-            .store(in: &cancellables)
-
         Publishers.CombineLatest(
             settings.$preventDisplaySleep,
             settings.$preventScreenSaver
@@ -511,18 +484,6 @@ public final class AwakeCoordinator: ObservableObject {
         }
         .store(in: &cancellables)
 
-        screenBehaviorManager.$lastError
-            .compactMap { $0 }
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { error in
-                AwakeCoordinator.shared.sendNotification(
-                    title: L10n.string("Display Control Problem"),
-                    body: error,
-                    identifier: "awake-screen-behavior-error"
-                )
-            }
-            .store(in: &cancellables)
     }
 
     private func startHeartbeat() {
@@ -538,9 +499,9 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private var isLowBatteryCutoffActive: Bool {
-        settings.stopAtLowBattery &&
+        settings.lowBatteryThreshold > 0 &&
             !powerMonitor.isOnACPower &&
-            (powerMonitor.batteryLevel ?? 100) <= 20
+            (powerMonitor.batteryLevel ?? 100) <= settings.lowBatteryThreshold
     }
 
     private func applyScreenBehaviorPolicy() {
@@ -549,19 +510,6 @@ public final class AwakeCoordinator: ObservableObject {
             preventDisplaySleep: settings.preventDisplaySleep,
             preventScreenSaver: settings.preventScreenSaver
         )
-    }
-
-    private var notificationDescriptionForCurrentMode: String {
-        switch settings.selectedMode {
-        case .whileAgentRunning:
-            return L10n.string("Mode: While Agent is Running")
-        case .indefinitely:
-            return L10n.string("Mode: Indefinitely")
-        case .timer:
-            return L10n.format("Mode: Timer (%@)", formattedRemainingTime)
-        case .whileDownloading:
-            return L10n.string("Mode: While Downloading")
-        }
     }
 
     private func sendNotification(title: String, body: String, identifier: String) {
@@ -609,11 +557,7 @@ public final class AwakeCoordinator: ObservableObject {
         }
         guard !isLowBatteryCutoffActive else {
             setTimerEndDate(nil)
-            sendNotification(
-                title: L10n.string("Keep Awake Blocked"),
-                body: L10n.string("Keep Awake Blocked (Battery 20% or Lower)"),
-                identifier: "awake-low-battery-blocked"
-            )
+            statusMessage = L10n.format("Keep Awake Blocked (Battery %d%% or Lower)", settings.lowBatteryThreshold)
             return
         }
 

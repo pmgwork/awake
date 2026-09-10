@@ -27,6 +27,15 @@ struct MenuBarView: View {
                 sleepManager: coordinator.sleepManager
             )
 
+            if coordinator.completionGraceEndDate != nil {
+                Label(
+                    coordinator.formattedGraceStatus,
+                    systemImage: "hourglass"
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            }
+
             if settings.selectedMode == .whileAgentRunning {
                 Divider()
 

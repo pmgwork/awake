@@ -20,8 +20,6 @@ struct AgentSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("Supported Providers"))
-            } footer: {
-                Text(L10n.string("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active."))
             }
 
             let customAgents = settings.monitoredAgents.filter { !$0.isPreset }

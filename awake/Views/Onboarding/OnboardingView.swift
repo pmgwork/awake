@@ -222,9 +222,6 @@ struct OnboardingView: View {
 
     private var agentsPage: some View {
         Group {
-            Text(L10n.string("Awake reacts only to lifecycle events from linked agents. A running CLI process alone is never treated as active."))
-                .foregroundStyle(.secondary)
-
             Section(L10n.string("Supported Providers")) {
                 ForEach(AgentProvider.allCases) { provider in
                     providerRow(provider)

@@ -12,6 +12,7 @@
 		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
 		A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* AppUpdateServiceTests.swift */; };
+		B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CompletionGracePeriodTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,7 @@
 		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* CompletionGracePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGracePeriodTests.swift; sourceTree = "<group>"; };
 		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -101,6 +103,7 @@
 			children = (
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				A1000000000000000000001E /* AppUpdateServiceTests.swift */,
+				B20000000000000000000002 /* CompletionGracePeriodTests.swift */,
 			);
 			path = awakeTests;
 			sourceTree = "<group>";
@@ -257,6 +260,7 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */,
+				B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

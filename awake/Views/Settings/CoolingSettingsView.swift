@@ -33,8 +33,6 @@ struct CoolingSettingsView: View {
                 .disabled(!settings.closedLidCoolingEnabled)
             } header: {
                 Text(L10n.string("Closed-Lid Cooling & Thermal Management"))
-            } footer: {
-                Text(L10n.string("Controls fan speed when MacBook lid is closed during unattended AI Agent workloads."))
             }
 
             Section {

@@ -19,11 +19,13 @@ public final class SettingsStore: ObservableObject {
         static let downloadMonitoringEnabled = "pmgwork.awake.downloadMonitoringEnabled"
         static let downloadFolderPath = "pmgwork.awake.downloadFolderPath"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
+        static let completionGraceDuration = "pmgwork.awake.completionGraceDuration"
         static let closedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
         static let excludeNormalClamshell = "pmgwork.awake.excludeNormalClamshell"
         static let closedLidFanMode = "pmgwork.awake.closedLidFanMode"
         static let onlyOnACPower = "pmgwork.awake.onlyOnACPower"
         static let stopAtLowBattery = "pmgwork.awake.stopAtLowBattery"
+        static let lowBatteryThreshold = "pmgwork.awake.lowBatteryThreshold"
         static let launchAtLogin = "pmgwork.awake.launchAtLogin"
         static let notificationsEnabled = "pmgwork.awake.notificationsEnabled"
         static let showTemperatureInMenuBar = "pmgwork.awake.showTemperatureInMenuBar"
@@ -74,6 +76,12 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published public var completionGraceDuration: TimeInterval {
+        didSet {
+            UserDefaults.standard.set(completionGraceDuration, forKey: Keys.completionGraceDuration)
+        }
+    }
+
     @Published public var closedLidCoolingEnabled: Bool {
         didSet {
             UserDefaults.standard.set(closedLidCoolingEnabled, forKey: Keys.closedLidCoolingEnabled)
@@ -98,9 +106,10 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published public var stopAtLowBattery: Bool {
+    /// Zero disables the battery cutoff.
+    @Published public var lowBatteryThreshold: Int {
         didSet {
-            UserDefaults.standard.set(stopAtLowBattery, forKey: Keys.stopAtLowBattery)
+            UserDefaults.standard.set(lowBatteryThreshold, forKey: Keys.lowBatteryThreshold)
         }
     }
 
@@ -212,6 +221,8 @@ public final class SettingsStore: ObservableObject {
         // Timer Duration (default 2 hours)
         let savedDuration = UserDefaults.standard.double(forKey: Keys.selectedTimerDuration)
         self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 2 * 60 * 60
+        self.completionGraceDuration = UserDefaults.standard.object(forKey: Keys.completionGraceDuration) == nil
+            ? 180 : max(0, UserDefaults.standard.double(forKey: Keys.completionGraceDuration))
 
         // Cooling settings
         if UserDefaults.standard.object(forKey: Keys.closedLidCoolingEnabled) != nil {
@@ -235,10 +246,13 @@ public final class SettingsStore: ObservableObject {
 
         self.onlyOnACPower = UserDefaults.standard.bool(forKey: Keys.onlyOnACPower)
 
-        if UserDefaults.standard.object(forKey: Keys.stopAtLowBattery) != nil {
-            self.stopAtLowBattery = UserDefaults.standard.bool(forKey: Keys.stopAtLowBattery)
+        if UserDefaults.standard.object(forKey: Keys.lowBatteryThreshold) != nil {
+            let threshold = UserDefaults.standard.integer(forKey: Keys.lowBatteryThreshold)
+            self.lowBatteryThreshold = [0, 5, 10, 15, 20, 25].contains(threshold) ? threshold : 20
+        } else if UserDefaults.standard.object(forKey: Keys.stopAtLowBattery) != nil {
+            self.lowBatteryThreshold = UserDefaults.standard.bool(forKey: Keys.stopAtLowBattery) ? 20 : 0
         } else {
-            self.stopAtLowBattery = true
+            self.lowBatteryThreshold = 20
         }
 
         self.showTemperatureInMenuBar = UserDefaults.standard.bool(forKey: Keys.showTemperatureInMenuBar)
@@ -322,12 +336,13 @@ public final class SettingsStore: ObservableObject {
         monitoredAgents = MonitoredAgent.defaultPresets
         agentMonitoringEnabled = true
         downloadMonitoringEnabled = true
+        completionGraceDuration = 180
         downloadFolderPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
         closedLidCoolingEnabled = true
         excludeNormalClamshell = true
         closedLidFanMode = .maximum
         onlyOnACPower = false
-        stopAtLowBattery = true
+        lowBatteryThreshold = 20
         preventDisplaySleep = true
         preventScreenSaver = true
     }

@@ -96,9 +96,6 @@ public final class AppUpdateService: ObservableObject {
             let current = currentVersion
             if Self.isNewer(latest: release.version, current: current) {
                 state = .available(currentVersion: current, release: release)
-                if !userInitiated {
-                    notifyUpdateAvailable(release)
-                }
             } else {
                 state = .upToDate(currentVersion: current)
             }
@@ -134,15 +131,6 @@ public final class AppUpdateService: ObservableObject {
             url: pageURL,
             notes: decoded.body ?? "",
             prerelease: decoded.prerelease
-        )
-    }
-
-    private func notifyUpdateAvailable(_ release: AppRelease) {
-        guard settings.notificationsEnabled else { return }
-        NotificationManager.shared.sendNotification(
-            title: L10n.format("Awake %@ is available", release.version),
-            body: L10n.string("Open Settings to download the latest release."),
-            identifier: "awake-update-available-\(release.version)"
         )
     }
 
