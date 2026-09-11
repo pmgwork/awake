@@ -14,8 +14,7 @@ public final class OnboardingWindowController {
 
     public func showOnboarding(coordinator: AwakeCoordinator) {
         if let existing = window {
-            existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            present(existing)
             return
         }
 
@@ -46,8 +45,16 @@ public final class OnboardingWindowController {
 
         self.window = newWindow
 
-        newWindow.makeKeyAndOrderFront(nil)
+        present(newWindow)
+    }
+
+    private func present(_ window: NSWindow) {
+        // Awake is an LSUIElement app, so it is not necessarily active during
+        // its first launch. Activate before making the window key, and order it
+        // forward explicitly in case another app still owns the active space.
         NSApp.activate(ignoringOtherApps: true)
+        window.orderFrontRegardless()
+        window.makeKeyAndOrderFront(nil)
     }
 
     public func closeOnboarding() {
