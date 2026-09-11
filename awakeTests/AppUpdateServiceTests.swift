@@ -10,17 +10,11 @@ final class AppUpdateServiceTests: XCTestCase {
     }
 
     func testIsNewerComparesSemver() {
-        XCTAssertTrue(AppUpdateService.isNewer(latest: "1.1", current: "1.0"))
+        XCTAssertTrue(AppUpdateService.isNewer(latest: "1.10", current: "1.9"))
+        XCTAssertFalse(AppUpdateService.isNewer(latest: "1.9", current: "1.10"))
         XCTAssertTrue(AppUpdateService.isNewer(latest: "v1.0.1", current: "1.0"))
         XCTAssertTrue(AppUpdateService.isNewer(latest: "2.0.0", current: "1.9.9"))
         XCTAssertFalse(AppUpdateService.isNewer(latest: "1.0", current: "1.0"))
-        XCTAssertFalse(AppUpdateService.isNewer(latest: "1.0", current: "1.1"))
         XCTAssertFalse(AppUpdateService.isNewer(latest: "1.0.0", current: "1.0"))
-    }
-
-    func testCompareVersionsHandlesDifferentLengths() {
-        XCTAssertEqual(AppUpdateService.compareVersions("1.0", "1.0.0"), .orderedSame)
-        XCTAssertEqual(AppUpdateService.compareVersions("1.10", "1.9"), .orderedDescending)
-        XCTAssertEqual(AppUpdateService.compareVersions("1.9", "1.10"), .orderedAscending)
     }
 }

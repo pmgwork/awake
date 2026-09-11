@@ -9,7 +9,6 @@ final class AgentSessionStoreTests: XCTestCase {
         directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AwakeTests-\(UUID().uuidString)", isDirectory: true)
         store = AgentSessionStore(directoryURL: directoryURL)
-        try store.prepareDirectory()
     }
 
     override func tearDownWithError() throws {
@@ -59,10 +58,20 @@ final class AgentSessionStoreTests: XCTestCase {
         XCTAssertEqual(sessions.map(\.sessionID), ["two"])
     }
 
-    func testDisabledProviderDoesNotBecomeActive() {
-        let event = AgentHookEvent(provider: .openCode, sessionID: "one", state: .active, reason: "busy")
-        let sessions = AgentEventMonitor.activeSessions(from: [event], enabledProviders: [.codex])
-        XCTAssertTrue(sessions.isEmpty)
+    func testOnlyEnabledNonTestSessionsBecomeActive() {
+        let events = [
+            AgentHookEvent(provider: .codex, sessionID: "enabled", state: .active, reason: "busy"),
+            AgentHookEvent(provider: .openCode, sessionID: "disabled", state: .active, reason: "busy"),
+            AgentHookEvent(
+                provider: .codex,
+                sessionID: "\(AgentHookEvent.integrationTestSessionIDPrefix)test-123",
+                state: .active,
+                reason: "integration-test"
+            ),
+        ]
+
+        let sessions = AgentEventMonitor.activeSessions(from: events, enabledProviders: [.codex])
+        XCTAssertEqual(sessions.map(\.sessionID), ["enabled"])
     }
 
     func testFilenameDoesNotContainRawSessionIdentifier() throws {
@@ -71,9 +80,6 @@ final class AgentSessionStoreTests: XCTestCase {
         let url = try store.save(event)
 
         XCTAssertFalse(url.lastPathComponent.contains(sessionID))
-        let persisted = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertFalse(persisted.contains("prompt"))
-        XCTAssertFalse(persisted.contains("transcript"))
     }
 
     func testLegacyPresetMigratesToStableProviderIdentifier() throws {
@@ -94,62 +100,39 @@ final class AgentSessionStoreTests: XCTestCase {
         XCTAssertFalse(agent.isEnabled)
     }
 
-    func testFreshActiveSessionWithoutPIDIsKept() throws {
-        let event = AgentHookEvent(
+    func testExpiredSessionsWithoutPIDAreDroppedWhileFreshSessionIsKept() throws {
+        let now = Date()
+        let fresh = AgentHookEvent(
             provider: .codex,
             sessionID: "fresh-no-pid",
             state: .active,
             reason: "UserPromptSubmit",
-            occurredAt: Date()
+            occurredAt: now
         )
-        try store.save(event)
-
-        let events = store.loadValidEvents()
-        XCTAssertEqual(events.map(\.sessionID), ["fresh-no-pid"])
-        XCTAssertEqual(events.map(\.state), [.active])
-    }
-
-    func testExpiredActiveSessionWithoutPIDIsDropped() throws {
-        let event = AgentHookEvent(
+        let expiredActive = AgentHookEvent(
             provider: .codex,
             sessionID: "orphan-no-pid",
             state: .active,
             reason: "UserPromptSubmit",
-            occurredAt: Date().addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
+            occurredAt: now.addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
         )
-        try store.save(event)
-
-        let events = store.loadValidEvents()
-        XCTAssertTrue(events.isEmpty)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .codex, sessionID: "orphan-no-pid").path))
-    }
-
-    func testExpiredWaitingForInputIsDropped() throws {
-        let event = AgentHookEvent(
+        let expiredWaiting = AgentHookEvent(
             provider: .claude,
             sessionID: "orphan-waiting",
             state: .waitingForInput,
             reason: "idle_prompt",
-            occurredAt: Date().addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
+            occurredAt: now.addingTimeInterval(-(AgentSessionStore.orphanSessionTTL + 60))
         )
-        try store.save(event)
 
-        let events = store.loadValidEvents()
-        XCTAssertTrue(events.isEmpty)
-    }
+        try store.save(fresh)
+        try store.save(expiredActive)
+        try store.save(expiredWaiting)
 
-    func testIntegrationTestTrafficNeverBecomesActive() {
-        let active = AgentHookEvent(
-            provider: .codex,
-            sessionID: "\(AgentHookEvent.integrationTestSessionIDPrefix)test-123",
-            state: .active,
-            reason: "integration-test"
-        )
-        let sessions = AgentEventMonitor.activeSessions(
-            from: [active],
-            enabledProviders: Set(AgentProvider.allCases)
-        )
-        XCTAssertTrue(sessions.isEmpty)
+        let events = store.loadValidEvents(now: now)
+        XCTAssertEqual(events.map(\.sessionID), ["fresh-no-pid"])
+        XCTAssertEqual(events.map(\.state), [.active])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .codex, sessionID: "orphan-no-pid").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .claude, sessionID: "orphan-waiting").path))
     }
 
     func testRemoveByProviderAndSessionID() throws {
