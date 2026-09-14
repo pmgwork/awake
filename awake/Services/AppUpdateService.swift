@@ -114,8 +114,16 @@ public final class AppUpdateService: ObservableObject {
         var request = URLRequest(url: url, timeoutInterval: 20)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let (data, response) = try await urlSession.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        guard let http = response as? HTTPURLResponse else {
             throw UpdateError.badResponse
+        }
+        if let error = Self.error(forStatusCode: http.statusCode) {
+            NSLog(
+                "[AppUpdateService] Release check failed with HTTP %d (%@)",
+                http.statusCode,
+                url.absoluteString
+            )
+            throw error
         }
         let decoded = try JSONDecoder().decode(GitHubReleaseDTO.self, from: data)
         guard !decoded.draft, !decoded.prerelease else {
@@ -135,6 +143,14 @@ public final class AppUpdateService: ObservableObject {
     }
 
     // MARK: - Version helpers (pure, unit-tested)
+
+    /// Maps an HTTP status to a user-facing update error, or `nil` when the
+    /// response body can be decoded. A 404 means the release feed is not
+    /// readable: either the repository is private or no stable release exists.
+    nonisolated public static func error(forStatusCode statusCode: Int) -> UpdateError? {
+        if (200..<300).contains(statusCode) { return nil }
+        return statusCode == 404 ? .noStableRelease : .badResponse
+    }
 
     nonisolated public static func normalizedVersion(from tag: String) -> String {
         var value = tag.trimmingCharacters(in: .whitespacesAndNewlines)

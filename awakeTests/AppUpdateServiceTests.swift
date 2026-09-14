@@ -17,4 +17,12 @@ final class AppUpdateServiceTests: XCTestCase {
         XCTAssertFalse(AppUpdateService.isNewer(latest: "1.0", current: "1.0"))
         XCTAssertFalse(AppUpdateService.isNewer(latest: "1.0.0", current: "1.0"))
     }
+
+    func testStatusCodeMappingDistinguishesMissingReleaseFeed() {
+        XCTAssertNil(AppUpdateService.error(forStatusCode: 200))
+        XCTAssertNil(AppUpdateService.error(forStatusCode: 204))
+        XCTAssertEqual(AppUpdateService.error(forStatusCode: 404), .noStableRelease)
+        XCTAssertEqual(AppUpdateService.error(forStatusCode: 403), .badResponse)
+        XCTAssertEqual(AppUpdateService.error(forStatusCode: 500), .badResponse)
+    }
 }
