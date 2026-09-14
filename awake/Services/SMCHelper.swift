@@ -15,13 +15,99 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     private let fanLeaseLock = NSLock()
     private var fanLeaseProcess: Process?
 
+    private let installStateLock = NSLock()
+    private let installCheckLock = NSLock()
+    private let installCheckQueue = DispatchQueue(label: "pmgwork.awake.smchelper.installcheck", qos: .utility)
+    private var cachedInstallCheck: (date: Date, installed: Bool)?
+    private let installCheckTTL: TimeInterval = 30
+
     private init() {}
 
     public func isHelperToolPresent() -> Bool {
         FileManager.default.fileExists(atPath: helperToolPath)
     }
 
+    /// Returns whether the installed helper matches the expected protocol version.
+    ///
+    /// The check launches the helper binary and waits for it, so it must never
+    /// run on the main thread: synchronous process waits pump the calling
+    /// thread's run loop and can re-enter AppKit/SwiftUI from inside a view
+    /// update. Main-thread callers receive the cached value while a background
+    /// refresh is scheduled.
     public func checkHelperInstalled() -> Bool {
+        if Thread.isMainThread {
+            let cached = cachedInstallState
+            refreshHelperInstallStateInBackground()
+            return cached ?? false
+        }
+        return performInstallCheck(usingCache: true)
+    }
+
+    /// Re-runs the helper check on a background queue and updates the cache.
+    public func refreshHelperInstallState() async -> Bool {
+        await withCheckedContinuation { continuation in
+            installCheckQueue.async {
+                continuation.resume(returning: self.performInstallCheck(usingCache: false))
+            }
+        }
+    }
+
+    /// Warms the cached helper state at launch so the first fan or battery
+    /// assertion does not race the asynchronous check.
+    public func prewarmHelperInstallState() {
+        refreshHelperInstallStateInBackground()
+    }
+
+    // MARK: - Helper Installation State
+
+    private var cachedInstallState: Bool? {
+        installStateLock.lock()
+        defer { installStateLock.unlock() }
+        return cachedInstallCheck?.installed
+    }
+
+    private var freshCachedInstallState: Bool? {
+        installStateLock.lock()
+        defer { installStateLock.unlock() }
+        guard let cachedInstallCheck,
+              Date().timeIntervalSince(cachedInstallCheck.date) < installCheckTTL else {
+            return nil
+        }
+        return cachedInstallCheck.installed
+    }
+
+    private func storeInstallState(_ installed: Bool) {
+        installStateLock.lock()
+        cachedInstallCheck = (Date(), installed)
+        installStateLock.unlock()
+    }
+
+    private func refreshHelperInstallStateInBackground() {
+        installCheckQueue.async { [weak self] in
+            _ = self?.performInstallCheck(usingCache: true)
+        }
+    }
+
+    private func performInstallCheck(usingCache: Bool) -> Bool {
+        if usingCache, let cached = freshCachedInstallState {
+            return cached
+        }
+
+        // Serialize cache misses so concurrent callers cannot launch the helper
+        // multiple times.
+        installCheckLock.lock()
+        defer { installCheckLock.unlock() }
+
+        if usingCache, let cached = freshCachedInstallState {
+            return cached
+        }
+
+        let installed = readInstalledHelperVersion()
+        storeInstallState(installed)
+        return installed
+    }
+
+    private func readInstalledHelperVersion() -> Bool {
         guard FileManager.default.isExecutableFile(atPath: helperToolPath),
               let attributes = try? FileManager.default.attributesOfItem(atPath: helperToolPath),
               (attributes[.ownerAccountID] as? NSNumber)?.intValue == 0,
@@ -40,13 +126,35 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         proc.standardError = FileHandle.nullDevice
         do {
             try proc.run()
-            proc.waitUntilExit()
+            guard waitForExit(proc, timeout: 2) else { return false }
             let output = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             return proc.terminationStatus == 0 && output == helperProtocolVersion
         } catch {
             return false
         }
+    }
+
+    /// Waits for a launched process without pumping the caller's run loop and
+    /// terminates it when it exceeds the timeout.
+    private func waitForExit(_ process: Process, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        guard process.isRunning else { return true }
+
+        NSLog(
+            "[SMCHelper] Process %d did not exit within %.1fs; terminating.",
+            process.processIdentifier,
+            timeout
+        )
+        process.terminate()
+        let killDeadline = Date().addingTimeInterval(1)
+        while process.isRunning, Date() < killDeadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        return false
     }
 
     /// Sets maximum mode through the installed helper, with direct/authorization fallbacks.
@@ -164,7 +272,10 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         proc.standardError = stderr
         do {
             try proc.run()
-            proc.waitUntilExit()
+            guard waitForExit(proc, timeout: 5) else {
+                NSLog("[SMCHelper] Privileged helper command timed out (mode: %@)", mode)
+                return false
+            }
             let success = proc.terminationStatus == 0
             if success {
                 NSLog("[SMCHelper] Privileged helper command succeeded (mode: %@)", mode)
@@ -235,7 +346,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         guard let process = fanLeaseProcess else { return }
         if process.isRunning {
             process.terminate()
-            process.waitUntilExit()
+            _ = waitForExit(process, timeout: 2)
         }
         fanLeaseProcess = nil
     }

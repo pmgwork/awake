@@ -13,6 +13,8 @@
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
 		A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* AppUpdateServiceTests.swift */; };
 		B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CompletionGracePeriodTests.swift */; };
+		B20000000000000000000004 /* KeyboardShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* KeyboardShortcutTests.swift */; };
+		B20000000000000000000006 /* SMCHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* SMCHelperTests.swift */; };
 		D15A557230530E7E00B14CCB /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = D15A557130530E7D00B14CCB /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
@@ -55,6 +57,8 @@
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* CompletionGracePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGracePeriodTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000003 /* KeyboardShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000005 /* SMCHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMCHelperTests.swift; sourceTree = "<group>"; };
 		D15A557130530E7D00B14CCB /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -106,6 +110,8 @@
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				A1000000000000000000001E /* AppUpdateServiceTests.swift */,
 				B20000000000000000000002 /* CompletionGracePeriodTests.swift */,
+				B20000000000000000000003 /* KeyboardShortcutTests.swift */,
+				B20000000000000000000005 /* SMCHelperTests.swift */,
 			);
 			path = awakeTests;
 			sourceTree = "<group>";
@@ -265,6 +271,8 @@
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */,
 				B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */,
+				B20000000000000000000004 /* KeyboardShortcutTests.swift in Sources */,
+				B20000000000000000000006 /* SMCHelperTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -295,3 +295,9 @@
 "Completion Grace Period" = "完了後の猶予時間";
 "Applies to agents and downloads." = "エージェントとダウンロードに適用されます。";
 "Releasing in %@" = "スリープ防止の解除まで %@";
+"Global Shortcut" = "グローバルショートカット";
+"Toggle Awake" = "Awakeの開始／停止";
+"Record Shortcut" = "ショートカットを記録";
+"Press shortcut…" = "キーを押してください…";
+"Clear" = "クリア";
+"This shortcut is already in use by another app or the system." = "このショートカットは他のアプリまたはシステムで使用されています。";

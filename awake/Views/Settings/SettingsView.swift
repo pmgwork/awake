@@ -14,7 +14,8 @@ struct SettingsView: View {
                 settings: coordinator.settings,
                 notificationManager: NotificationManager.shared,
                 screenBehaviorManager: coordinator.screenBehaviorManager,
-                updateService: AppUpdateService.shared
+                updateService: AppUpdateService.shared,
+                shortcutManager: coordinator.shortcutManager
             )
             .tabItem {
                 Label(L10n.string("General"), systemImage: "gearshape")
@@ -38,6 +39,6 @@ struct SettingsView: View {
                 Label(L10n.string("Cooling"), systemImage: "wind")
             }
         }
-        .frame(minWidth: 480, idealWidth: 500, minHeight: 480, idealHeight: 550)
+        .frame(minWidth: 520, idealWidth: 560, minHeight: 520, idealHeight: 600)
     }
 }

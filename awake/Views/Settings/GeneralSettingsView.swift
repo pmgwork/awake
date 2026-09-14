@@ -1,12 +1,14 @@
 import SwiftUI
 import UserNotifications
 import AppKit
+import Carbon.HIToolbox
 
 struct GeneralSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var notificationManager: NotificationManager
     @ObservedObject var screenBehaviorManager: ScreenBehaviorManager
     @ObservedObject var updateService: AppUpdateService
+    @ObservedObject var shortcutManager: GlobalShortcutManager
 
     var body: some View {
         Form {
@@ -29,6 +31,19 @@ struct GeneralSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("General Preferences"))
+            }
+
+            Section {
+                LabeledContent(L10n.string("Toggle Awake")) {
+                    ShortcutRecorderView(shortcut: $settings.toggleShortcut)
+                }
+
+                if let error = shortcutManager.registrationError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text(L10n.string("Global Shortcut"))
             }
 
             Section {
@@ -169,5 +184,91 @@ struct GeneralSettingsView: View {
             Label(message, systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
         }
+    }
+}
+
+private struct ShortcutRecorderView: View {
+    @Binding var shortcut: KeyboardShortcut?
+
+    @State private var isRecording = false
+    @State private var eventMonitor: Any?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(action: toggleRecording) {
+                Text(buttonTitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(minWidth: 140)
+            }
+            .buttonStyle(.bordered)
+            .tint(isRecording ? .accentColor : nil)
+
+            Button(L10n.string("Clear")) {
+                shortcut = nil
+            }
+            .disabled(shortcut == nil || isRecording)
+        }
+        .onDisappear(perform: stopRecording)
+    }
+
+    private var buttonTitle: String {
+        if isRecording {
+            return L10n.string("Press shortcut…")
+        }
+        if let shortcut {
+            return shortcut.displayString
+        }
+        return L10n.string("Record Shortcut")
+    }
+
+    private func toggleRecording() {
+        if isRecording {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    private func startRecording() {
+        guard eventMonitor == nil else { return }
+        isRecording = true
+        // A local monitor runs before the event reaches the responder chain, so
+        // every key pressed while recording is consumed.
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            capture(event)
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
+        }
+        isRecording = false
+    }
+
+    private func capture(_ event: NSEvent) {
+        switch Int(event.keyCode) {
+        case kVK_Escape:
+            stopRecording()
+            return
+        case kVK_Delete, kVK_ForwardDelete:
+            shortcut = nil
+            stopRecording()
+            return
+        default:
+            break
+        }
+
+        let modifiers = event.modifierFlags.intersection(KeyboardShortcut.supportedModifiers)
+        let candidate = KeyboardShortcut(keyCode: event.keyCode, modifiers: modifiers)
+        guard candidate.isValid else {
+            NSSound.beep()
+            return
+        }
+
+        shortcut = candidate
+        stopRecording()
     }
 }

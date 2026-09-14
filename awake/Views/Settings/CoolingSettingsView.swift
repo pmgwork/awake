@@ -6,7 +6,7 @@ struct CoolingSettingsView: View {
     @ObservedObject var thermalMonitor: ThermalMonitor
 
     @State private var isInstallingHelper = false
-    @State private var isHelperInstalled = SMCHelper.shared.checkHelperInstalled()
+    @State private var isHelperInstalled = false
     @State private var isHelperPresent = SMCHelper.shared.isHelperToolPresent()
     @State private var helperStatusText = ""
 
@@ -113,8 +113,7 @@ struct CoolingSettingsView: View {
         }
         .formStyle(.grouped)
         .onAppear {
-            isHelperInstalled = SMCHelper.shared.checkHelperInstalled()
-            isHelperPresent = SMCHelper.shared.isHelperToolPresent()
+            refreshHelperState()
             fanController.refreshFanStatus()
         }
     }
@@ -123,12 +122,25 @@ struct CoolingSettingsView: View {
         isInstallingHelper = true
         SMCHelper.shared.installHelperTool { success in
             isInstallingHelper = false
-            isHelperInstalled = success && SMCHelper.shared.checkHelperInstalled()
             isHelperPresent = SMCHelper.shared.isHelperToolPresent()
-            helperStatusText = isHelperInstalled
-                ? L10n.string("Helper update successful!")
-                : L10n.string("Helper update cancelled or failed.")
-            if isHelperInstalled { fanController.allowPolicyRetry() }
+            Task { @MainActor in
+                let installed = await SMCHelper.shared.refreshHelperInstallState()
+                isHelperInstalled = success && installed
+                helperStatusText = isHelperInstalled
+                    ? L10n.string("Helper update successful!")
+                    : L10n.string("Helper update cancelled or failed.")
+                if isHelperInstalled { fanController.allowPolicyRetry() }
+            }
+        }
+    }
+
+    /// The helper check launches a privileged binary, so it must stay off the
+    /// main thread. `@State` initializers are re-evaluated on every view
+    /// re-creation, which previously spawned a process during view updates.
+    private func refreshHelperState() {
+        isHelperPresent = SMCHelper.shared.isHelperToolPresent()
+        Task { @MainActor in
+            isHelperInstalled = await SMCHelper.shared.refreshHelperInstallState()
         }
     }
 
