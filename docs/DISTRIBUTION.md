@@ -23,7 +23,7 @@
 
 3. GitHubでタグ + Release作成:
    - タグ `v0.1.1` をpush
-   - Release名 `Awake v0.1.1`、Notesに変更点とSHA256を記載
+   - Release名 `Awake v0.1.1`、Notesに変更点（**英語**）とSHA256を記載
    - `dist/Awake-0.1.1.zip` (必須) を添付。DMGは任意。
    - **Stable releaseとして公開** (pre-release/draftにしない。
      `AppUpdateService` はstableな `releases/latest` のみ見る)
