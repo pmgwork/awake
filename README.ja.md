@@ -101,11 +101,11 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 ## リリース
 
 ```sh
-scripts/package.sh 0.2.0
-# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256
+scripts/package.sh 0.1.1
+# => dist/Awake-0.1.1.zip, dist/Awake-0.1.1.dmg, dist/Awake-0.1.1.sha256
 ```
 
-タグ `v0.2.0` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP を添付します。アプリの更新確認は `releases/latest` を参照するため、draft と pre-release は対象外です。
+タグ `v0.1.1` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP を添付します。アプリの更新確認は `releases/latest` を参照するため、draft と pre-release は対象外です。
 
 ## プロジェクト構成
 

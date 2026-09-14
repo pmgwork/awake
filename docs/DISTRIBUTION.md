@@ -7,24 +7,24 @@
 
 - 署名: ローカルの Apple Development / ad-hoc で可。他人のMacでは
   Gatekeeper警告が出る (仕様)。Developer ID・公証は有料Program必須のため対象外。
-- タグ形式: `vX.Y.Z` (例 `v0.1.0`)。`AppUpdateService` が先頭 `v` を剥がして
+- タグ形式: `vX.Y.Z` (例 `v0.1.1`)。`AppUpdateService` が先頭 `v` を剥がして
   `CFBundleShortVersionString` と比較する。
 
 ## リリース手順
 
 1. 版数を決める: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
-   (Xcode > Target awake > General、現在 `0.1.0`)
+   (Xcode > Target awake > General、現在 `0.1.1`)
 2. パッケージ作成:
 
    ```sh
-   scripts/package.sh 0.1.0
-   # => dist/Awake-0.1.0.zip (+ .dmg), dist/Awake-0.1.0.sha256
+   scripts/package.sh 0.1.1
+   # => dist/Awake-0.1.1.zip (+ .dmg), dist/Awake-0.1.1.sha256
    ```
 
 3. GitHubでタグ + Release作成:
-   - タグ `v0.1.0` をpush
-   - Release名 `Awake v0.1.0`、Notesに変更点とSHA256を記載
-   - `dist/Awake-0.1.0.zip` (必須) を添付。DMGは任意。
+   - タグ `v0.1.1` をpush
+   - Release名 `Awake v0.1.1`、Notesに変更点とSHA256を記載
+   - `dist/Awake-0.1.1.zip` (必須) を添付。DMGは任意。
    - **Stable releaseとして公開** (pre-release/draftにしない。
      `AppUpdateService` はstableな `releases/latest` のみ見る)
 4. 動作確認: 別Mac or 新規ユーザでZIP展開→初回起動→オンボーディング→

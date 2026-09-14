@@ -101,11 +101,11 @@ Run the unit tests from Xcode with **Product ▸ Test** (target `awakeTests`). T
 ## Releasing
 
 ```sh
-scripts/package.sh 0.2.0
-# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256
+scripts/package.sh 0.1.1
+# => dist/Awake-0.1.1.zip, dist/Awake-0.1.1.dmg, dist/Awake-0.1.1.sha256
 ```
 
-Create a GitHub release with tag `v0.2.0`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP. The in-app update check reads `releases/latest`, which ignores drafts and pre-releases.
+Create a GitHub release with tag `v0.1.1`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP. The in-app update check reads `releases/latest`, which ignores drafts and pre-releases.
 
 ## Project layout
 

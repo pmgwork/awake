@@ -101,11 +101,11 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 ## 发布
 
 ```sh
-scripts/package.sh 0.2.0
-# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256
+scripts/package.sh 0.1.1
+# => dist/Awake-0.1.1.zip, dist/Awake-0.1.1.dmg, dist/Awake-0.1.1.sha256
 ```
 
-创建标签为 `v0.2.0` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP。应用内的更新检查读取 `releases/latest`，会忽略 draft 和 pre-release。
+创建标签为 `v0.1.1` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP。应用内的更新检查读取 `releases/latest`，会忽略 draft 和 pre-release。
 
 ## 项目结构
 
