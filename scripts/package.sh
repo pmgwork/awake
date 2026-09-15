@@ -4,21 +4,37 @@
 #
 # Usage:
 #   scripts/package.sh [version]
-#   e.g. scripts/package.sh 0.1.1
+#   e.g. scripts/package.sh 0.1.2
 # Output: dist/Awake-<version>.zip (+ .dmg when hdiutil available)
 set -eu
 
-VERSION="${1:-0.1.1}"
-DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode-26.6.0.app/Contents/Developer}"
+VERSION="${1:-0.1.2}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$PROJECT_DIR/dist"
 APP_NAME="awake.app"
 DMG_NAME="Awake-${VERSION}.dmg"
 ZIP_NAME="Awake-${VERSION}.zip"
 
+# Toolchain: use DEVELOPER_DIR when already set, otherwise the standard Xcode
+# install, falling back to the active developer directory. Release builds are
+# made with Xcode 27 / the macOS 27 SDK so the app opts into the macOS 26/27
+# behavior and appearance changes.
+#
+# The generic destination keeps Release universal (arm64 + x86_64); a plain
+# `platform=macOS` destination silently builds only for the host architecture.
+if [ -z "${DEVELOPER_DIR:-}" ]; then
+  if [ -d /Applications/Xcode.app/Contents/Developer ]; then
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  else
+    DEVELOPER_DIR="$(xcode-select -p)"
+  fi
+fi
+export DEVELOPER_DIR
+
 mkdir -p "$DIST_DIR"
 rm -f "$DIST_DIR/$DMG_NAME" "$DIST_DIR/$ZIP_NAME"
 
+echo "==> Toolchain: $(xcodebuild -version | tr '\n' ' ')"
 echo "==> Building Release (MARKETING_VERSION=$VERSION)..."
 DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild \
   -project "$PROJECT_DIR/awake.xcodeproj" \
@@ -26,7 +42,7 @@ DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild \
   -configuration Release \
   MARKETING_VERSION="$VERSION" \
   CURRENT_PROJECT_VERSION="$VERSION" \
-  -destination 'platform=macOS' \
+  -destination 'generic/platform=macOS' \
   -derivedDataPath "$DIST_DIR/DerivedData" \
   build
 
@@ -35,6 +51,8 @@ if [ ! -d "$BUILT_APP" ]; then
   echo "Build output not found: $BUILT_APP" >&2
   exit 1
 fi
+
+echo "==> Architectures: $(lipo -archs "$BUILT_APP/Contents/MacOS/awake")"
 
 echo "==> Verifying signature..."
 codesign --verify --deep --strict "$BUILT_APP" || {

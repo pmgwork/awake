@@ -22,8 +22,8 @@
 
 ## 系统要求
 
-- macOS 13（Ventura）或更高版本
-- 合盖散热的风扇控制面向 Apple Silicon（其他功能在 Intel Mac 上也可使用）
+- macOS 13（Ventura）或更高版本，支持 macOS 27（Golden Gate）（macOS 27 本身仅支持 Apple Silicon）
+- 合盖散热的风扇控制面向 Apple Silicon（其他功能在运行 macOS 13〜26 的 Intel Mac 上也可使用）
 - 应用界面支持英语和日语
 
 ## 安装
@@ -31,8 +31,9 @@
 1. 从[最新版本](https://github.com/PMGWork/awake/releases/latest)下载 `Awake-x.y.z.zip`
 2. 解压后把 `Awake.app` 移动到 `/Applications`
 3. 构建未经过公证（notarization），首次启动需要绕过一次 Gatekeeper：
-   - 右键点按 `Awake.app` → **打开** → **打开**，或
-   - `xattr -d com.apple.quarantine /Applications/Awake.app`
+   - macOS 15 或更高版本（含 26/27）：先尝试打开一次 `Awake.app` 并关闭警告，然后前往**系统设置 → 隐私与安全性**，滚动到**安全性**并点按 **仍要打开**，或
+   - 清除 quarantine 属性：`xattr -r -d com.apple.quarantine /Applications/Awake.app`
+   - macOS 14 及更早版本也可右键点按 `Awake.app` → **打开** → **打开**
 
 Awake 只在菜单栏运行（不会显示在 Dock 中）。
 
@@ -82,7 +83,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 
 ## 从源码构建
 
-需要 Xcode 16 或更高版本（开发使用 Xcode 26）。没有任何第三方依赖。
+需要 Xcode 16 或更高版本。发布构建使用 Xcode 27 与 macOS 27 SDK，以采用 macOS 26/27 的外观与行为变化。没有任何第三方依赖。
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -101,11 +102,11 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 ## 发布
 
 ```sh
-scripts/package.sh 0.1.1
-# => dist/Awake-0.1.1.zip, dist/Awake-0.1.1.dmg, dist/Awake-0.1.1.sha256
+scripts/package.sh 0.1.2
+# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256
 ```
 
-创建标签为 `v0.1.1` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP。应用内的更新检查读取 `releases/latest`，会忽略 draft 和 pre-release。
+创建标签为 `v0.1.2` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP。应用内的更新检查读取 `releases/latest`，会忽略 draft 和 pre-release。
 
 ## 项目结构
 
@@ -121,7 +122,7 @@ scripts/package.sh 0.1.1
 
 | 现象 | 处理方法 |
 | --- | --- |
-| 首次启动被 macOS 阻止 | 右键 → **打开**，或清除 quarantine 属性（见「安装」） |
+| 首次启动被 macOS 阻止 | 系统设置 → 隐私与安全性 → **仍要打开**，或清除 quarantine 属性（见「安装」） |
 | 更新检查失败 | 仓库需要是公开的且存在 stable 版本（更新检查不进行身份验证） |
 | 无法使用风扇控制 | 设置 → 散热 → **安装辅助工具**／**更新辅助工具** |
 | 检测不到代理 | 在设置 → 代理中**链接**，然后执行**测试** |

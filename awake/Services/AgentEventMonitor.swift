@@ -51,10 +51,10 @@ public final class AgentEventMonitor: ObservableObject {
         guard !reloadInProgress else { return }
         reloadInProgress = true
         let store = self.store
-        queue.async {
+        queue.async { [weak self] in
             let events = store.loadValidEvents()
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+            guard let self else { return }
+            Task { @MainActor in
                 self.apply(events)
                 self.reloadInProgress = false
             }

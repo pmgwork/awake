@@ -22,8 +22,8 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 
 ## 動作環境
 
-- macOS 13（Ventura）以降
-- 閉蓋冷却のファン制御は Apple Silicon 向けです（その他の機能は Intel Mac でも動作します）
+- macOS 13（Ventura）以降。macOS 27（Golden Gate）に対応しています（macOS 27 自体は Apple Silicon 専用です）
+- 閉蓋冷却のファン制御は Apple Silicon 向けです（その他の機能は macOS 13〜26 の Intel Mac でも動作します）
 - アプリの表示は英語と日本語に対応しています
 
 ## インストール
@@ -31,8 +31,9 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 1. [最新リリース](https://github.com/PMGWork/awake/releases/latest) から `Awake-x.y.z.zip` をダウンロード
 2. 展開して `Awake.app` を `/Applications` へ移動
 3. 公証（notarization）を行っていないため、初回起動時のみ Gatekeeper の回避操作が必要です
-   - `Awake.app` を右クリック → **開く** → **開く**
-   - または `xattr -d com.apple.quarantine /Applications/Awake.app`
+   - macOS 15 以降（26/27 を含む）: 一度 `Awake.app` を開こうとして警告を閉じ、**システム設定 → プライバシーとセキュリティ** の **セキュリティ** 欄で **このまま開く** をクリック
+   - または quarantine 属性を削除: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
+   - macOS 14 以前は右クリック → **開く** → **開く** でも可
 
 Awake はメニューバー専用アプリです（Dock にアイコンは表示されません）。
 
@@ -82,7 +83,7 @@ Awake はメニューバー専用アプリです（Dock にアイコンは表示
 
 ## ソースからビルド
 
-Xcode 16 以降（開発は Xcode 26）が必要です。外部依存はありません。
+Xcode 16 以降が必要です。リリースビルドは Xcode 27 と macOS 27 SDK で作成し、macOS 26/27 の外観・挙動の変更に追随します。外部依存はありません。
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -101,11 +102,11 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 ## リリース
 
 ```sh
-scripts/package.sh 0.1.1
-# => dist/Awake-0.1.1.zip, dist/Awake-0.1.1.dmg, dist/Awake-0.1.1.sha256
+scripts/package.sh 0.1.2
+# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256
 ```
 
-タグ `v0.1.1` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP を添付します。アプリの更新確認は `releases/latest` を参照するため、draft と pre-release は対象外です。
+タグ `v0.1.2` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP を添付します。アプリの更新確認は `releases/latest` を参照するため、draft と pre-release は対象外です。
 
 ## プロジェクト構成
 
@@ -121,7 +122,7 @@ scripts/package.sh 0.1.1
 
 | 症状 | 対処 |
 | --- | --- |
-| 初回起動時に macOS にブロックされる | 右クリック → **開く**、または quarantine 属性を削除（インストール参照） |
+| 初回起動時に macOS にブロックされる | システム設定 → プライバシーとセキュリティ → **このまま開く**、または quarantine 属性を削除（インストール参照） |
 | 「確認できませんでした」と表示される | リポジトリが公開され、stable リリースが存在する必要があります（更新確認は未認証で行います） |
 | ファン制御が使えない | 設定 → 冷却 → **ヘルパーをインストール**／**ヘルパーを更新** |
 | エージェントが検出されない | 設定 → エージェントで **連携** し、**テスト** を実行 |

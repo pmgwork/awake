@@ -45,7 +45,7 @@ public final class GlobalShortcutManager: ObservableObject {
 
         installEventHandlerIfNeeded()
 
-        var hotKeyID = EventHotKeyID(
+        let hotKeyID = EventHotKeyID(
             signature: GlobalShortcutHotKey.signature,
             id: GlobalShortcutHotKey.toggleID
         )
