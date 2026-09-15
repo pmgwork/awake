@@ -129,13 +129,13 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
         let image = NSImage(named: NSImage.Name(iconName))
         image?.size = NSSize(width: 21, height: 16.8)
-        if isAutomaticMonitoring, let image {
-            button.image = image.tinted(with: .systemOrange)
-        } else {
-            image?.isTemplate = true
-            button.image = image
-        }
-        button.contentTintColor = nil
+        // Keep the cup as a template image so the system renders it with the
+        // menu bar material. The monitoring state is expressed through the
+        // button's content tint instead of drawing a pre-colored copy, which
+        // keeps the icon correct across menu bar appearances on macOS 26/27.
+        image?.isTemplate = true
+        button.image = image
+        button.contentTintColor = isAutomaticMonitoring ? .systemOrange : nil
         button.toolTip = settingsToolTip
 
         let shouldShowTimer = coordinator.isActive &&
@@ -200,18 +200,5 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
                 : L10n.string("Monitoring Paused")
         }
         return coordinator.isActive ? L10n.string("On") : L10n.string("Off")
-    }
-}
-
-private extension NSImage {
-    func tinted(with color: NSColor) -> NSImage {
-        let result = NSImage(size: size, flipped: false) { rect in
-            self.draw(in: rect)
-            color.setFill()
-            rect.fill(using: .sourceAtop)
-            return true
-        }
-        result.isTemplate = false
-        return result
     }
 }

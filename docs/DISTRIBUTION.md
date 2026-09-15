@@ -5,6 +5,11 @@
 
 ## 前提
 
+- ツールチェーン: リリースビルドは Xcode 27（macOS 27 SDK）で作成する。
+  `scripts/package.sh` は `/Applications/Xcode.app` を既定で使い、
+  `DEVELOPER_DIR` を設定すれば任意の Xcode に切り替えられる。
+- アーキテクチャ: Release は universal（arm64 + x86_64）。macOS 27 は
+  Apple Silicon 専用だが、macOS 13〜26 の Intel Mac 向けスライスも同梱する。
 - 署名: ローカルの Apple Development / ad-hoc で可。他人のMacでは
   Gatekeeper警告が出る (仕様)。Developer ID・公証は有料Program必須のため対象外。
 - タグ形式: `vX.Y.Z` (例 `v0.1.1`)。`AppUpdateService` が先頭 `v` を剥がして
@@ -29,13 +34,16 @@
      `AppUpdateService` はstableな `releases/latest` のみ見る)
 4. 動作確認: 別Mac or 新規ユーザでZIP展開→初回起動→オンボーディング→
    設定 > Software Updates > Check Now で新版検出を確認。
+   macOS 27（Apple Silicon）で温度表示・スリープ防止・ファン制御が
+   動作することも確認する。
 
 ## 利用者向け (Gatekeeper回避)
 
-初回のみいずれか:
+初回のみいずれか (macOS 15 以降。macOS 14 以前は右クリック → 開く → 開くも可):
 
-- 右クリック → 開く → 開く (推奨、GUIのみで完結)
-- または: `xattr -d com.apple.quarantine /Applications/Awake.app`
+- 一度起動を試して警告を閉じ、システム設定 → プライバシーとセキュリティ →
+  セキュリティ欄の「このまま開く」をクリック (推奨、GUIのみで完結)
+- または: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
 
 ## 有料アカウント取得後の切替メモ
 

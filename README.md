@@ -22,8 +22,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 ## Requirements
 
-- macOS 13 (Ventura) or later
-- Apple Silicon Mac recommended: closed-lid fan control is built for Apple Silicon. The other features also work on Intel Macs.
+- macOS 13 (Ventura) or later. macOS 27 (Golden Gate) is supported; macOS 27 itself runs only on Apple silicon.
+- Apple Silicon Mac recommended: closed-lid fan control is built for Apple Silicon. The other features also work on Intel Macs running macOS 13–26.
 - The app UI is available in English and Japanese.
 
 ## Installation
@@ -31,8 +31,9 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 1. Download `Awake-x.y.z.zip` from the [latest release](https://github.com/PMGWork/awake/releases/latest).
 2. Unzip it and move `Awake.app` to `/Applications`.
 3. Builds are not notarized (no paid Apple Developer account), so the first launch needs one Gatekeeper step:
-   - Right-click `Awake.app` → **Open** → **Open**, or
-   - `xattr -d com.apple.quarantine /Applications/Awake.app`
+   - On macOS 15 or later (including 26/27): try to open `Awake.app` once and dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**, or
+   - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
+   - On macOS 14 or earlier, right-click `Awake.app` → **Open** → **Open** also works.
 
 Awake runs only in the menu bar (no Dock icon).
 
@@ -82,7 +83,7 @@ When the lid closes with no external display connected, Awake keeps the system a
 
 ## Building from source
 
-Requires Xcode 16 or later (the project is developed with Xcode 26). There are no third-party dependencies.
+Requires Xcode 16 or later. Release builds are made with Xcode 27 and the macOS 27 SDK, so the app adopts the macOS 26/27 appearance and behavior changes. There are no third-party dependencies.
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -121,7 +122,7 @@ Create a GitHub release with tag `v0.1.1`, keep it a **stable** release (not a d
 
 | Symptom | Fix |
 | --- | --- |
-| macOS blocks the first launch | Right-click → **Open**, or clear the quarantine attribute (see Installation) |
+| macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
 | "Could not check for updates" | The repository must be public and have a published stable release; the check is unauthenticated |
 | Fan control is unavailable | Settings → Cooling → **Install Helper** / **Update Helper** |
 | Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
