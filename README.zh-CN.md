@@ -35,12 +35,6 @@
    - 清除 quarantine 属性：`xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 及更早版本也可右键点按 `Awake.app` → **打开** → **打开**
    - 使用 DMG 时同样需要这些许可：打开磁盘映像时的提示没有「打开」按钮，请在**系统设置 → 隐私与安全性**中允许，复制到 `/Applications` 后再允许应用
-4. 也可以使用 Homebrew 安装（需要先 tap）：
-   ```sh
-   brew tap pmgwork/tap
-   brew install --cask awake
-   ```
-   首次启动同样需要绕过一次 Gatekeeper。安装后 Awake 会在应用内自行更新，`brew upgrade --cask awake` 是可选的。
 
 Awake 只在菜单栏运行（不会显示在 Dock 中）。
 

@@ -73,22 +73,6 @@
    置き換えと再起動が完了することを確認する。初回の Sparkle 導入版
    (0.1.3) から次版への更新が最初の実地テストになる。
 
-## Homebrew Tap (任意)
-
-- `PMGWork/homebrew-tap` の `Casks/awake.rb` を配布している。
-
-  ```sh
-  brew tap pmgwork/tap
-  brew install --cask awake
-  ```
-
-- 版数を上げたら `scripts/update-cask.sh <version>` で cask を更新する
-  （リリースの `.sha256` を読んで version と sha256 を書き換える）。
-- Homebrew 5.0 以降は未公証アプリの cask に quarantine が必ず付与され、
-  `--no-quarantine` も廃止された。そのため cask 経由でも初回起動時は
-  利用者による Gatekeeper 回避が必要（アプリ内更新は quarantine の
-  影響を受けないため、2回目以降は brew 不要）。
-
 ## 利用者向け (Gatekeeper回避)
 
 初回のみいずれか (macOS 15 以降。macOS 14 以前は右クリック → 開く → 開くも可):

@@ -35,12 +35,6 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
    - または quarantine 属性を削除: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 以前は右クリック → **開く** → **開く** でも可
    - DMG を使う場合も同じ許可が必要です。ディスクイメージを開くときの警告には「開く」ボタンがないため **システム設定 → プライバシーとセキュリティ** から許可し、`/Applications` へコピーした後にアプリ側も許可します
-4. Homebrew を使う場合（先に tap します）:
-   ```sh
-   brew tap pmgwork/tap
-   brew install --cask awake
-   ```
-   初回起動時の Gatekeeper 回避は同じく必要です。インストール後は Awake がアプリ内で更新するため、`brew upgrade --cask awake` は任意です。
 
 Awake はメニューバー専用アプリです（Dock にアイコンは表示されません）。
 
