@@ -5,6 +5,7 @@
 xcuserdata/
 *.xcuserstate
 *.xccheckout
+*.profraw
 DerivedData/
 build/
 dist/

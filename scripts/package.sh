@@ -65,10 +65,22 @@ codesign --verify --deep --strict "$BUILT_APP" || {
 }
 codesign -dv "$BUILT_APP" 2>&1 | head -n 8 || true
 
+# Sparkle installs the app straight from this archive, so it is created with
+# ditto (Finder's Compress equivalent), which preserves symlinks and bundle
+# metadata, and the extracted copy is verified before anything is published.
 echo "==> Creating ZIP..."
 rm -rf "$DIST_DIR/stage" && mkdir -p "$DIST_DIR/stage"
-cp -R "$BUILT_APP" "$DIST_DIR/stage/Awake.app"
-(cd "$DIST_DIR/stage" && zip -qr -y "$DIST_DIR/$ZIP_NAME" "Awake.app")
+ditto "$BUILT_APP" "$DIST_DIR/stage/Awake.app"
+ditto -c -k --sequesterRsrc --keepParent \
+  "$DIST_DIR/stage/Awake.app" "$DIST_DIR/$ZIP_NAME"
+
+echo "==> Verifying the extracted app..."
+rm -rf "$DIST_DIR/stage/verify" && mkdir -p "$DIST_DIR/stage/verify"
+ditto -x -k "$DIST_DIR/$ZIP_NAME" "$DIST_DIR/stage/verify"
+codesign --verify --deep --strict "$DIST_DIR/stage/verify/Awake.app" || {
+  echo "error: signature verification failed for the app inside $ZIP_NAME" >&2
+  exit 1
+}
 rm -rf "$DIST_DIR/stage"
 
 # The DMG opens as a drag-to-Applications window: Awake.app on the left, an
@@ -174,6 +186,13 @@ fi
   -o "$DIST_DIR/appcast.xml" \
   "$UPDATES_DIR"
 rm -rf "$UPDATES_DIR"
+
+# An unsigned feed would be rejected by every Sparkle-enabled install.
+if ! grep -q 'sparkle:edSignature=' "$DIST_DIR/appcast.xml"; then
+  echo "error: appcast.xml has no EdDSA signature." >&2
+  echo "       Check SUPublicEDKey in awake/Info.plist and the Keychain key." >&2
+  exit 1
+fi
 
 echo "Done: $DIST_DIR/$ZIP_NAME"
 echo "      $DIST_DIR/appcast.xml (attach both to the v$VERSION release)"
