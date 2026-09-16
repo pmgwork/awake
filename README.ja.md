@@ -100,18 +100,7 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 
 ユニットテストは Xcode の **Product ▸ Test**（ターゲット `awakeTests`）で実行します。アプリのターゲットはファイル同期グループを使用しているため、`awake/` 配下に追加したファイルは自動的に認識されます。
 
-## リリース
-
-初回のみ署名鍵を用意します。`dist/sparkle-tools/bin/generate_keys` で Sparkle の EdDSA 鍵を生成し、大切に保管してください（ツールは初回のパッケージ作成時に自動でダウンロードされます）。公開鍵は `awake/Info.plist` の `SUPublicEDKey` に埋め込み済みです。秘密鍵を失うと、既存ユーザーへアプリ内アップデートを配布できなくなります。
-
-```sh
-scripts/package.sh 0.2.0
-# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256, dist/appcast.xml
-```
-
-先に `dist/release-notes-v0.2.0.md` を用意しておくと、内容が appcast に埋め込まれ、更新画面に表示されます。
-
-タグ `v0.2.0` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP と `appcast.xml` を添付します（手動ダウンロード用に DMG と `.sha256` も添付可）。更新確認は `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml` を読むため、最新の stable リリースには常に `appcast.xml` が必要です。詳細は `docs/DISTRIBUTION.md`。
+リリース（配布）手順は `docs/DISTRIBUTION.md` にまとめています。
 
 ## プロジェクト構成
 
@@ -128,7 +117,7 @@ scripts/package.sh 0.2.0
 | 症状 | 対処 |
 | --- | --- |
 | 初回起動時に macOS にブロックされる | システム設定 → プライバシーとセキュリティ → **このまま開く**、または quarantine 属性を削除（インストール参照） |
-| アプリ内アップデートに失敗する | リポジトリが公開され、最新の stable リリースに `appcast.xml` が添付されている必要があります（リリース参照） |
+| アプリ内アップデートに失敗する | 最新リリースからダウンロードして手動で入れ直す |
 | ファン制御が使えない | 設定 → 冷却 → **ヘルパーをインストール**／**ヘルパーを更新** |
 | エージェントが検出されない | 設定 → エージェントで **連携** し、**テスト** を実行 |
 

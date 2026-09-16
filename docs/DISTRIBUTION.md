@@ -60,14 +60,29 @@
    ドラッグ&ドロップ用レイアウト（640×400、アイコン 128px）で作成する。
    レイアウトは Finder 経由で `.DS_Store` に書き込むため、GUI セッションが
    ない場合はレイアウトなしの DMG にフォールバックする。
-4. GitHubでタグ + Release作成:
-   - タグ `v0.2.0` をpush
-   - Release名 `Awake v0.2.0`、Notesに変更点（**英語**）とSHA256を記載
-   - 添付: `dist/Awake-0.2.0.zip` と `dist/appcast.xml`（両方必須）。
-     `dist/Awake-0.2.0.dmg`（ドラッグ&ドロップ用）と `.sha256` も添付推奨
-     （手動ダウンロード用）
-   - **Stable releaseとして公開** (pre-release/draftにしない。`SUFeedURL` は
-     `releases/latest` を指すため、draft/pre-release は配信対象外)
+4. リリース作成（`scripts/release.sh` 推奨）:
+
+   ```sh
+   scripts/release.sh 0.2.0            # ビルド→タグ→draft Release作成
+   scripts/release.sh --publish 0.2.0  # 添付とノートを確認して公開
+   ```
+
+   `release.sh` は次を自動化する:
+   - クリーンな作業ツリーと `origin/main` との同期を確認（未pushのビルドを防ぐ）
+   - `scripts/package.sh <version>` の実行（`--skip-build` で省略可）
+   - annotated タグ `v0.2.0` の作成と push
+   - draft Release（名前 `Awake v0.2.0`）に `Awake-0.2.0.zip` と
+     `appcast.xml`（両方必須）、あれば `.dmg` と `.sha256` も添付。
+     `dist/release-notes-v0.2.0.md` があれば SHA256 を追記して Notes に使う
+   - `--publish` で `--draft=false --latest` を実行し、**stable** として公開
+     （`SUFeedURL` は `releases/latest` を指すため、draft/pre-release は
+     配信対象外。公開前に必須アセットの有無も確認する）
+
+   実行内容だけ確認したい場合は `--dry-run` を使う。
+
+   手動で行う場合: タグ `v0.2.0` をpushし、Release名 `Awake v0.2.0`、Notesに
+   変更点（**英語**）とSHA256を記載。添付は zip と `appcast.xml` が必須、
+   `.dmg` と `.sha256` も推奨（手動ダウンロード用）。
 5. 動作確認: Sparkle 導入版（0.2.0 以降）を入れた確認用Macで
    設定 > Software Updates > Check Now → 更新が見つかる → Install で
    置き換えと再起動が完了することを確認する。初回の Sparkle 導入版

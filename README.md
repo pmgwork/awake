@@ -100,18 +100,7 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 
 Run the unit tests from Xcode with **Product ▸ Test** (target `awakeTests`). The app target uses a file-system synchronized group, so new files under `awake/` are picked up automatically.
 
-## Releasing
-
-One-time setup: generate the Sparkle signing key with `dist/sparkle-tools/bin/generate_keys` (the tools are downloaded on the first package run) and keep it safe. The public key lives in `awake/Info.plist` as `SUPublicEDKey`. If the private key is lost, existing installs can no longer receive in-app updates.
-
-```sh
-scripts/package.sh 0.2.0
-# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256, dist/appcast.xml
-```
-
-Optionally write `dist/release-notes-v0.2.0.md` first; its contents are embedded in the appcast and shown in the update window.
-
-Create a GitHub release with tag `v0.2.0`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP **and `appcast.xml`**, plus the DMG and `Awake-0.2.0.sha256` for manual downloads. The updater reads `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`, so the newest stable release must always carry an `appcast.xml` asset. Details: `docs/DISTRIBUTION.md`.
+Release (distribution) steps are documented in `docs/DISTRIBUTION.md`.
 
 ## Project layout
 
@@ -128,7 +117,7 @@ Create a GitHub release with tag `v0.2.0`, keep it a **stable** release (not a d
 | Symptom | Fix |
 | --- | --- |
 | macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
-| In-app updates fail | The repository must be public and the newest **stable** release must include `appcast.xml` (see Releasing) |
+| In-app updates fail | Replace the app with the latest release from GitHub |
 | Fan control is unavailable | Settings → Cooling → **Install Helper** / **Update Helper** |
 | Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
 
