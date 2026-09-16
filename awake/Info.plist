@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sparkle in-app updates. The feed URL always resolves to the newest
+	     stable GitHub Release, which must carry an appcast.xml asset. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/PMGWork/awake/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>0Fy0NadcsAe7hxe9+GEQEUmhEko8rhVDEQOOh+q/LU8=</string>
+	<!-- Awake manages the "check automatically" preference in its own settings. -->
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<!-- Verify the EdDSA signature before extracting a downloaded update. -->
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
+	<!-- Do not send anonymous system profiling data to the update server. -->
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+</dict>
+</plist>

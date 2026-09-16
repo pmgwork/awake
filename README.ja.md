@@ -18,7 +18,7 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 - **画面の制御** — セッション中だけ、ディスプレイのスリープ・スクリーンセーバー・自動ロックを防止できます。
 - **グローバルショートカット** — 記録したキーの組み合わせで、どのアプリからでもメニューバーの主操作を実行できます。
 - **通知** — 自動停止や保護機構の失敗時に通知します。
-- **アップデート確認** — GitHub Releases を読み取ります。アカウントは不要です。
+- **アプリ内アップデート** — GitHub Releases を確認し、新しい版はアプリ内でダウンロードしてインストールします（Sparkle・EdDSA 署名検証つき）。アカウントは不要です。
 
 ## 動作環境
 
@@ -34,6 +34,12 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
    - macOS 15 以降（26/27 を含む）: 一度 `Awake.app` を開こうとして警告を閉じ、**システム設定 → プライバシーとセキュリティ** の **セキュリティ** 欄で **このまま開く** をクリック
    - または quarantine 属性を削除: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 以前は右クリック → **開く** → **開く** でも可
+4. Homebrew を使う場合（先に tap します）:
+   ```sh
+   brew tap pmgwork/tap
+   brew install --cask awake
+   ```
+   初回起動時の Gatekeeper 回避は同じく必要です。インストール後は Awake がアプリ内で更新するため、`brew upgrade --cask awake` は任意です。
 
 Awake はメニューバー専用アプリです（Dock にアイコンは表示されません）。
 
@@ -79,11 +85,11 @@ Awake はメニューバー専用アプリです（Dock にアイコンは表示
 
 - エージェントの検出は `~/Library/Application Support/Awake` 配下のローカルなフックイベントのみを使用します。プロセスのポーリングや、プロジェクト・書類ファイルの走査は行いません。
 - ダウンロードの検出は、指定フォルダ内のファイル名（`.download`、`.crdownload`、`.part` など。隠しファイルは対象外）のみを参照します。
-- 解析・テレメトリー・アカウントはありません。ネットワーク通信は、有効時のみ行われる GitHub Releases のアップデート確認だけです。
+- 解析・テレメトリー・アカウントはありません。ネットワーク通信は、GitHub の `releases/latest` の確認と、更新に同意したときのダウンロードだけです。匿名のシステムプロファイリングは送信しません。
 
 ## ソースからビルド
 
-Xcode 16 以降が必要です。リリースビルドは Xcode 27 と macOS 27 SDK で作成し、macOS 26/27 の外観・挙動の変更に追随します。外部依存はありません。
+Xcode 16 以降が必要です。リリースビルドは Xcode 27 と macOS 27 SDK で作成し、macOS 26/27 の外観・挙動の変更に追随します。外部依存は、アプリ内アップデート用の [Sparkle](https://sparkle-project.org)（Swift Package Manager 経由）だけです。
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -101,12 +107,16 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 
 ## リリース
 
+初回のみ署名鍵を用意します。`dist/sparkle-tools/bin/generate_keys` で Sparkle の EdDSA 鍵を生成し、大切に保管してください（ツールは初回のパッケージ作成時に自動でダウンロードされます）。公開鍵は `awake/Info.plist` の `SUPublicEDKey` に埋め込み済みです。秘密鍵を失うと、既存ユーザーへアプリ内アップデートを配布できなくなります。
+
 ```sh
 scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256
+# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
 ```
 
-タグ `v0.1.2` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP を添付します。アプリの更新確認は `releases/latest` を参照するため、draft と pre-release は対象外です。
+先に `dist/release-notes-v0.1.2.md` を用意しておくと、内容が appcast に埋め込まれ、更新画面に表示されます。
+
+タグ `v0.1.2` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP と `appcast.xml` を添付します（手動ダウンロード用に DMG と `.sha256` も添付可）。更新確認は `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml` を読むため、最新の stable リリースには常に `appcast.xml` が必要です。詳細は `docs/DISTRIBUTION.md`。
 
 ## プロジェクト構成
 
@@ -123,7 +133,7 @@ scripts/package.sh 0.1.2
 | 症状 | 対処 |
 | --- | --- |
 | 初回起動時に macOS にブロックされる | システム設定 → プライバシーとセキュリティ → **このまま開く**、または quarantine 属性を削除（インストール参照） |
-| 「確認できませんでした」と表示される | リポジトリが公開され、stable リリースが存在する必要があります（更新確認は未認証で行います） |
+| アプリ内アップデートに失敗する | リポジトリが公開され、最新の stable リリースに `appcast.xml` が添付されている必要があります（リリース参照） |
 | ファン制御が使えない | 設定 → 冷却 → **ヘルパーをインストール**／**ヘルパーを更新** |
 | エージェントが検出されない | 設定 → エージェントで **連携** し、**テスト** を実行 |
 

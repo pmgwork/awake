@@ -7,7 +7,7 @@ struct GeneralSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var notificationManager: NotificationManager
     @ObservedObject var screenBehaviorManager: ScreenBehaviorManager
-    @ObservedObject var updateService: AppUpdateService
+    @ObservedObject var updater: AppUpdater
     @ObservedObject var shortcutManager: GlobalShortcutManager
 
     var body: some View {
@@ -98,32 +98,25 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle(
                     L10n.string("Automatically check for updates"),
-                    isOn: $settings.automaticallyCheckForUpdates
+                    isOn: Binding(
+                        get: { updater.automaticallyChecksForUpdates },
+                        set: { updater.setAutomaticallyChecksForUpdates($0) }
+                    )
                 )
 
                 LabeledContent {
                     HStack {
                         updateStatusView
                         Button(L10n.string("Check Now")) {
-                            updateService.checkForUpdates(userInitiated: true)
+                            updater.checkForUpdates()
                         }
-                        .disabled(updateService.state == .checking)
+                        .disabled(!updater.canCheckForUpdates)
                     }
                 } label: {
                     Text(L10n.string("Software Updates"))
                 }
-
-                if case .available(_, let release) = updateService.state {
-                    LabeledContent {
-                        Button(L10n.string("Download...")) {
-                            updateService.openRelease(release)
-                        }
-                    } label: {
-                        Text(L10n.format("Awake %@", release.version))
-                    }
-                }
             } footer: {
-                Text(L10n.string("Checks GitHub Releases on launch. No account or signing required."))
+                Text(L10n.string("Updates are downloaded and installed inside Awake. No account required."))
             }
 
             Section {
@@ -132,7 +125,7 @@ struct GeneralSettingsView: View {
                     OnboardingWindowController.shared.showOnboarding(coordinator: AwakeCoordinator.shared)
                 }
                 Button(L10n.string("View All Releases")) {
-                    updateService.openReleasesPage()
+                    updater.openReleasesPage()
                 }
             } header: {
                 Text(L10n.string("About"))
@@ -163,26 +156,12 @@ struct GeneralSettingsView: View {
 
     @ViewBuilder
     private var updateStatusView: some View {
-        switch updateService.state {
-        case .idle:
-            if let lastChecked = settings.lastUpdateCheckAt {
-                Text(L10n.format("Last checked %@", lastChecked.formatted(date: .abbreviated, time: .shortened)))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(L10n.string("Not Checked"))
-                    .foregroundStyle(.secondary)
-            }
-        case .checking:
-            ProgressView()
-                .controlSize(.small)
-        case .upToDate:
-            Label(L10n.string("Up to Date"), systemImage: "checkmark.circle")
-                .foregroundStyle(.green)
-        case .available(_, let release):
-            Label(L10n.format("Version %@ Available", release.version), systemImage: "arrow.down.circle")
-        case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
+        if let lastChecked = updater.lastUpdateCheckDate {
+            Text(L10n.format("Last checked %@", lastChecked.formatted(date: .abbreviated, time: .shortened)))
+                .foregroundStyle(.secondary)
+        } else {
+            Text(L10n.string("Not Checked"))
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -18,7 +18,7 @@
 - **屏幕控制** — 仅在会话期间防止显示器睡眠、屏幕保护程序和自动锁定。
 - **全局快捷键** — 录制组合键后，可在任意应用中执行菜单栏的主要操作。
 - **通知** — 自动停止或保护机制失败时发出通知。
-- **更新检查** — 读取 GitHub Releases，无需账号。
+- **应用内更新** — 检查 GitHub Releases，并在应用内下载安装新版本（Sparkle，带 EdDSA 签名验证）。无需账号。
 
 ## 系统要求
 
@@ -34,6 +34,12 @@
    - macOS 15 或更高版本（含 26/27）：先尝试打开一次 `Awake.app` 并关闭警告，然后前往**系统设置 → 隐私与安全性**，滚动到**安全性**并点按 **仍要打开**，或
    - 清除 quarantine 属性：`xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 及更早版本也可右键点按 `Awake.app` → **打开** → **打开**
+4. 也可以使用 Homebrew 安装（需要先 tap）：
+   ```sh
+   brew tap pmgwork/tap
+   brew install --cask awake
+   ```
+   首次启动同样需要绕过一次 Gatekeeper。安装后 Awake 会在应用内自行更新，`brew upgrade --cask awake` 是可选的。
 
 Awake 只在菜单栏运行（不会显示在 Dock 中）。
 
@@ -79,11 +85,11 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 
 - 代理检测只使用 `~/Library/Application Support/Awake` 下的本地 Hook 事件，不轮询进程，也不扫描你的项目或文档文件。
 - 下载检测只查看所选文件夹中的文件名（`.download`、`.crdownload`、`.part` 等，跳过隐藏文件）。
-- 没有分析、遥测或账号。唯一的网络请求是 GitHub Releases 的更新检查，且仅在启用时进行。
+- 没有分析、遥测或账号。网络请求仅限于读取 GitHub 的 `releases/latest` 进行更新检查，以及在你同意更新后下载更新。不会发送匿名系统分析数据。
 
 ## 从源码构建
 
-需要 Xcode 16 或更高版本。发布构建使用 Xcode 27 与 macOS 27 SDK，以采用 macOS 26/27 的外观与行为变化。没有任何第三方依赖。
+需要 Xcode 16 或更高版本。发布构建使用 Xcode 27 与 macOS 27 SDK，以采用 macOS 26/27 的外观与行为变化。唯一的第三方依赖是用于应用内更新的 [Sparkle](https://sparkle-project.org)（通过 Swift Package Manager 获取）。
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -101,12 +107,16 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 
 ## 发布
 
+首次需要生成签名密钥：用 `dist/sparkle-tools/bin/generate_keys` 生成 Sparkle 的 EdDSA 密钥并妥善保管（工具会在首次打包时自动下载）。公钥已写入 `awake/Info.plist` 的 `SUPublicEDKey`。如果私钥丢失，现有用户将无法再收到应用内更新。
+
 ```sh
 scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256
+# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
 ```
 
-创建标签为 `v0.1.2` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP。应用内的更新检查读取 `releases/latest`，会忽略 draft 和 pre-release。
+可以事先准备 `dist/release-notes-v0.1.2.md`，其内容会嵌入 appcast 并显示在更新窗口中。
+
+创建标签为 `v0.1.2` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP 和 `appcast.xml`（也可附上 DMG 和 `.sha256` 供手动下载）。更新检查读取 `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`，因此最新的 stable 版本必须附带 `appcast.xml`。详见 `docs/DISTRIBUTION.md`。
 
 ## 项目结构
 
@@ -123,7 +133,7 @@ scripts/package.sh 0.1.2
 | 现象 | 处理方法 |
 | --- | --- |
 | 首次启动被 macOS 阻止 | 系统设置 → 隐私与安全性 → **仍要打开**，或清除 quarantine 属性（见「安装」） |
-| 更新检查失败 | 仓库需要是公开的且存在 stable 版本（更新检查不进行身份验证） |
+| 应用内更新失败 | 仓库需要是公开的，且最新的 **stable** 版本必须附带 `appcast.xml`（见「发布」） |
 | 无法使用风扇控制 | 设置 → 散热 → **安装辅助工具**／**更新辅助工具** |
 | 检测不到代理 | 在设置 → 代理中**链接**，然后执行**测试** |
 

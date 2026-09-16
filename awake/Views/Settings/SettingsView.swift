@@ -14,7 +14,7 @@ struct SettingsView: View {
                 settings: coordinator.settings,
                 notificationManager: NotificationManager.shared,
                 screenBehaviorManager: coordinator.screenBehaviorManager,
-                updateService: AppUpdateService.shared,
+                updater: AppUpdater.shared,
                 shortcutManager: coordinator.shortcutManager
             )
             .tabItem {

@@ -11,7 +11,7 @@
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
-		A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* AppUpdateServiceTests.swift */; };
+		E10000000000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E10000000000000000000002 /* Sparkle */; };
 		B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CompletionGracePeriodTests.swift */; };
 		B20000000000000000000004 /* KeyboardShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* KeyboardShortcutTests.swift */; };
 		B20000000000000000000006 /* SMCHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* SMCHelperTests.swift */; };
@@ -55,7 +55,6 @@
 		A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1000000000000000000001E /* AppUpdateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateServiceTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* CompletionGracePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGracePeriodTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000003 /* KeyboardShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000005 /* SMCHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMCHelperTests.swift; sourceTree = "<group>"; };
@@ -63,9 +62,22 @@
 		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E10000000000000000000004 /* Exceptions for "awake" folder in "awake" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D198EB48303EB1D10004E0F5 /* awake */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D198EB4B303EB1D10004E0F5 /* awake */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E10000000000000000000004 /* Exceptions for "awake" folder in "awake" target */,
+			);
 			path = awake;
 			sourceTree = "<group>";
 		};
@@ -90,6 +102,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E10000000000000000000003 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,7 +121,6 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
-				A1000000000000000000001E /* AppUpdateServiceTests.swift */,
 				B20000000000000000000002 /* CompletionGracePeriodTests.swift */,
 				B20000000000000000000003 /* KeyboardShortcutTests.swift */,
 				B20000000000000000000005 /* SMCHelperTests.swift */,
@@ -197,6 +209,7 @@
 			);
 			name = awake;
 			packageProductDependencies = (
+				E10000000000000000000002 /* Sparkle */,
 			);
 			productName = awake;
 			productReference = D198EB49303EB1D10004E0F5 /* awake.app */;
@@ -231,6 +244,9 @@
 			);
 			mainGroup = D198EB40303EB1D10004E0F5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D198EB4A303EB1D10004E0F5 /* Products */;
 			projectDirPath = "";
@@ -269,7 +285,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
-				A1000000000000000000001D /* AppUpdateServiceTests.swift in Sources */,
 				B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */,
 				B20000000000000000000004 /* KeyboardShortcutTests.swift in Sources */,
 				B20000000000000000000006 /* SMCHelperTests.swift in Sources */,
@@ -487,6 +502,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = awake/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Awake;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -521,6 +537,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = awake/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Awake;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -581,6 +598,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E10000000000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D198EB41303EB1D10004E0F5 /* Project object */;
 }

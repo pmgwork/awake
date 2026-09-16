@@ -18,7 +18,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
 - **Global shortcut** — run the menu bar's main action from any app with a key combination you record.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
-- **Update check** — reads GitHub Releases; no account required.
+- **In-app updates** — checks GitHub Releases and installs new versions inside the app (Sparkle, EdDSA-verified); no account required.
 
 ## Requirements
 
@@ -34,6 +34,12 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
    - On macOS 15 or later (including 26/27): try to open `Awake.app` once and dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**, or
    - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - On macOS 14 or earlier, right-click `Awake.app` → **Open** → **Open** also works.
+4. Alternative: install with Homebrew (tap it first):
+   ```sh
+   brew tap pmgwork/tap
+   brew install --cask awake
+   ```
+   The same one-time Gatekeeper step applies on first launch. After that Awake updates itself in-app, so `brew upgrade --cask awake` is optional.
 
 Awake runs only in the menu bar (no Dock icon).
 
@@ -79,11 +85,11 @@ When the lid closes with no external display connected, Awake keeps the system a
 
 - Agent activity is detected from local hook events under `~/Library/Application Support/Awake`. Awake does not poll running processes and does not inspect your project or document files.
 - Download detection only looks at file names (`.download`, `.crdownload`, `.part`, …, skipping hidden files) in the folder you choose.
-- No analytics, no telemetry, no account. The only network request is the GitHub Releases update check, and only when it is enabled.
+- No analytics, no telemetry, no account. Awake contacts GitHub only to read `releases/latest` for update checks and to download an update after you agree to install it. Anonymous system profiling is disabled.
 
 ## Building from source
 
-Requires Xcode 16 or later. Release builds are made with Xcode 27 and the macOS 27 SDK, so the app adopts the macOS 26/27 appearance and behavior changes. There are no third-party dependencies.
+Requires Xcode 16 or later. Release builds are made with Xcode 27 and the macOS 27 SDK, so the app adopts the macOS 26/27 appearance and behavior changes. The only third-party dependency is [Sparkle](https://sparkle-project.org) for in-app updates, resolved with Swift Package Manager.
 
 ```sh
 git clone https://github.com/PMGWork/awake.git
@@ -101,12 +107,16 @@ Run the unit tests from Xcode with **Product ▸ Test** (target `awakeTests`). T
 
 ## Releasing
 
+One-time setup: generate the Sparkle signing key with `dist/sparkle-tools/bin/generate_keys` (the tools are downloaded on the first package run) and keep it safe. The public key lives in `awake/Info.plist` as `SUPublicEDKey`. If the private key is lost, existing installs can no longer receive in-app updates.
+
 ```sh
 scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256
+# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
 ```
 
-Create a GitHub release with tag `v0.1.2`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP. The in-app update check reads `releases/latest`, which ignores drafts and pre-releases.
+Optionally write `dist/release-notes-v0.1.2.md` first; its contents are embedded in the appcast and shown in the update window.
+
+Create a GitHub release with tag `v0.1.2`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP **and `appcast.xml`**, plus the DMG and `Awake-0.1.2.sha256` for manual downloads. The updater reads `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`, so the newest stable release must always carry an `appcast.xml` asset. Details: `docs/DISTRIBUTION.md`.
 
 ## Project layout
 
@@ -123,7 +133,7 @@ Create a GitHub release with tag `v0.1.2`, keep it a **stable** release (not a d
 | Symptom | Fix |
 | --- | --- |
 | macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
-| "Could not check for updates" | The repository must be public and have a published stable release; the check is unauthenticated |
+| In-app updates fail | The repository must be public and the newest **stable** release must include `appcast.xml` (see Releasing) |
 | Fan control is unavailable | Settings → Cooling → **Install Helper** / **Update Helper** |
 | Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
 
