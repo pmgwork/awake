@@ -46,10 +46,10 @@ struct CoolingSettingsView: View {
                         installHelper()
                     } label: {
                         HStack(spacing: 6) {
-                            if isInstallingHelper {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
+                            ProgressView()
+                                .controlSize(.small)
+                                .opacity(isInstallingHelper ? 1 : 0)
+                                .accessibilityHidden(!isInstallingHelper)
                             Text(helperButtonTitle)
                         }
                     }
@@ -58,11 +58,7 @@ struct CoolingSettingsView: View {
             } header: {
                 Text(L10n.string("Fan Control Helper"))
             } footer: {
-                if !isHelperInstalled && helperStatusText.isEmpty {
-                    Text(isHelperPresent
-                         ? L10n.string("A newer helper is required for this Mac and battery closed-lid operation.")
-                         : L10n.string("macOS requires administrator permission once to control hardware fans on Apple Silicon."))
-                }
+                Text(helperFooterText)
             }
 
             Section {
@@ -70,10 +66,12 @@ struct CoolingSettingsView: View {
                     L10n.string("Fan"),
                     value: fanController.currentStatus.formattedRPM
                 )
+                .monospacedDigit()
                 LabeledContent(
                     L10n.string("Temperature"),
                     value: thermalMonitor.thermalReading.formattedTemperature
                 )
+                .monospacedDigit()
 
                 HStack {
                     Button(L10n.string("Test 100% Spin")) {
@@ -87,20 +85,11 @@ struct CoolingSettingsView: View {
                     }
                 }
 
-                if fanController.isTestModeActive {
-                    Label(
-                        L10n.string("Fan test ends after 60 seconds and returns to the current cooling policy."),
-                        systemImage: "timer"
-                    )
-                    .foregroundStyle(.secondary)
-                }
-
-                if let error = fanController.controlError {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                }
             } header: {
                 Text(L10n.string("Fan Speed Diagnostics & Test"))
+            } footer: {
+                Label(diagnosticFooterText, systemImage: diagnosticFooterIcon)
+                    .foregroundStyle(diagnosticFooterColor)
             }
         }
         .formStyle(.grouped)
@@ -137,6 +126,25 @@ struct CoolingSettingsView: View {
         }
     }
 
+    private var diagnosticFooterText: String {
+        if let error = fanController.controlError { return error }
+        if fanController.isTestModeActive {
+            return L10n.string("Fan test ends after 60 seconds and returns to the current cooling policy.")
+        }
+        return L10n.string("Run a spin test to verify fan control.")
+    }
+
+    private var diagnosticFooterIcon: String {
+        if fanController.controlError != nil { return "exclamationmark.triangle" }
+        if fanController.isTestModeActive { return "timer" }
+        return "checkmark.circle"
+    }
+
+    private var diagnosticFooterColor: Color {
+        if fanController.controlError != nil { return .red }
+        return .secondary
+    }
+
     private var helperButtonTitle: String {
         if isInstallingHelper { return L10n.string("Updating...") }
         if isHelperInstalled { return L10n.string("Reinstall Helper...") }
@@ -158,5 +166,14 @@ struct CoolingSettingsView: View {
     private var helperStateColor: Color {
         if !isHelperInstalled && !helperStatusText.isEmpty { return .red }
         return isHelperInstalled ? .green : .secondary
+    }
+
+    private var helperFooterText: String {
+        if isHelperInstalled {
+            return L10n.string("The current helper is installed and ready for fan control.")
+        }
+        return isHelperPresent
+            ? L10n.string("A newer helper is required for this Mac and battery closed-lid operation.")
+            : L10n.string("macOS requires administrator permission once to control hardware fans on Apple Silicon.")
     }
 }

@@ -2,14 +2,8 @@
 //  SettingsWindowController.swift
 //  Awake
 //
-//  Presents the settings panes in an `NSTabViewController`. The AppKit tab
-//  controller owns the window toolbar, so the system draws the standard
-//  settings toolbar and keeps its background stable while the pointer moves
-//  over the SwiftUI forms. SwiftUI's own `Settings` scene re-renders that
-//  background on hover in this app, which is why the window is built here.
-//
-//  Every pane is measured at its natural height, and the window is sized to
-//  the selected pane so forms never scroll.
+//  AppKit owns the selectable toolbar items and their persistent highlight;
+//  SwiftUI continues to provide each settings pane.
 //
 
 import SwiftUI
@@ -47,46 +41,39 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         self.window = window
 
-        // Assigning the content view controller resizes the window to the
-        // controller's preferred size, so the measured size is applied after.
         window.setContentSize(initialSize)
         window.contentMinSize = initialSize
         window.contentMaxSize = initialSize
-
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    public func close() {
-        window?.close()
-    }
-
     private func configureTabs() {
-        guard tabController.tabViewItems.isEmpty else { return }
+        if tabController.tabViewItems.isEmpty {
+            tabController.tabStyle = .toolbar
+            tabController.onSelectionChange = { [weak self] tab in
+                self?.applySize(for: tab)
+            }
 
-        tabController.tabStyle = .toolbar
-        tabController.onSelectionChange = { [weak self] tab in
-            self?.applySize(for: tab)
+            for tab in SettingsTab.allCases {
+                let pane = paneView(for: tab)
+                let hostingController = NSHostingController(rootView: pane)
+                hostingController.sizingOptions = []
+                let item = NSTabViewItem(viewController: hostingController)
+                item.label = tab.title
+                item.image = tab.toolbarImage
+                tabController.addTabViewItem(item)
+            }
         }
 
+        // Re-measure on every show so the fixed window follows state changes
+        // (active sessions, legacy custom agents) instead of the first-open state.
         for tab in SettingsTab.allCases {
-            let pane = pane(for: tab)
-            let hostingController = NSHostingController(rootView: pane)
-            hostingController.sizingOptions = []
-            let item = NSTabViewItem(viewController: hostingController)
-            item.label = tab.title
-            item.image = tab.toolbarImage
-            tabController.addTabViewItem(item)
-            paneSizes[tab] = measure(pane)
+            paneSizes[tab] = measure(paneView(for: tab))
         }
     }
 
-    /// Measures the pane at the shared content width so the window can match it.
-    ///
-    /// `NSHostingController.sizeThatFits(in:)` reports an infinite height for
-    /// SwiftUI forms, but an `NSHostingView` laid out at the content width
-    /// reports the height the form actually needs.
     private func measure(_ pane: some View) -> NSSize {
         let hostingView = NSHostingView(rootView: pane)
         hostingView.frame = NSRect(x: 0, y: 0, width: SettingsTab.contentWidth, height: 0)
@@ -103,10 +90,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.setContentSize(size)
         window.contentMinSize = size
         window.contentMaxSize = size
-    }
-
-    private func pane(for tab: SettingsTab) -> some View {
-        paneView(for: tab)
     }
 
     private func paneView(for tab: SettingsTab) -> some View {
@@ -138,33 +121,16 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             }
         }
         .frame(width: SettingsTab.contentWidth)
-        .contentSizedVerticalScrolling()
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
     }
-
-    // MARK: - NSWindowDelegate
 
     public func windowWillClose(_ notification: Notification) {
         window = nil
     }
 }
 
-private extension View {
-    /// Keeps a pane from bouncing or scrolling when its content already fits.
-    @ViewBuilder
-    func contentSizedVerticalScrolling() -> some View {
-        if #available(macOS 13.3, *) {
-            scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        } else {
-            self
-        }
-    }
-}
-
-/// `NSTabViewController` is its own `NSTabView` delegate, so selecting a tab is
-/// observed by overriding the delegate callback instead of replacing it.
 @MainActor
 private final class SettingsTabViewController: NSTabViewController {
-    /// Called with the pane that became visible.
     var onSelectionChange: ((SettingsTab) -> Void)?
 
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {

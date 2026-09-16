@@ -4,7 +4,7 @@
 
 A macOS menu bar app that keeps your Mac awake while AI coding agents are running — even with the lid closed.
 
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
+![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)
 ![Latest release](https://img.shields.io/github/v/release/PMGWork/awake)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -21,8 +21,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 ## Requirements
 
-- macOS 13 (Ventura) or later. macOS 27 (Golden Gate) is supported; macOS 27 itself runs only on Apple silicon.
-- Apple Silicon Mac recommended: closed-lid fan control is built for Apple Silicon. The other features also work on Intel Macs running macOS 13–26.
+- macOS 26 (Tahoe) or later. macOS 27 (Golden Gate) is supported; macOS 27 itself runs only on Apple silicon.
+- Apple Silicon Mac recommended: closed-lid fan control is built for Apple Silicon. The other features also work on Intel Macs running macOS 26.
 - The app UI is available in English and Japanese.
 
 ## Installation
@@ -30,9 +30,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 1. Download `Awake-x.y.z.zip` from the [latest release](https://github.com/PMGWork/awake/releases/latest). Each release also includes `Awake-x.y.z.dmg`, which opens as a drag-to-Applications window.
 2. Unzip it and move `Awake.app` to `/Applications`.
 3. Builds are not notarized (no paid Apple Developer account), so the first launch needs one Gatekeeper step:
-   - On macOS 15 or later (including 26/27): try to open `Awake.app` once and dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**, or
+   - Try to open `Awake.app` once and dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**, or
    - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
-   - On macOS 14 or earlier, right-click `Awake.app` → **Open** → **Open** also works.
    - With the DMG, macOS asks for the same approval of the disk image when you open it (that dialog has no *Open* button; use **System Settings → Privacy & Security**), then for the app after copying it to `/Applications`.
 
 Awake runs only in the menu bar (no Dock icon).

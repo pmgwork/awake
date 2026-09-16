@@ -28,14 +28,16 @@ struct SessionsSettingsView: View {
                     L10n.string("Prevent Screen Saver & Automatic Lock"),
                     isOn: $settings.preventScreenSaver
                 )
-                if let error = screenBehaviorManager.lastError {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                }
             } header: {
                 Text(L10n.string("Display During Sessions"))
             } footer: {
-                Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))
+                    if let error = screenBehaviorManager.lastError {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
 
             Section {

@@ -5,9 +5,8 @@
 
 import SwiftUI
 
-/// The panes of the settings window. An `NSTabViewController` presents them so
-/// the system draws the standard settings toolbar (see
-/// `SettingsWindowController`).
+/// The panes of the settings window. AppKit presents them as selectable
+/// toolbar items while each pane remains implemented in SwiftUI.
 enum SettingsTab: CaseIterable {
     case general
     case sessions
@@ -32,11 +31,9 @@ enum SettingsTab: CaseIterable {
         }
     }
 
-    /// The image shown in the settings toolbar.
     var toolbarImage: NSImage? {
         NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
     }
 
-    /// The width shared by every pane. Heights come from measuring each pane.
     static let contentWidth: CGFloat = 540
 }

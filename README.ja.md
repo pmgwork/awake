@@ -4,7 +4,7 @@
 
 AIコーディングエージェントの実行中、Macのスリープを防ぐメニューバーアプリです。蓋を閉じたままでも動作します。
 
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
+![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)
 ![Latest release](https://img.shields.io/github/v/release/PMGWork/awake)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -21,8 +21,8 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 
 ## 動作環境
 
-- macOS 13（Ventura）以降。macOS 27（Golden Gate）に対応しています（macOS 27 自体は Apple Silicon 専用です）
-- 閉蓋冷却のファン制御は Apple Silicon 向けです（その他の機能は macOS 13〜26 の Intel Mac でも動作します）
+- macOS 26（Tahoe）以降。macOS 27（Golden Gate）に対応しています（macOS 27 自体は Apple Silicon 専用です）
+- 閉蓋冷却のファン制御は Apple Silicon 向けです（その他の機能は macOS 26 の Intel Mac でも動作します）
 - アプリの表示は英語と日本語に対応しています
 
 ## インストール
@@ -30,9 +30,8 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 1. [最新リリース](https://github.com/PMGWork/awake/releases/latest) から `Awake-x.y.z.zip` をダウンロード（各リリースには、Applications へドラッグするだけの `Awake-x.y.z.dmg` も添付されます）
 2. 展開して `Awake.app` を `/Applications` へ移動
 3. 公証（notarization）を行っていないため、初回起動時のみ Gatekeeper の回避操作が必要です
-   - macOS 15 以降（26/27 を含む）: 一度 `Awake.app` を開こうとして警告を閉じ、**システム設定 → プライバシーとセキュリティ** の **セキュリティ** 欄で **このまま開く** をクリック
+   - 一度 `Awake.app` を開こうとして警告を閉じ、**システム設定 → プライバシーとセキュリティ** の **セキュリティ** 欄で **このまま開く** をクリック
    - または quarantine 属性を削除: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
-   - macOS 14 以前は右クリック → **開く** → **開く** でも可
    - DMG を使う場合も同じ許可が必要です。ディスクイメージを開くときの警告には「開く」ボタンがないため **システム設定 → プライバシーとセキュリティ** から許可し、`/Applications` へコピーした後にアプリ側も許可します
 
 Awake はメニューバー専用アプリです（Dock にアイコンは表示されません）。

@@ -73,13 +73,7 @@ struct MenuBarView: View {
 
             // Bottom Footer
             HStack {
-                Button {
-                    popoverCloseAction()
-                    SettingsWindowController.shared.show()
-                } label: {
-                    settingsLabel
-                }
-                .buttonStyle(.borderless)
+                settingsButton
 
                 Spacer()
 
@@ -105,6 +99,17 @@ struct MenuBarView: View {
         }
         .font(.system(size: 11))
         .foregroundStyle(.secondary)
+    }
+
+    @ViewBuilder
+    private var settingsButton: some View {
+        Button {
+            popoverCloseAction()
+            SettingsWindowController.shared.show()
+        } label: {
+            settingsLabel
+        }
+        .buttonStyle(.borderless)
     }
 
     private var primaryActionTitle: String {

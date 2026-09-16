@@ -4,7 +4,7 @@
 
 一款 macOS 菜单栏应用：在 AI 编程代理运行期间防止 Mac 睡眠，合上盖子也能继续工作。
 
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
+![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)
 ![Latest release](https://img.shields.io/github/v/release/PMGWork/awake)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -21,8 +21,8 @@
 
 ## 系统要求
 
-- macOS 13（Ventura）或更高版本，支持 macOS 27（Golden Gate）（macOS 27 本身仅支持 Apple Silicon）
-- 合盖散热的风扇控制面向 Apple Silicon（其他功能在运行 macOS 13〜26 的 Intel Mac 上也可使用）
+- macOS 26（Tahoe）或更高版本，支持 macOS 27（Golden Gate）（macOS 27 本身仅支持 Apple Silicon）
+- 合盖散热的风扇控制面向 Apple Silicon（其他功能也可在运行 macOS 26 的 Intel Mac 上使用）
 - 应用界面支持英语和日语
 
 ## 安装
@@ -30,9 +30,8 @@
 1. 从[最新版本](https://github.com/PMGWork/awake/releases/latest)下载 `Awake-x.y.z.zip`（每个版本还附带可直接拖入 Applications 的 `Awake-x.y.z.dmg`）
 2. 解压后把 `Awake.app` 移动到 `/Applications`
 3. 构建未经过公证（notarization），首次启动需要绕过一次 Gatekeeper：
-   - macOS 15 或更高版本（含 26/27）：先尝试打开一次 `Awake.app` 并关闭警告，然后前往**系统设置 → 隐私与安全性**，滚动到**安全性**并点按 **仍要打开**，或
+   - 先尝试打开一次 `Awake.app` 并关闭警告，然后前往**系统设置 → 隐私与安全性**，滚动到**安全性**并点按 **仍要打开**，或
    - 清除 quarantine 属性：`xattr -r -d com.apple.quarantine /Applications/Awake.app`
-   - macOS 14 及更早版本也可右键点按 `Awake.app` → **打开** → **打开**
    - 使用 DMG 时同样需要这些许可：打开磁盘映像时的提示没有「打开」按钮，请在**系统设置 → 隐私与安全性**中允许，复制到 `/Applications` 后再允许应用
 
 Awake 只在菜单栏运行（不会显示在 Dock 中）。

@@ -24,7 +24,7 @@ struct AgentSettingsView: View {
 
             let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
             if !customAgents.isEmpty {
-                Section(L10n.string("Saved Custom Agents")) {
+                Section {
                     ForEach(customAgents) { agent in
                         LabeledContent {
                             Button(L10n.string("Delete"), role: .destructive) {
@@ -39,6 +39,8 @@ struct AgentSettingsView: View {
                             }
                         }
                     }
+                } header: {
+                    Text(L10n.string("Saved Custom Agents"))
                 }
             }
 
@@ -69,16 +71,8 @@ struct AgentSettingsView: View {
             } header: {
                 Text(L10n.string("Current Activity"))
             } footer: {
-                if let latestEventDate {
-                    Text(L10n.format("Last event %@", latestEventDate.formatted(.relative(presentation: .named))))
-                }
-            }
-
-            if let error = integrationManager.lastError {
-                Section {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                }
+                Label(integrationFooterText, systemImage: integrationFooterIcon)
+                    .foregroundStyle(integrationFooterColor)
             }
         }
         .formStyle(.grouped)
@@ -170,8 +164,17 @@ struct AgentSettingsView: View {
         }
     }
 
-    private var latestEventDate: Date? {
-        eventMonitor.lastEventAtByProvider.values.max()
+    private var integrationFooterText: String {
+        if let error = integrationManager.lastError { return error }
+        return L10n.string("All integrations healthy.")
+    }
+
+    private var integrationFooterIcon: String {
+        integrationManager.lastError != nil ? "exclamationmark.triangle" : "checkmark.circle"
+    }
+
+    private var integrationFooterColor: Color {
+        integrationManager.lastError != nil ? .red : .secondary
     }
 
     private func providerStatusText(

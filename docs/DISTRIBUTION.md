@@ -10,7 +10,7 @@
   `scripts/package.sh` は `/Applications/Xcode.app` を既定で使い、
   `DEVELOPER_DIR` を設定すれば任意の Xcode に切り替えられる。
 - アーキテクチャ: Release は universal（arm64 + x86_64）。macOS 27 は
-  Apple Silicon 専用だが、macOS 13〜26 の Intel Mac 向けスライスも同梱する。
+  Apple Silicon 専用だが、macOS 26 の Intel Mac 向けスライスも同梱する。
 - 署名: ローカルの Apple Development 署名で可。Hardened Runtime と
   Library Validation の関係で、Sparkle.framework をロードするには
   Apple Development 署名が必要（ad-hoc 署名ではロードできない）。
@@ -90,7 +90,7 @@
 
 ## 利用者向け (Gatekeeper回避)
 
-初回のみいずれか (macOS 15 以降。macOS 14 以前は右クリック → 開く → 開くも可):
+初回のみいずれか:
 
 - 一度起動を試して警告を閉じ、システム設定 → プライバシーとセキュリティ →
   セキュリティ欄の「このまま開く」をクリック (推奨、GUIのみで完結)

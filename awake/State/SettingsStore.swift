@@ -117,9 +117,7 @@ public final class SettingsStore: ObservableObject {
             UserDefaults.standard.set(launchAtLogin, forKey: Keys.launchAtLogin)
             if !updateLaunchAtLogin(enabled: launchAtLogin) {
                 isSynchronizingLaunchAtLogin = true
-                if #available(macOS 13.0, *) {
-                    launchAtLogin = SMAppService.mainApp.status == .enabled
-                }
+                launchAtLogin = SMAppService.mainApp.status == .enabled
                 UserDefaults.standard.set(launchAtLogin, forKey: Keys.launchAtLogin)
                 isSynchronizingLaunchAtLogin = false
             }
@@ -254,11 +252,7 @@ public final class SettingsStore: ObservableObject {
         }
 
         // Check SMAppService status for Launch at Login
-        if #available(macOS 13.0, *) {
-            self.launchAtLogin = SMAppService.mainApp.status == .enabled
-        } else {
-            self.launchAtLogin = UserDefaults.standard.bool(forKey: Keys.launchAtLogin)
-        }
+        self.launchAtLogin = SMAppService.mainApp.status == .enabled
 
         self.notificationsEnabled = UserDefaults.standard.bool(forKey: Keys.notificationsEnabled)
         if UserDefaults.standard.object(forKey: Keys.preventDisplaySleep) != nil {
@@ -359,23 +353,18 @@ public final class SettingsStore: ObservableObject {
 
     @discardableResult
     private func updateLaunchAtLogin(enabled: Bool) -> Bool {
-        if #available(macOS 13.0, *) {
-            do {
-                if enabled {
-                    if SMAppService.mainApp.status != .enabled {
-                        try SMAppService.mainApp.register()
-                    }
-                } else {
-                    if SMAppService.mainApp.status == .enabled {
-                        try SMAppService.mainApp.unregister()
-                    }
+        do {
+            if enabled {
+                if SMAppService.mainApp.status != .enabled {
+                    try SMAppService.mainApp.register()
                 }
-                return true
-            } catch {
-                NSLog("[SettingsStore] Failed to update launch at login: %@", error.localizedDescription)
-                return false
+            } else if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
             }
+            return true
+        } catch {
+            NSLog("[SettingsStore] Failed to update launch at login: %@", error.localizedDescription)
+            return false
         }
-        return true
     }
 }

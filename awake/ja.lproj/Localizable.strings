@@ -64,7 +64,6 @@
 "Select which AI Agent CLI processes will automatically keep your Mac awake while running." = "実行中にMacのスリープを自動的に防止するAIエージェントCLIを選択します。";
 "Preset Agents" = "プリセット";
 "Custom Agents" = "カスタム";
-"No custom agents added." = "カスタムエージェントはありません。";
 "Add Process..." = "プロセスを追加…";
 "Reset to Presets" = "プリセットに戻す";
 "Live Process Detection Preview" = "プロセス検出プレビュー";
@@ -94,6 +93,7 @@
 "Turns off Awake in every mode and restores automatic fan control at 20% when unplugged." = "電源未接続時に残量が20%になると、すべてのモードでAwakeを停止し、ファンを自動制御へ戻します。";
 "Fan Control Access Authorized" = "ファン制御を利用可能";
 "Fan Control Authorization Required" = "ファン制御ヘルパーが必要";
+"The current helper is installed and ready for fan control." = "最新のヘルパーがインストールされ、ファン制御を利用できます。";
 "A newer helper is required for this Mac and battery closed-lid operation." = "このMacとバッテリー閉蓋動作には新しいヘルパーが必要です。";
 "macOS requires administrator permission once to control hardware fans on Apple Silicon." = "Apple Siliconのファン制御には、初回のみ管理者権限が必要です。";
 "Fan Speed Diagnostics & Test" = "ファン速度の診断・テスト";
@@ -138,8 +138,11 @@
 "Returns to Auto in %d seconds" = "%d秒後に自動制御へ戻ります";
 "Fan test automatically returns to Auto after 60 seconds." = "ファンテストは60秒後に自動制御へ戻ります。";
 "Fan test ends after 60 seconds and returns to the current cooling policy." = "ファンテストは60秒後に終了し、現在の冷却ポリシーへ戻ります。";
+"Run a spin test to verify fan control." = "ファン制御を確認するにはスピンテストを実行してください。";
 "Manually stopped by user." = "ユーザーが手動で停止しました。";
 "Notifications are disabled in System Settings." = "通知はシステム設定で無効になっています。";
+"Notifications are turned off in Awake." = "通知はAwakeでオフになっています。";
+"Notifications enabled." = "通知が有効です。";
 "Display During Sessions" = "セッション中の画面";
 "These preferences apply only while Awake is actively preventing system sleep." = "これらの設定はAwakeがシステムスリープを防止している間だけ適用されます。";
 "Prevent Display Sleep" = "ディスプレイのスリープを防止";
@@ -204,9 +207,8 @@
 "Refresh" = "更新";
 "Hook Event Status" = "フックイベントの状態";
 "%d active sessions" = "%d件のアクティブセッション";
-"Last event %@" = "最終イベント %@";
-"No events received" = "イベント未受信";
 "Hook Integration" = "フック連携";
+"All integrations healthy." = "すべての連携は正常です。";
 "Link %@?" = "%@を連携しますか？";
 "Unlink %@?" = "%@の連携を解除しますか？";
 "Update Configuration" = "設定を更新";
