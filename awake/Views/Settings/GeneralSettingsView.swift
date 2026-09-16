@@ -118,7 +118,7 @@ struct GeneralSettingsView: View {
                     }
                 }
             } footer: {
-                Text(L10n.string("Updates are downloaded and installed inside Awake. No account required."))
+                Text(L10n.string("Updates are downloaded and installed inside Awake."))
             }
 
             Section {

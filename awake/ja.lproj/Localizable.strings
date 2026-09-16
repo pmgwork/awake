@@ -272,7 +272,7 @@
 "Show Welcome Guide..." = "ウェルカムガイドを表示…";
 "Software Updates" = "ソフトウェアアップデート";
 "Automatically check for updates" = "アップデートを自動で確認";
-"Updates are downloaded and installed inside Awake. No account required." = "アップデートはAwake内でダウンロードしてインストールします。アカウントは不要です。";
+"Updates are downloaded and installed inside Awake." = "アップデートはAwake内でダウンロードしてインストールします。";
 "Check Now" = "今すぐ確認";
 "Last checked %@" = "最終確認 %@";
 "Keep Awake After Completion" = "完了後も起動を維持";
