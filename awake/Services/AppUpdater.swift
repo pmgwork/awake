@@ -9,16 +9,12 @@
 //  Gatekeeper approval described in the README.
 //
 
-import AppKit
 import Combine
 import Sparkle
 
 @MainActor
 public final class AppUpdater: NSObject, ObservableObject {
     public static let shared = AppUpdater()
-
-    /// Where "View All Releases" and Sparkle's fallback links point to.
-    public static let releasesPageURL = URL(string: "https://github.com/PMGWork/awake/releases")!
 
     /// Preferences used by the previous GitHub API based checker. They are
     /// migrated into Sparkle's own settings the first time this class runs.
@@ -53,11 +49,6 @@ public final class AppUpdater: NSObject, ObservableObject {
     /// and, when the user agrees, downloads and installs the new version.
     public func checkForUpdates() {
         controller.checkForUpdates(nil)
-    }
-
-    /// Opens the GitHub releases page in the default browser.
-    public func openReleasesPage() {
-        NSWorkspace.shared.open(Self.releasesPageURL)
     }
 
     public func setAutomaticallyChecksForUpdates(_ enabled: Bool) {

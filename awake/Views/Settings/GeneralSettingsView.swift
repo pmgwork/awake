@@ -105,15 +105,17 @@ struct GeneralSettingsView: View {
                 )
 
                 LabeledContent {
-                    HStack {
-                        updateStatusView
-                        Button(L10n.string("Check Now")) {
-                            updater.checkForUpdates()
-                        }
-                        .disabled(!updater.canCheckForUpdates)
+                    Button(L10n.string("Check Now")) {
+                        updater.checkForUpdates()
                     }
+                    .disabled(!updater.canCheckForUpdates)
                 } label: {
-                    Text(L10n.string("Software Updates"))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.string("Software Updates"))
+                        lastCheckedText
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } footer: {
                 Text(L10n.string("Updates are downloaded and installed inside Awake. No account required."))
@@ -123,9 +125,6 @@ struct GeneralSettingsView: View {
                 LabeledContent(L10n.string("Version"), value: appVersion)
                 Button(L10n.string("Show Welcome Guide...")) {
                     OnboardingWindowController.shared.showOnboarding(coordinator: AwakeCoordinator.shared)
-                }
-                Button(L10n.string("View All Releases")) {
-                    updater.openReleasesPage()
                 }
             } header: {
                 Text(L10n.string("About"))
@@ -155,13 +154,11 @@ struct GeneralSettingsView: View {
     }
 
     @ViewBuilder
-    private var updateStatusView: some View {
+    private var lastCheckedText: some View {
         if let lastChecked = updater.lastUpdateCheckDate {
             Text(L10n.format("Last checked %@", lastChecked.formatted(date: .abbreviated, time: .shortened)))
-                .foregroundStyle(.secondary)
         } else {
             Text(L10n.string("Not Checked"))
-                .foregroundStyle(.secondary)
         }
     }
 }
