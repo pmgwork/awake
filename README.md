@@ -105,13 +105,13 @@ Run the unit tests from Xcode with **Product ▸ Test** (target `awakeTests`). T
 One-time setup: generate the Sparkle signing key with `dist/sparkle-tools/bin/generate_keys` (the tools are downloaded on the first package run) and keep it safe. The public key lives in `awake/Info.plist` as `SUPublicEDKey`. If the private key is lost, existing installs can no longer receive in-app updates.
 
 ```sh
-scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
+scripts/package.sh 0.2.0
+# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256, dist/appcast.xml
 ```
 
-Optionally write `dist/release-notes-v0.1.2.md` first; its contents are embedded in the appcast and shown in the update window.
+Optionally write `dist/release-notes-v0.2.0.md` first; its contents are embedded in the appcast and shown in the update window.
 
-Create a GitHub release with tag `v0.1.2`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP **and `appcast.xml`**, plus the DMG and `Awake-0.1.2.sha256` for manual downloads. The updater reads `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`, so the newest stable release must always carry an `appcast.xml` asset. Details: `docs/DISTRIBUTION.md`.
+Create a GitHub release with tag `v0.2.0`, keep it a **stable** release (not a draft or pre-release), and attach the ZIP **and `appcast.xml`**, plus the DMG and `Awake-0.2.0.sha256` for manual downloads. The updater reads `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`, so the newest stable release must always carry an `appcast.xml` asset. Details: `docs/DISTRIBUTION.md`.
 
 ## Project layout
 

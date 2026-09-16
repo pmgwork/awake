@@ -105,13 +105,13 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 首次需要生成签名密钥：用 `dist/sparkle-tools/bin/generate_keys` 生成 Sparkle 的 EdDSA 密钥并妥善保管（工具会在首次打包时自动下载）。公钥已写入 `awake/Info.plist` 的 `SUPublicEDKey`。如果私钥丢失，现有用户将无法再收到应用内更新。
 
 ```sh
-scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
+scripts/package.sh 0.2.0
+# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256, dist/appcast.xml
 ```
 
-可以事先准备 `dist/release-notes-v0.1.2.md`，其内容会嵌入 appcast 并显示在更新窗口中。
+可以事先准备 `dist/release-notes-v0.2.0.md`，其内容会嵌入 appcast 并显示在更新窗口中。
 
-创建标签为 `v0.1.2` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP 和 `appcast.xml`（也可附上 DMG 和 `.sha256` 供手动下载）。更新检查读取 `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`，因此最新的 stable 版本必须附带 `appcast.xml`。详见 `docs/DISTRIBUTION.md`。
+创建标签为 `v0.2.0` 的 GitHub Release，保持为 **stable**（不是 draft，也不是 pre-release），并附上 ZIP 和 `appcast.xml`（也可附上 DMG 和 `.sha256` 供手动下载）。更新检查读取 `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`，因此最新的 stable 版本必须附带 `appcast.xml`。详见 `docs/DISTRIBUTION.md`。
 
 ## 项目结构
 

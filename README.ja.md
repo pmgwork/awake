@@ -105,13 +105,13 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 初回のみ署名鍵を用意します。`dist/sparkle-tools/bin/generate_keys` で Sparkle の EdDSA 鍵を生成し、大切に保管してください（ツールは初回のパッケージ作成時に自動でダウンロードされます）。公開鍵は `awake/Info.plist` の `SUPublicEDKey` に埋め込み済みです。秘密鍵を失うと、既存ユーザーへアプリ内アップデートを配布できなくなります。
 
 ```sh
-scripts/package.sh 0.1.2
-# => dist/Awake-0.1.2.zip, dist/Awake-0.1.2.dmg, dist/Awake-0.1.2.sha256, dist/appcast.xml
+scripts/package.sh 0.2.0
+# => dist/Awake-0.2.0.zip, dist/Awake-0.2.0.dmg, dist/Awake-0.2.0.sha256, dist/appcast.xml
 ```
 
-先に `dist/release-notes-v0.1.2.md` を用意しておくと、内容が appcast に埋め込まれ、更新画面に表示されます。
+先に `dist/release-notes-v0.2.0.md` を用意しておくと、内容が appcast に埋め込まれ、更新画面に表示されます。
 
-タグ `v0.1.2` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP と `appcast.xml` を添付します（手動ダウンロード用に DMG と `.sha256` も添付可）。更新確認は `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml` を読むため、最新の stable リリースには常に `appcast.xml` が必要です。詳細は `docs/DISTRIBUTION.md`。
+タグ `v0.2.0` で GitHub Release を作成し、**stable**（draft でも pre-release でもない状態）にして ZIP と `appcast.xml` を添付します（手動ダウンロード用に DMG と `.sha256` も添付可）。更新確認は `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml` を読むため、最新の stable リリースには常に `appcast.xml` が必要です。詳細は `docs/DISTRIBUTION.md`。
 
 ## プロジェクト構成
 

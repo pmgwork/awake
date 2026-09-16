@@ -18,7 +18,7 @@
   有料Program必須のため対象外。ブラウザでダウンロードした DMG も
   未公証のため、初回マウント時に Gatekeeper の確認が出る
   （システム設定 → プライバシーとセキュリティ →「このまま開く」で許可できる）。
-- タグ形式: `vX.Y.Z` (例 `v0.1.3`)。Sparkle は `CFBundleVersion` で新旧を比較し、
+- タグ形式: `vX.Y.Z` (例 `v0.2.0`)。Sparkle は `CFBundleVersion` で新旧を比較し、
   `scripts/package.sh` が `CURRENT_PROJECT_VERSION` に版数を入れる。
 
 ## 署名鍵 (初回のみ)
@@ -42,7 +42,7 @@
 ## リリース手順
 
 1. 版数を決める: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
-   (Xcode > Target awake > General、現在 `0.1.2`)。`scripts/package.sh` が
+   (Xcode > Target awake > General、現在 `0.2.0`)。`scripts/package.sh` が
    引数の版数で両方を上書きするため、通常はプロジェクト側の変更は不要。
 2. リリースノート（**英語**）を `dist/release-notes-v<version>.md` として用意する。
    `generate_appcast` が同じ名前の ZIP に紐づけて appcast へ埋め込み、
@@ -50,8 +50,8 @@
 3. パッケージ作成:
 
    ```sh
-   scripts/package.sh 0.1.3
-   # => dist/Awake-0.1.3.zip (+ .dmg), dist/Awake-0.1.3.sha256, dist/appcast.xml
+   scripts/package.sh 0.2.0
+   # => dist/Awake-0.2.0.zip (+ .dmg), dist/Awake-0.2.0.sha256, dist/appcast.xml
    ```
 
    初回は Sparkle 2.10.0 のツールを `dist/sparkle-tools/` にダウンロードし、
@@ -61,17 +61,17 @@
    レイアウトは Finder 経由で `.DS_Store` に書き込むため、GUI セッションが
    ない場合はレイアウトなしの DMG にフォールバックする。
 4. GitHubでタグ + Release作成:
-   - タグ `v0.1.3` をpush
-   - Release名 `Awake v0.1.3`、Notesに変更点（**英語**）とSHA256を記載
-   - 添付: `dist/Awake-0.1.3.zip` と `dist/appcast.xml`（両方必須）。
-     `dist/Awake-0.1.3.dmg`（ドラッグ&ドロップ用）と `.sha256` も添付推奨
+   - タグ `v0.2.0` をpush
+   - Release名 `Awake v0.2.0`、Notesに変更点（**英語**）とSHA256を記載
+   - 添付: `dist/Awake-0.2.0.zip` と `dist/appcast.xml`（両方必須）。
+     `dist/Awake-0.2.0.dmg`（ドラッグ&ドロップ用）と `.sha256` も添付推奨
      （手動ダウンロード用）
    - **Stable releaseとして公開** (pre-release/draftにしない。`SUFeedURL` は
      `releases/latest` を指すため、draft/pre-release は配信対象外)
-5. 動作確認: Sparkle 導入版（0.1.3 以降）を入れた確認用Macで
+5. 動作確認: Sparkle 導入版（0.2.0 以降）を入れた確認用Macで
    設定 > Software Updates > Check Now → 更新が見つかる → Install で
    置き換えと再起動が完了することを確認する。初回の Sparkle 導入版
-   (0.1.3) から次版への更新が最初の実地テストになる。
+   (0.2.0) から次版への更新が最初の実地テストになる。
 
 ## 利用者向け (Gatekeeper回避)
 
