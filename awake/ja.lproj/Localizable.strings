@@ -233,7 +233,6 @@
 "Awake v%@" = "Awake v%@";
 "CLI not installed" = "CLIがインストールされていません";
 "Welcome to Awake" = "Awakeへようこそ";
-"Step %d of %d" = "ステップ %d / %d";
 "Set Up Later" = "あとで設定";
 "Continue" = "続ける";
 "Done" = "完了";

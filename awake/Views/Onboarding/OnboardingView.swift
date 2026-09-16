@@ -11,7 +11,7 @@ struct OnboardingView: View {
     @State private var step: Step = .welcome
     @State private var pendingProvider: AgentProvider?
 
-    private enum Step: Int, CaseIterable {
+    private enum Step: Int {
         case welcome
         case preferences
         case agents
@@ -38,9 +38,6 @@ struct OnboardingView: View {
                     moveBackward()
                 }
                 .disabled(step == .welcome)
-
-                Text(L10n.format("Step %d of %d", step.rawValue + 1, Step.allCases.count))
-                    .foregroundStyle(.secondary)
 
                 Spacer()
 
