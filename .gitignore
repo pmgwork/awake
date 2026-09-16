@@ -14,3 +14,6 @@ dist/
 *.mode1v3
 *.mode2v3
 *.perspectivev3
+
+# opencode (agent scratch files; keep .opencode/plugins etc. trackable)
+.opencode/tmp/
