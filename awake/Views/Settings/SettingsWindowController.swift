@@ -22,12 +22,12 @@ public final class SettingsWindowController {
         let hostingController = NSHostingController(rootView: contentView)
 
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 480),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
-        newWindow.minSize = NSSize(width: 520, height: 520)
+        newWindow.contentMinSize = NSSize(width: 540, height: 480)
         newWindow.title = L10n.string("Awake Settings")
 
         newWindow.contentViewController = hostingController
