@@ -186,12 +186,12 @@ public final class SettingsStore: ObservableObject {
             self.monitoredAgents = MonitoredAgent.defaultPresets
         }
 
-        // Mode
+        // Mode (defaults to Indefinitely until the user picks another mode)
         if let modeRaw = UserDefaults.standard.string(forKey: Keys.selectedMode),
            let mode = KeepAwakeModeType(rawValue: modeRaw) {
             self.selectedMode = mode
         } else {
-            self.selectedMode = .whileAgentRunning
+            self.selectedMode = .indefinitely
         }
 
         if UserDefaults.standard.object(forKey: Keys.agentMonitoringEnabled) != nil {
