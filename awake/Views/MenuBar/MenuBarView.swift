@@ -33,6 +33,7 @@ struct MenuBarView: View {
                     systemImage: "hourglass"
                 )
                 .font(.system(size: 11))
+                .monospacedDigit()
                 .foregroundStyle(.secondary)
             }
 

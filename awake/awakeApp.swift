@@ -132,6 +132,10 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         let shouldShowTimer = coordinator.isActive &&
             coordinator.settings.selectedMode == .timer &&
             coordinator.settings.showTimerInMenuBar
+        button.font = .monospacedDigitSystemFont(
+            ofSize: NSFont.systemFontSize,
+            weight: .regular
+        )
         button.title = shouldShowTimer ? coordinator.formattedRemainingTime : ""
         button.imagePosition = shouldShowTimer ? .imageLeading : .imageOnly
         button.setAccessibilityValue(accessibilityStatus)

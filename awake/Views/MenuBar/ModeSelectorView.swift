@@ -19,32 +19,47 @@ struct ModeSelectorView: View {
                 .textCase(.uppercase)
 
             VStack(alignment: .leading, spacing: 6) {
-                Picker("", selection: Binding(
-                    get: { settings.selectedMode },
-                    set: { coordinator.selectMode($0) }
-                )) {
-                    Text(L10n.string("Indefinitely")).tag(KeepAwakeModeType.indefinitely)
-                    Text(L10n.string("For Duration")).tag(KeepAwakeModeType.timer)
-                    Text(L10n.string("While Downloading")).tag(KeepAwakeModeType.whileDownloading)
-                    Text(L10n.string("While Agent is Running")).tag(KeepAwakeModeType.whileAgentRunning)
-                }
-                .labelsHidden()
-                .pickerStyle(.radioGroup)
+                ForEach(modeOrder) { mode in
+                    Button {
+                        coordinator.selectMode(mode)
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: settings.selectedMode == mode
+                                  ? "largecircle.fill.circle"
+                                  : "circle")
+                                .font(.system(size: 16))
+                                .foregroundStyle(settings.selectedMode == mode ? Color.accentColor : Color.secondary)
+                            Text(mode.displayName)
+                                .foregroundStyle(.primary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(settings.selectedMode == mode ? .isSelected : [])
 
-                if settings.selectedMode == .timer {
-                    timerPresetsGrid
-                        .padding(.leading, 22)
-                        .padding(.top, 2)
-                    if coordinator.isActive, let endTime = coordinator.formattedTimerEndTime {
-                        Text(L10n.format("Ends at %@", endTime))
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                    if mode == .timer, settings.selectedMode == .timer {
+                        timerPresetsGrid
                             .padding(.leading, 22)
+                            .padding(.top, 2)
+                        if coordinator.isActive, let endTime = coordinator.formattedTimerEndTime {
+                            Text(L10n.format("Ends at %@", endTime))
+                                .font(.system(size: 9))
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 22)
+                        }
                     }
                 }
             }
         }
     }
+
+    private let modeOrder: [KeepAwakeModeType] = [
+        .indefinitely,
+        .timer,
+        .whileDownloading,
+        .whileAgentRunning
+    ]
 
     private var timerPresetsGrid: some View {
         VStack(alignment: .leading, spacing: 6) {

@@ -36,41 +36,33 @@ struct CoolingSettingsView: View {
             }
 
             Section {
-                LabeledContent {
-                    Label(
-                        isHelperInstalled
-                            ? L10n.string("Fan Control Access Authorized")
-                            : L10n.string("Fan Control Authorization Required"),
-                        systemImage: isHelperInstalled ? "checkmark.circle" : "lock.shield"
-                    )
-                    .foregroundStyle(isHelperInstalled ? .green : .secondary)
-                } label: {
-                    Text(L10n.string("Status"))
-                }
+                HStack(spacing: 12) {
+                    Label(helperStateTitle, systemImage: helperStateIcon)
+                        .foregroundStyle(helperStateColor)
 
-                Button(helperButtonTitle) {
-                    installHelper()
-                }
-                .disabled(isInstallingHelper)
+                    Spacer(minLength: 12)
 
-                if isInstallingHelper {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                if !isHelperInstalled {
-                    Text(isHelperPresent
-                         ? L10n.string("A newer helper is required for this Mac and battery closed-lid operation.")
-                         : L10n.string("macOS requires administrator permission once to control hardware fans on Apple Silicon."))
-                        .foregroundStyle(.secondary)
-                }
-
-                if !helperStatusText.isEmpty {
-                    Text(helperStatusText)
-                        .foregroundStyle(isHelperInstalled ? .green : .red)
+                    Button {
+                        installHelper()
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isInstallingHelper {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            Text(helperButtonTitle)
+                        }
+                    }
+                    .disabled(isInstallingHelper)
                 }
             } header: {
                 Text(L10n.string("Fan Control Helper"))
+            } footer: {
+                if !isHelperInstalled && helperStatusText.isEmpty {
+                    Text(isHelperPresent
+                         ? L10n.string("A newer helper is required for this Mac and battery closed-lid operation.")
+                         : L10n.string("macOS requires administrator permission once to control hardware fans on Apple Silicon."))
+                }
             }
 
             Section {
@@ -119,6 +111,7 @@ struct CoolingSettingsView: View {
     }
 
     private func installHelper() {
+        helperStatusText = ""
         isInstallingHelper = true
         SMCHelper.shared.installHelperTool { success in
             isInstallingHelper = false
@@ -148,5 +141,22 @@ struct CoolingSettingsView: View {
         if isInstallingHelper { return L10n.string("Updating...") }
         if isHelperInstalled { return L10n.string("Reinstall Helper...") }
         return isHelperPresent ? L10n.string("Update Helper...") : L10n.string("Install Helper...")
+    }
+
+    private var helperStateTitle: String {
+        if !isHelperInstalled && !helperStatusText.isEmpty { return helperStatusText }
+        return isHelperInstalled
+            ? L10n.string("Fan Control Access Authorized")
+            : L10n.string("Fan Control Authorization Required")
+    }
+
+    private var helperStateIcon: String {
+        if !isHelperInstalled && !helperStatusText.isEmpty { return "exclamationmark.triangle" }
+        return isHelperInstalled ? "checkmark.circle" : "lock.shield"
+    }
+
+    private var helperStateColor: Color {
+        if !isHelperInstalled && !helperStatusText.isEmpty { return .red }
+        return isHelperInstalled ? .green : .secondary
     }
 }

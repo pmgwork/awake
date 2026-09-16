@@ -206,13 +206,8 @@ public final class AwakeCoordinator: ObservableObject {
         }
 
         settings.selectedMode = mode
-        if mode == .whileAgentRunning && settings.agentMonitoringEnabled && eventMonitor.hasActiveSession {
-            startKeepAwake(userInitiated: true)
-        } else if mode == .whileDownloading && settings.downloadMonitoringEnabled && downloadMonitor.isDownloading {
-            startKeepAwake(userInitiated: true)
-        } else {
-            evaluateState()
-        }
+        statusMessage = L10n.string("Idle")
+        evaluateState()
     }
 
     public func setTimerDuration(_ duration: TimeInterval) {
