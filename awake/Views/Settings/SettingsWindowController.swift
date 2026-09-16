@@ -27,7 +27,8 @@ public final class SettingsWindowController {
             backing: .buffered,
             defer: false
         )
-        newWindow.contentMinSize = NSSize(width: 540, height: 480)
+        newWindow.contentMinSize = NSSize(width: 540, height: 320)
+        newWindow.contentMaxSize = NSSize(width: 540, height: 480)
         newWindow.title = L10n.string("Awake Settings")
 
         newWindow.contentViewController = hostingController
