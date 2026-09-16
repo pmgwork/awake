@@ -42,5 +42,17 @@ struct SettingsView: View {
         .frame(width: 540)
         .frame(maxHeight: 540)
         .fixedSize(horizontal: false, vertical: true)
+        .contentSizedVerticalScrolling()
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func contentSizedVerticalScrolling() -> some View {
+        if #available(macOS 13.3, *) {
+            scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        } else {
+            self
+        }
     }
 }
