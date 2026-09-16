@@ -99,6 +99,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
         if NSApp.currentEvent?.type == .rightMouseUp {
+            sender.highlight(false)
             coordinator.togglePrimaryAction()
             return
         }
@@ -125,15 +126,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
 
-        let image = NSImage(named: NSImage.Name(iconName))
-        image?.size = NSSize(width: 21, height: 16.8)
-        // Keep the cup as a template image so the system renders it with the
-        // menu bar material. The monitoring state is expressed through the
-        // button's content tint instead of drawing a pre-colored copy, which
-        // keeps the icon correct across menu bar appearances on macOS 26/27.
-        image?.isTemplate = true
-        button.image = image
-        button.contentTintColor = isAutomaticMonitoring ? .systemOrange : nil
+        button.image = statusIcon()
         button.toolTip = settingsToolTip
 
         let shouldShowTimer = coordinator.isActive &&
@@ -142,6 +135,28 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         button.title = shouldShowTimer ? coordinator.formattedRemainingTime : ""
         button.imagePosition = shouldShowTimer ? .imageLeading : .imageOnly
         button.setAccessibilityValue(accessibilityStatus)
+    }
+
+    private func statusIcon() -> NSImage? {
+        // Named images are cached; keep size and rendering changes local.
+        guard let image = NSImage(named: NSImage.Name(iconName))?.copy() as? NSImage else {
+            return nil
+        }
+        image.size = NSSize(width: 21, height: 16.8)
+        image.isTemplate = true
+
+        // Leave the status button's tint untouched so AppKit can adapt the
+        // normal icon to the menu bar, independently of the app appearance.
+        guard isAutomaticMonitoring else { return image }
+
+        let tintedImage = NSImage(size: image.size, flipped: false) { rect in
+            image.draw(in: rect)
+            NSColor.systemOrange.setFill()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        tintedImage.isTemplate = false
+        return tintedImage
     }
 
     private var iconName: String {
