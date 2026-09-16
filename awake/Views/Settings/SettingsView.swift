@@ -5,9 +5,8 @@
 
 import SwiftUI
 import Combine
-import AppKit
 
-/// The panes of the settings window, shown as a preference-style toolbar.
+/// The panes shown in the settings window's compact tab bar.
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case agents
@@ -31,19 +30,9 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         }
     }
 
-    var toolbarIdentifier: NSToolbarItem.Identifier {
-        NSToolbarItem.Identifier("settings.tab.\(rawValue)")
-    }
-
-    init?(toolbarIdentifier: NSToolbarItem.Identifier) {
-        guard let tab = SettingsTab.allCases.first(where: { $0.toolbarIdentifier == toolbarIdentifier }) else {
-            return nil
-        }
-        self = tab
-    }
 }
 
-/// Observable selection shared between the window's toolbar and its content.
+/// Observable selection shared between the tab bar and its content.
 @MainActor
 public final class SettingsTabSelection: ObservableObject {
     @Published public var tab: SettingsTab = .general
@@ -56,30 +45,69 @@ struct SettingsView: View {
     @ObservedObject var selection: SettingsTabSelection
 
     var body: some View {
-        Group {
-            switch selection.tab {
-            case .general:
-                GeneralSettingsView(
-                    settings: coordinator.settings,
-                    notificationManager: NotificationManager.shared,
-                    screenBehaviorManager: coordinator.screenBehaviorManager,
-                    updater: AppUpdater.shared,
-                    shortcutManager: coordinator.shortcutManager
-                )
-            case .agents:
-                AgentSettingsView(
-                    settings: coordinator.settings,
-                    eventMonitor: coordinator.eventMonitor,
-                    integrationManager: coordinator.hookIntegrationManager
-                )
-            case .cooling:
-                CoolingSettingsView(
-                    settings: coordinator.settings,
-                    fanController: coordinator.fanController,
-                    thermalMonitor: coordinator.thermalMonitor
-                )
+        VStack(spacing: 0) {
+            settingsTabBar
+            Divider()
+
+            Group {
+                switch selection.tab {
+                case .general:
+                    GeneralSettingsView(
+                        settings: coordinator.settings,
+                        notificationManager: NotificationManager.shared,
+                        screenBehaviorManager: coordinator.screenBehaviorManager,
+                        updater: AppUpdater.shared,
+                        shortcutManager: coordinator.shortcutManager
+                    )
+                case .agents:
+                    AgentSettingsView(
+                        settings: coordinator.settings,
+                        eventMonitor: coordinator.eventMonitor,
+                        integrationManager: coordinator.hookIntegrationManager
+                    )
+                case .cooling:
+                    CoolingSettingsView(
+                        settings: coordinator.settings,
+                        fanController: coordinator.fanController,
+                        thermalMonitor: coordinator.thermalMonitor
+                    )
+                }
             }
         }
         .frame(minWidth: 520, idealWidth: 560, minHeight: 520, idealHeight: 600)
+    }
+
+    private var settingsTabBar: some View {
+        HStack(spacing: 6) {
+            ForEach(SettingsTab.allCases) { tab in
+                Button {
+                    selection.tab = tab
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 19, weight: .regular))
+                            .frame(height: 21)
+
+                        Text(tab.title)
+                            .font(.system(size: 11))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(selection.tab == tab ? .primary : .secondary)
+                    .frame(width: 72, height: 50)
+                    .background {
+                        if selection.tab == tab {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color.primary.opacity(0.1))
+                        }
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selection.tab == tab ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
     }
 }
