@@ -156,7 +156,7 @@
 "Could not restore automatic fan control. Restart the Mac if manual control remains active." = "ファンを自動制御へ戻せませんでした。手動制御が続く場合はMacを再起動してください。";
 "Fan control failed because the SMC rejected the command. See the diagnostic log." = "SMCが命令を拒否したため、ファン制御に失敗しました。診断ログを確認してください。";
 "Fans may be in manual mode. Restore Auto or restart the Mac." = "ファンが手動制御のままかもしれません。自動制御へ戻すか、Macを再起動してください。";
-"Keep Awake Blocked (Battery %d%% or Lower)" = "バッテリー残量%d%%以下のため開始できません";
+"Automatic Start Paused (Battery %d%% or Lower)" = "バッテリー残量%d%%以下のため自動開始を停止中";
 "Agent Running: Keep Awake Active" = "エージェント実行中：スリープ防止が有効";
 "Waiting for Monitored Agent..." = "監視対象エージェントを待機中…";
 "Keep Awake Active (Indefinitely)" = "スリープ防止が有効（無期限）";

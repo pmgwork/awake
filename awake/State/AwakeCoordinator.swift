@@ -37,6 +37,10 @@ public final class AwakeCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
     private var completionGrace = CompletionGracePeriod()
+    /// Set when the user manually starts Keep Awake while the low-battery
+    /// cutoff applies. It suspends the fail-safe for that session so a manual
+    /// start is not immediately undone by the heartbeat.
+    private var lowBatteryManualOverride = false
 
     private enum PersistenceKeys {
         static let timerEndDate = "pmgwork.awake.activeTimerEndDate"
@@ -56,7 +60,11 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     // MARK: - User Intent Actions
-    public func startKeepAwake() {
+
+    /// Starts Keep Awake. Actions driven by the user pass
+    /// `userInitiated: true`, which lets them start even below the battery
+    /// cutoff; automatic starts stay paused while the cutoff applies.
+    public func startKeepAwake(userInitiated: Bool = false) {
         guard !isActive else { return }
         if settings.selectedMode == .whileAgentRunning {
             guard settings.agentMonitoringEnabled, eventMonitor.hasActiveSession else {
@@ -74,9 +82,15 @@ public final class AwakeCoordinator: ObservableObject {
                 return
             }
         }
-        guard !isLowBatteryCutoffActive else {
-            statusMessage = L10n.format("Keep Awake Blocked (Battery %d%% or Lower)", settings.lowBatteryThreshold)
-            return
+        if isLowBatteryCutoffActive {
+            guard userInitiated else {
+                statusMessage = L10n.format("Automatic Start Paused (Battery %d%% or Lower)", settings.lowBatteryThreshold)
+                return
+            }
+            // A manual start below the threshold is allowed; remember it so the
+            // fail-safe does not stop the session again until it ends or power
+            // recovers.
+            lowBatteryManualOverride = true
         }
 
         switch settings.selectedMode {
@@ -107,6 +121,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         let stopReason = reason ?? L10n.string("Awake is no longer preventing system sleep.")
         isActive = false
+        lowBatteryManualOverride = false
         completionGrace.reset()
         completionGraceEndDate = nil
         remainingGraceSeconds = 0
@@ -128,7 +143,7 @@ public final class AwakeCoordinator: ObservableObject {
         if isActive {
             stopKeepAwake(reason: L10n.string("Manually stopped by user."))
         } else {
-            startKeepAwake()
+            startKeepAwake(userInitiated: true)
         }
     }
 
@@ -150,7 +165,7 @@ public final class AwakeCoordinator: ObservableObject {
         if enabled {
             statusMessage = L10n.string("Waiting for Monitored Agent...")
             if eventMonitor.hasActiveSession {
-                startKeepAwake()
+                startKeepAwake(userInitiated: true)
             } else {
                 evaluateState()
             }
@@ -171,7 +186,7 @@ public final class AwakeCoordinator: ObservableObject {
         if enabled {
             statusMessage = L10n.string("Waiting for Download...")
             if downloadMonitor.isDownloading {
-                startKeepAwake()
+                startKeepAwake(userInitiated: true)
             } else {
                 evaluateState()
             }
@@ -192,9 +207,9 @@ public final class AwakeCoordinator: ObservableObject {
 
         settings.selectedMode = mode
         if mode == .whileAgentRunning && settings.agentMonitoringEnabled && eventMonitor.hasActiveSession {
-            startKeepAwake()
+            startKeepAwake(userInitiated: true)
         } else if mode == .whileDownloading && settings.downloadMonitoringEnabled && downloadMonitor.isDownloading {
-            startKeepAwake()
+            startKeepAwake(userInitiated: true)
         } else {
             evaluateState()
         }
@@ -262,9 +277,14 @@ public final class AwakeCoordinator: ObservableObject {
 
     public func evaluateState() {
         defer { applyScreenBehaviorPolicy() }
+        if !isLowBatteryCutoffActive {
+            lowBatteryManualOverride = false
+        }
         // Global battery fail-safe: turn off Awake in every mode and restore
-        // automatic fan control before the battery reaches a critical level.
-        if isLowBatteryCutoffActive {
+        // automatic fan control when the battery reaches the configured level.
+        // A manual start below the threshold suspends the fail-safe until the
+        // session ends or power recovers.
+        if isLowBatteryCutoffEnforced {
             if fanController.activeMode != .auto || fanController.isTestModeActive {
                 fanController.restoreAuto()
             }
@@ -475,6 +495,18 @@ public final class AwakeCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
+        // Re-apply the battery fail-safe when the threshold itself changes.
+        settings.$lowBatteryThreshold
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { _ in
+                let coordinator = AwakeCoordinator.shared
+                coordinator.lowBatteryManualOverride = false
+                coordinator.evaluateState()
+            }
+            .store(in: &cancellables)
+
         Publishers.CombineLatest(
             settings.$preventDisplaySleep,
             settings.$preventScreenSaver
@@ -503,6 +535,11 @@ public final class AwakeCoordinator: ObservableObject {
         settings.lowBatteryThreshold > 0 &&
             !powerMonitor.isOnACPower &&
             (powerMonitor.batteryLevel ?? 100) <= settings.lowBatteryThreshold
+    }
+
+    /// Whether the cutoff should still stop Awake or block automatic starts.
+    private var isLowBatteryCutoffEnforced: Bool {
+        isLowBatteryCutoffActive && !lowBatteryManualOverride
     }
 
     private func applyScreenBehaviorPolicy() {
@@ -558,7 +595,7 @@ public final class AwakeCoordinator: ObservableObject {
         }
         guard !isLowBatteryCutoffActive else {
             setTimerEndDate(nil)
-            statusMessage = L10n.format("Keep Awake Blocked (Battery %d%% or Lower)", settings.lowBatteryThreshold)
+            statusMessage = L10n.format("Automatic Start Paused (Battery %d%% or Lower)", settings.lowBatteryThreshold)
             return
         }
 

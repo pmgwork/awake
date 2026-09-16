@@ -14,7 +14,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 - **Other keep-awake modes** — for a fixed duration (15m–3h), while a download is in progress, or indefinitely.
 - **Completion grace period** — stays awake for another 1–5 minutes after the last agent or download finishes.
 - **Closed-lid cooling** — optional fan control while the lid is closed and no external display is attached (Apple Silicon).
-- **Battery protection** — turns everything off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%).
+- **Battery protection** — turns everything off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
 - **In-app updates** — checks GitHub Releases and installs new versions inside the app (Sparkle, EdDSA-verified); no account required.
