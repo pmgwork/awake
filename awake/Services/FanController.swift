@@ -86,6 +86,8 @@ public final class FanController: ObservableObject {
                 self.performApplyMaximumCooling()
             case .aggressive:
                 self.performApplyAggressiveCooling()
+            case .moderate:
+                self.performApplyModerateCooling()
             }
         }
     }
@@ -127,6 +129,20 @@ public final class FanController: ObservableObject {
             let controller = FanController.shared
             controller.finishApplying(
                 mode: .aggressive,
+                success: success,
+                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. See the diagnostic log.")
+            )
+        }
+    }
+
+    private nonisolated func performApplyModerateCooling() {
+        NSLog("[FanController] Applying Moderate Fan Cooling")
+        let success = self.executeSMCFanSpeed(targetMode: .moderate)
+
+        Task { @MainActor in
+            let controller = FanController.shared
+            controller.finishApplying(
+                mode: .moderate,
                 success: success,
                 errorMessage: L10n.string("Fan control failed because the SMC rejected the command. See the diagnostic log.")
             )
@@ -202,12 +218,16 @@ public final class FanController: ObservableObject {
     // MARK: - SMC Control Implementations
     private nonisolated func executeSMCFanSpeed(targetMode: FanMode) -> Bool {
         NSLog("[FanController] Sending fan control command to AppleSMC (Mode: %@)", targetMode.rawValue)
-        if targetMode == .maximum || targetMode == .aggressive {
-            return targetMode == .maximum
-                ? SMCHelper.shared.setFanMaximum()
-                : SMCHelper.shared.setFanAggressive()
+        switch targetMode {
+        case .maximum:
+            return SMCHelper.shared.setFanMaximum()
+        case .aggressive:
+            return SMCHelper.shared.setFanAggressive()
+        case .moderate:
+            return SMCHelper.shared.setFanModerate()
+        case .auto:
+            return false
         }
-        return false
     }
 
     private nonisolated func executeSMCRestoreAuto() -> Bool {

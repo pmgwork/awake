@@ -115,8 +115,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             case .cooling:
                 CoolingSettingsView(
                     settings: AwakeCoordinator.shared.settings,
-                    fanController: AwakeCoordinator.shared.fanController,
-                    thermalMonitor: AwakeCoordinator.shared.thermalMonitor
+                    fanController: AwakeCoordinator.shared.fanController
                 )
             }
         }

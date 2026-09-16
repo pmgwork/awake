@@ -12,8 +12,13 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle(L10n.string("Launch Awake at Login"), isOn: $settings.launchAtLogin)
                 Toggle(L10n.string("Enable Notifications"), isOn: $settings.notificationsEnabled)
-                Label(notificationStatusText, systemImage: notificationStatusIcon)
-                    .foregroundStyle(notificationStatusColor)
+                if settings.notificationsEnabled && notificationManager.authorizationStatus == .denied {
+                    Label(
+                        L10n.string("Notifications are disabled in System Settings."),
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .foregroundStyle(.red)
+                }
                 Picker(L10n.string("Battery Cutoff When Unplugged"), selection: $settings.lowBatteryThreshold) {
                     Text(L10n.string("Off")).tag(0)
                     ForEach([5, 10, 15, 20, 25], id: \.self) { threshold in
@@ -69,30 +74,6 @@ struct GeneralSettingsView: View {
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-    }
-
-    private var notificationStatusText: String {
-        if !settings.notificationsEnabled {
-            return L10n.string("Notifications are turned off in Awake.")
-        }
-        if notificationManager.authorizationStatus == .denied {
-            return L10n.string("Notifications are disabled in System Settings.")
-        }
-        return L10n.string("Notifications enabled.")
-    }
-
-    private var notificationStatusIcon: String {
-        if !settings.notificationsEnabled { return "bell.slash" }
-        if notificationManager.authorizationStatus == .denied { return "exclamationmark.triangle" }
-        return "checkmark.circle"
-    }
-
-    private var notificationStatusColor: Color {
-        if settings.notificationsEnabled, notificationManager.authorizationStatus == .denied {
-            return .red
-        }
-        if settings.notificationsEnabled { return .green }
-        return .secondary
     }
 
     @ViewBuilder

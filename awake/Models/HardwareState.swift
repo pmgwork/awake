@@ -88,6 +88,7 @@ public enum FanMode: String, Codable, CaseIterable, Identifiable {
     case auto = "Auto"
     case maximum = "Maximum"
     case aggressive = "Aggressive"
+    case moderate = "Moderate"
 
     public var id: String { rawValue }
 
@@ -96,9 +97,11 @@ public enum FanMode: String, Codable, CaseIterable, Identifiable {
         case .auto:
             return L10n.string("Auto (System Control)")
         case .maximum:
-            return L10n.string("Maximum (100%)")
+            return "100%"
         case .aggressive:
-            return L10n.string("Aggressive (~75%)")
+            return "75%"
+        case .moderate:
+            return "50%"
         }
     }
 

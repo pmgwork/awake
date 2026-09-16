@@ -352,6 +352,10 @@ public nonisolated final class SMCClient: @unchecked Sendable {
         setAllFans(targetFraction: 0.75)
     }
 
+    public func setAllFansModerate() -> Bool {
+        setAllFans(targetFraction: 0.5)
+    }
+
     public func areAnyFansInManualMode() -> Bool {
         let count = getFanCount()
         guard count > 0 else { return false }

@@ -106,9 +106,11 @@ struct HardwareStatusView: View {
 
     private var fanValue: String {
         if fanController.activeMode == .maximum {
-            return L10n.string("Maximum")
+            return "100%"
         } else if fanController.activeMode == .aggressive {
-            return L10n.string("Aggressive")
+            return "75%"
+        } else if fanController.activeMode == .moderate {
+            return "50%"
         } else {
             return L10n.string("Auto")
         }

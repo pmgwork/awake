@@ -19,7 +19,6 @@
 "Display" = "ディスプレイ";
 "Sessions" = "セッション";
 "Session Behavior" = "セッションの振る舞い";
-"Keep Awake After Completion applies to agents and downloads." = "完了後もスリープ防止を続ける設定は、エージェントとダウンロードに適用されます。";
 "Fan" = "ファン";
 "Temperature" = "温度";
 "Power" = "電源";
@@ -34,6 +33,7 @@
 "Off / Sleeping" = "オフ／スリープ中";
 "Maximum" = "最大";
 "Aggressive" = "強冷却";
+"Moderate" = "中冷却";
 "Auto" = "自動";
 "AC Power" = "AC電源";
 "Battery (%d%%)" = "バッテリー（%d%%）";
@@ -84,8 +84,6 @@
 "Do not intervene when an external display is connected (leaves control to macOS)." = "外部ディスプレイ接続時は介入せず、macOSに制御を任せます。";
 "Closed-Lid Fan Mode:" = "閉蓋時のファンモード：";
 "Auto (System Control)" = "自動（システム制御）";
-"Maximum (100%)" = "最大（100%）";
-"Aggressive (~75%)" = "強冷却（約75%）";
 "Closed-Lid Cooling only on AC Power" = "AC電源接続時のみ閉蓋冷却";
 "Avoids heavy battery drain by only activating Closed-Lid Cooling when plugged in." = "電源接続時のみ冷却を有効にし、バッテリー消費を抑えます。";
 "Battery Cutoff When Unplugged" = "電源未接続時に自動停止するバッテリー残量";
@@ -96,9 +94,7 @@
 "The current helper is installed and ready for fan control." = "最新のヘルパーがインストールされ、ファン制御を利用できます。";
 "A newer helper is required for this Mac and battery closed-lid operation." = "このMacとバッテリー閉蓋動作には新しいヘルパーが必要です。";
 "macOS requires administrator permission once to control hardware fans on Apple Silicon." = "Apple Siliconのファン制御には、初回のみ管理者権限が必要です。";
-"Fan Speed Diagnostics & Test" = "ファン速度の診断・テスト";
 "Test 100% Spin" = "100%でテスト";
-"Test 75% Spin" = "75%でテスト";
 "Restore Auto" = "自動制御に戻す";
 "Updating..." = "更新中…";
 "Reinstall Helper..." = "ヘルパーを再インストール…";
@@ -138,11 +134,8 @@
 "Returns to Auto in %d seconds" = "%d秒後に自動制御へ戻ります";
 "Fan test automatically returns to Auto after 60 seconds." = "ファンテストは60秒後に自動制御へ戻ります。";
 "Fan test ends after 60 seconds and returns to the current cooling policy." = "ファンテストは60秒後に終了し、現在の冷却ポリシーへ戻ります。";
-"Run a spin test to verify fan control." = "ファン制御を確認するにはスピンテストを実行してください。";
 "Manually stopped by user." = "ユーザーが手動で停止しました。";
 "Notifications are disabled in System Settings." = "通知はシステム設定で無効になっています。";
-"Notifications are turned off in Awake." = "通知はAwakeでオフになっています。";
-"Notifications enabled." = "通知が有効です。";
 "Display During Sessions" = "セッション中の画面";
 "These preferences apply only while Awake is actively preventing system sleep." = "これらの設定はAwakeがシステムスリープを防止している間だけ適用されます。";
 "Prevent Display Sleep" = "ディスプレイのスリープを防止";
@@ -252,8 +245,6 @@
 "Fan Control Helper" = "ファン制御ヘルパー";
 "Delete" = "削除";
 "Active Sessions" = "アクティブセッション";
-"Current Activity" = "現在の稼働状況";
-"No active agent sessions." = "稼働中のエージェントはありません。";
 "Monitor %@" = "%@を監視";
 "Actions" = "操作";
 "Link this provider before enabling monitoring." = "監視を有効にする前に、このプロバイダーを連携してください。";

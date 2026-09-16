@@ -11,7 +11,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-8"
+    private let helperProtocolVersion = "awake-smc-9"
     private let fanLeaseLock = NSLock()
     private var fanLeaseProcess: Process?
 
@@ -184,6 +184,20 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         NSLog("[SMCHelper] Direct SMC write requires root privileges, attempting privileged helper...")
         return runPrivilegedFanCommand(mode: "aggressive")
+    }
+
+    public func setFanModerate() -> Bool {
+        if checkHelperInstalled() {
+            return startInstalledFanControlLease(mode: "moderate")
+        }
+
+        if SMCClient.shared.setAllFansModerate() {
+            NSLog("[SMCHelper] Direct SMC set moderate succeeded")
+            return true
+        }
+
+        NSLog("[SMCHelper] Direct SMC write requires root privileges, attempting privileged helper...")
+        return runPrivilegedFanCommand(mode: "moderate")
     }
 
     /// Restores automatic mode through the installed helper, with direct/authorization fallbacks.
@@ -697,14 +711,14 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-8");
+                puts("awake-smc-9");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-sleep") == 0) {
                 return holdBatterySleepAssertion();
             }
             const char *mode = argc > 1 ? argv[1] : "auto";
-            if (strcmp(mode, "max") != 0 && strcmp(mode, "aggressive") != 0 && strcmp(mode, "auto") != 0) return 64;
+            if (strcmp(mode, "max") != 0 && strcmp(mode, "aggressive") != 0 && strcmp(mode, "moderate") != 0 && strcmp(mode, "auto") != 0) return 64;
             bool watchParent = argc > 2 && strcmp(argv[2], "watch-parent") == 0;
 
             io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMCKeysEndpoint"));
@@ -757,17 +771,20 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                 uint8_t maxBytes[32] = {0};
                 uint32_t maxSize = 0;
                 bool targetOK = readKey(connection, maxKey, maxBytes, &maxSize);
-                if (targetOK && strcmp(mode, "aggressive") == 0) {
+                float fraction = 1.0f;
+                if (strcmp(mode, "aggressive") == 0) fraction = 0.75f;
+                else if (strcmp(mode, "moderate") == 0) fraction = 0.5f;
+                if (targetOK && fraction < 1.0f) {
                     SMCParam maxInfo = {0};
                     targetOK = keyInfo(connection, maxKey, &maxInfo);
                     if (targetOK && maxInfo.dataType == fourCC("flt ") && maxSize == 4) {
                         float rpm = 0;
                         memcpy(&rpm, maxBytes, sizeof(rpm));
-                        rpm *= 0.75f;
+                        rpm *= fraction;
                         memcpy(maxBytes, &rpm, sizeof(rpm));
                     } else if (targetOK && maxInfo.dataType == fourCC("fpe2") && maxSize == 2) {
                         uint16_t raw = ((uint16_t)maxBytes[0] << 8) | maxBytes[1];
-                        raw = (uint16_t)((float)raw * 0.75f);
+                        raw = (uint16_t)((float)raw * fraction);
                         maxBytes[0] = (uint8_t)(raw >> 8);
                         maxBytes[1] = (uint8_t)raw;
                     } else {

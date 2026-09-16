@@ -20,6 +20,23 @@ struct AgentSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("Supported Providers"))
+            } footer: {
+                HStack {
+                    Button {
+                        eventMonitor.reloadNow()
+                        integrationManager.refreshStatuses()
+                    } label: {
+                        Label(L10n.string("Refresh"), systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.link)
+
+                    Spacer(minLength: 12)
+
+                    Label(integrationFooterText, systemImage: integrationFooterIcon)
+                        .foregroundStyle(integrationFooterColor)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                }
             }
 
             let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
@@ -44,36 +61,6 @@ struct AgentSettingsView: View {
                 }
             }
 
-            Section {
-                if eventMonitor.hasActiveSession {
-                    ForEach(activeProviders) { provider in
-                        LabeledContent {
-                            Text(L10n.format(
-                                "%d active",
-                                eventMonitor.activeSessionCountByProvider[provider, default: 0]
-                            ))
-                            .foregroundStyle(.green)
-                        } label: {
-                            Label(provider.displayName, systemImage: "bolt.fill")
-                        }
-                    }
-                } else {
-                    Text(L10n.string("No active agent sessions."))
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    eventMonitor.reloadNow()
-                    integrationManager.refreshStatuses()
-                } label: {
-                    Label(L10n.string("Refresh"), systemImage: "arrow.clockwise")
-                }
-            } header: {
-                Text(L10n.string("Current Activity"))
-            } footer: {
-                Label(integrationFooterText, systemImage: integrationFooterIcon)
-                    .foregroundStyle(integrationFooterColor)
-            }
         }
         .formStyle(.grouped)
         .disabled(integrationManager.isWorking)
@@ -155,12 +142,6 @@ struct AgentSettingsView: View {
             .fixedSize()
             .disabled(!toolInstalled)
             .help(toolInstalled ? L10n.string("Actions") : L10n.string("CLI not installed"))
-        }
-    }
-
-    private var activeProviders: [AgentProvider] {
-        AgentProvider.allCases.filter {
-            eventMonitor.activeSessionCountByProvider[$0, default: 0] > 0
         }
     }
 

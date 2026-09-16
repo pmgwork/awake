@@ -3,7 +3,6 @@ import SwiftUI
 struct CoolingSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var fanController: FanController
-    @ObservedObject var thermalMonitor: ThermalMonitor
 
     @State private var isInstallingHelper = false
     @State private var isHelperInstalled = false
@@ -46,50 +45,29 @@ struct CoolingSettingsView: View {
                         installHelper()
                     } label: {
                         HStack(spacing: 6) {
-                            ProgressView()
-                                .controlSize(.small)
-                                .opacity(isInstallingHelper ? 1 : 0)
-                                .accessibilityHidden(!isInstallingHelper)
+                            if isInstallingHelper {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
                             Text(helperButtonTitle)
                         }
                     }
                     .disabled(isInstallingHelper)
                 }
-            } header: {
-                Text(L10n.string("Fan Control Helper"))
-            } footer: {
-                Text(helperFooterText)
-            }
-
-            Section {
-                LabeledContent(
-                    L10n.string("Fan"),
-                    value: fanController.currentStatus.formattedRPM
-                )
-                .monospacedDigit()
-                LabeledContent(
-                    L10n.string("Temperature"),
-                    value: thermalMonitor.thermalReading.formattedTemperature
-                )
-                .monospacedDigit()
 
                 HStack {
                     Button(L10n.string("Test 100% Spin")) {
                         fanController.testFanSpeed(mode: .maximum)
                     }
-                    Button(L10n.string("Test 75% Spin")) {
-                        fanController.testFanSpeed(mode: .aggressive)
-                    }
                     Button(L10n.string("Restore Auto")) {
                         fanController.testFanSpeed(mode: .auto)
                     }
                 }
-
             } header: {
-                Text(L10n.string("Fan Speed Diagnostics & Test"))
+                Text(L10n.string("Fan Control Helper"))
             } footer: {
-                Label(diagnosticFooterText, systemImage: diagnosticFooterIcon)
-                    .foregroundStyle(diagnosticFooterColor)
+                Label(combinedFooterText, systemImage: combinedFooterIcon)
+                    .foregroundStyle(combinedFooterColor)
             }
         }
         .formStyle(.grouped)
@@ -126,21 +104,21 @@ struct CoolingSettingsView: View {
         }
     }
 
-    private var diagnosticFooterText: String {
+    private var combinedFooterText: String {
         if let error = fanController.controlError { return error }
         if fanController.isTestModeActive {
             return L10n.string("Fan test ends after 60 seconds and returns to the current cooling policy.")
         }
-        return L10n.string("Run a spin test to verify fan control.")
+        return helperFooterText
     }
 
-    private var diagnosticFooterIcon: String {
+    private var combinedFooterIcon: String {
         if fanController.controlError != nil { return "exclamationmark.triangle" }
         if fanController.isTestModeActive { return "timer" }
-        return "checkmark.circle"
+        return isHelperInstalled ? "checkmark.circle" : "info.circle"
     }
 
-    private var diagnosticFooterColor: Color {
+    private var combinedFooterColor: Color {
         if fanController.controlError != nil { return .red }
         return .secondary
     }
