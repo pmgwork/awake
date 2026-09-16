@@ -8,7 +8,7 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var coordinator: AwakeCoordinator
     @ObservedObject var settings: SettingsStore
-    var openSettingsAction: () -> Void
+    var popoverCloseAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -72,17 +72,13 @@ struct MenuBarView: View {
 
             // Bottom Footer
             HStack {
-                if #available(macOS 14.0, *) {
-                    SettingsLink {
-                        settingsLabel
-                    }
-                    .buttonStyle(.borderless)
-                } else {
-                    Button(action: openSettingsAction) {
-                        settingsLabel
-                    }
-                    .buttonStyle(.borderless)
+                Button {
+                    popoverCloseAction()
+                    SettingsWindowController.shared.show()
+                } label: {
+                    settingsLabel
                 }
+                .buttonStyle(.borderless)
 
                 Spacer()
 

@@ -13,9 +13,16 @@ struct awakeApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView(coordinator: AwakeCoordinator.shared)
+            EmptyView()
         }
-        .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button(L10n.string("Settings...")) {
+                    SettingsWindowController.shared.show()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }
 
@@ -64,11 +71,11 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(
             rootView: MenuBarView(
                 coordinator: coordinator,
-                settings: coordinator.settings
-            ) { [weak self] in
-                self?.popover.performClose(nil)
-                SettingsWindowController.shared.showSettings(coordinator: AwakeCoordinator.shared)
-            }
+                settings: coordinator.settings,
+                popoverCloseAction: { [weak self] in
+                    self?.popover.performClose(nil)
+                }
+            )
         )
     }
 

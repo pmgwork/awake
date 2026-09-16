@@ -5,72 +5,38 @@
 
 import SwiftUI
 
-struct SettingsView: View {
-    @ObservedObject var coordinator: AwakeCoordinator
-    @State private var selectedTab: SettingsTab = .general
-
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsView(
-                settings: coordinator.settings,
-                notificationManager: NotificationManager.shared,
-                screenBehaviorManager: coordinator.screenBehaviorManager,
-                updater: AppUpdater.shared,
-                shortcutManager: coordinator.shortcutManager
-            )
-            .tabItem {
-                Label(L10n.string("General"), systemImage: "gearshape")
-            }
-            .tag(SettingsTab.general)
-
-            AgentSettingsView(
-                settings: coordinator.settings,
-                eventMonitor: coordinator.eventMonitor,
-                integrationManager: coordinator.hookIntegrationManager
-            )
-            .tabItem {
-                Label(L10n.string("Agents"), systemImage: "cpu")
-            }
-            .tag(SettingsTab.agents)
-
-            CoolingSettingsView(
-                settings: coordinator.settings,
-                fanController: coordinator.fanController,
-                thermalMonitor: coordinator.thermalMonitor
-            )
-            .tabItem {
-                Label(L10n.string("Cooling"), systemImage: "wind")
-            }
-            .tag(SettingsTab.cooling)
-        }
-        .frame(width: 540)
-        .frame(height: selectedTab.preferredHeight)
-        .contentSizedVerticalScrolling()
-    }
-}
-
-private enum SettingsTab: Hashable {
+/// The panes of the settings window. An `NSTabViewController` presents them so
+/// the system draws the standard settings toolbar (see
+/// `SettingsWindowController`).
+enum SettingsTab: CaseIterable {
     case general
+    case sessions
     case agents
     case cooling
 
-    var preferredHeight: CGFloat {
+    var title: String {
         switch self {
-        case .general, .cooling:
-            return 540
-        case .agents:
-            return 500
+        case .general: return L10n.string("General")
+        case .sessions: return L10n.string("Sessions")
+        case .agents: return L10n.string("Agents")
+        case .cooling: return L10n.string("Cooling")
         }
     }
-}
 
-private extension View {
-    @ViewBuilder
-    func contentSizedVerticalScrolling() -> some View {
-        if #available(macOS 13.3, *) {
-            scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        } else {
-            self
+    var systemImage: String {
+        switch self {
+        case .general: return "gearshape"
+        case .sessions: return "display"
+        case .agents: return "cpu"
+        case .cooling: return "wind"
         }
     }
+
+    /// The image shown in the settings toolbar.
+    var toolbarImage: NSImage? {
+        NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
+    }
+
+    /// The width shared by every pane. Heights come from measuring each pane.
+    static let contentWidth: CGFloat = 540
 }

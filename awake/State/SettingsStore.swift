@@ -32,7 +32,6 @@ public final class SettingsStore: ObservableObject {
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
-        static let toggleShortcut = "pmgwork.awake.toggleShortcut"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
         static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
     }
@@ -160,14 +159,6 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Global hot key that runs the same action as the menu bar's main button.
-    /// `nil` means no shortcut is assigned.
-    @Published public var toggleShortcut: KeyboardShortcut? {
-        didSet {
-            saveToggleShortcut()
-        }
-    }
-
     @Published public var hasCompletedOnboarding: Bool {
         didSet {
             UserDefaults.standard.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding)
@@ -282,13 +273,6 @@ public final class SettingsStore: ObservableObject {
             self.preventScreenSaver = true
         }
 
-        if let data = UserDefaults.standard.data(forKey: Keys.toggleShortcut),
-           let decoded = try? JSONDecoder().decode(KeyboardShortcut.self, from: data) {
-            self.toggleShortcut = decoded
-        } else {
-            self.toggleShortcut = nil
-        }
-
         if let data = UserDefaults.standard.data(forKey: Keys.providerLastTestedAt),
            let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {
             self.providerLastTestedAt = decoded
@@ -300,14 +284,6 @@ public final class SettingsStore: ObservableObject {
     private func saveAgents() {
         if let encoded = try? JSONEncoder().encode(monitoredAgents) {
             UserDefaults.standard.set(encoded, forKey: Keys.monitoredAgents)
-        }
-    }
-
-    private func saveToggleShortcut() {
-        if let toggleShortcut, let encoded = try? JSONEncoder().encode(toggleShortcut) {
-            UserDefaults.standard.set(encoded, forKey: Keys.toggleShortcut)
-        } else {
-            UserDefaults.standard.removeObject(forKey: Keys.toggleShortcut)
         }
     }
 
@@ -351,7 +327,6 @@ public final class SettingsStore: ObservableObject {
         lowBatteryThreshold = 20
         preventDisplaySleep = true
         preventScreenSaver = true
-        toggleShortcut = nil
     }
 
     public func markProviderTested(_ provider: AgentProvider, at date: Date = Date()) {

@@ -130,10 +130,10 @@ struct OnboardingView: View {
         ScrollView {
             VStack(spacing: 28) {
                 VStack(spacing: 14) {
-                    Image(systemName: "cup.and.saucer.fill")
-                        .font(.system(size: 64, weight: .regular))
-                        .foregroundStyle(Color.accentColor)
-                        .accessibilityHidden(true)
+                    if let appIcon = AppIcon.image(size: 96) {
+                        Image(nsImage: appIcon)
+                            .accessibilityHidden(true)
+                    }
 
                     Text(L10n.string("Welcome to Awake"))
                         .font(.largeTitle)

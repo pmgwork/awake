@@ -33,7 +33,6 @@ public final class AwakeCoordinator: ObservableObject {
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
-    public let shortcutManager = GlobalShortcutManager.shared
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
@@ -485,17 +484,6 @@ public final class AwakeCoordinator: ObservableObject {
             self?.applyScreenBehaviorPolicy()
         }
         .store(in: &cancellables)
-
-        // Keep the global hot key in sync with the persisted shortcut. The
-        // publisher replays the stored value, so this also registers at launch.
-        settings.$toggleShortcut
-            .receive(on: DispatchQueue.main)
-            .sink { shortcut in
-                AwakeCoordinator.shared.shortcutManager.register(shortcut) {
-                    AwakeCoordinator.shared.togglePrimaryAction()
-                }
-            }
-            .store(in: &cancellables)
 
     }
 
