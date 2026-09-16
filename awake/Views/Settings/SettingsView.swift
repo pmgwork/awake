@@ -40,7 +40,7 @@ struct SettingsView: View {
             }
         }
         .frame(width: 540)
-        .frame(maxHeight: 480)
+        .frame(maxHeight: 540)
         .fixedSize(horizontal: false, vertical: true)
     }
 }
