@@ -39,6 +39,6 @@ struct SettingsView: View {
                 Label(L10n.string("Cooling"), systemImage: "wind")
             }
         }
-        .frame(minWidth: 520, idealWidth: 560, minHeight: 520, idealHeight: 600)
+        .frame(width: 560, height: 600)
     }
 }

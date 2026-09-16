@@ -15,6 +15,7 @@ struct awakeApp: App {
         Settings {
             SettingsView(coordinator: AwakeCoordinator.shared)
         }
+        .windowResizability(.contentSize)
     }
 }
 
