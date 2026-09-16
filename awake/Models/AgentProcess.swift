@@ -50,7 +50,7 @@ public nonisolated struct MonitoredAgent: Identifiable, Codable, Equatable, Hash
             id: AgentProvider.codex.rawValue,
             name: "Codex",
             processNames: ["codex"],
-            isEnabled: true,
+            isEnabled: false,
             isPreset: true,
             provider: .codex
         ),
@@ -58,7 +58,7 @@ public nonisolated struct MonitoredAgent: Identifiable, Codable, Equatable, Hash
             id: AgentProvider.claude.rawValue,
             name: "Claude Code",
             processNames: ["claude"],
-            isEnabled: true,
+            isEnabled: false,
             isPreset: true,
             provider: .claude
         ),
@@ -66,7 +66,7 @@ public nonisolated struct MonitoredAgent: Identifiable, Codable, Equatable, Hash
             id: AgentProvider.openCode.rawValue,
             name: "OpenCode",
             processNames: ["opencode", "opencode2"],
-            isEnabled: true,
+            isEnabled: false,
             isPreset: true,
             provider: .openCode
         ),
@@ -74,7 +74,7 @@ public nonisolated struct MonitoredAgent: Identifiable, Codable, Equatable, Hash
             id: AgentProvider.antigravity.rawValue,
             name: "Antigravity",
             processNames: ["antigravity", "agy"],
-            isEnabled: true,
+            isEnabled: false,
             isPreset: true,
             provider: .antigravity
         )

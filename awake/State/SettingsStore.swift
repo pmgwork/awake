@@ -208,11 +208,11 @@ public final class SettingsStore: ObservableObject {
         self.downloadFolderPath = UserDefaults.standard.string(forKey: Keys.downloadFolderPath)
             ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
 
-        // Timer Duration (default 2 hours)
+        // Timer Duration (default 30 minutes) and completion grace (default 1 minute)
         let savedDuration = UserDefaults.standard.double(forKey: Keys.selectedTimerDuration)
-        self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 2 * 60 * 60
+        self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 30 * 60
         self.completionGraceDuration = UserDefaults.standard.object(forKey: Keys.completionGraceDuration) == nil
-            ? 180 : max(0, UserDefaults.standard.double(forKey: Keys.completionGraceDuration))
+            ? 60 : max(0, UserDefaults.standard.double(forKey: Keys.completionGraceDuration))
 
         // Cooling settings
         if UserDefaults.standard.object(forKey: Keys.closedLidCoolingEnabled) != nil {
@@ -231,7 +231,7 @@ public final class SettingsStore: ObservableObject {
            let fan = FanMode(rawValue: fanRaw) {
             self.closedLidFanMode = fan
         } else {
-            self.closedLidFanMode = .maximum
+            self.closedLidFanMode = .aggressive
         }
 
         self.onlyOnACPower = UserDefaults.standard.bool(forKey: Keys.onlyOnACPower)
@@ -318,11 +318,11 @@ public final class SettingsStore: ObservableObject {
         monitoredAgents = MonitoredAgent.defaultPresets
         agentMonitoringEnabled = true
         downloadMonitoringEnabled = true
-        completionGraceDuration = 180
+        completionGraceDuration = 60
         downloadFolderPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
         closedLidCoolingEnabled = true
         excludeNormalClamshell = true
-        closedLidFanMode = .maximum
+        closedLidFanMode = .aggressive
         onlyOnACPower = false
         lowBatteryThreshold = 20
         preventDisplaySleep = true
