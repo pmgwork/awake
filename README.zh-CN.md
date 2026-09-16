@@ -28,12 +28,13 @@
 
 ## 安装
 
-1. 从[最新版本](https://github.com/PMGWork/awake/releases/latest)下载 `Awake-x.y.z.zip`
+1. 从[最新版本](https://github.com/PMGWork/awake/releases/latest)下载 `Awake-x.y.z.zip`（每个版本还附带可直接拖入 Applications 的 `Awake-x.y.z.dmg`）
 2. 解压后把 `Awake.app` 移动到 `/Applications`
 3. 构建未经过公证（notarization），首次启动需要绕过一次 Gatekeeper：
    - macOS 15 或更高版本（含 26/27）：先尝试打开一次 `Awake.app` 并关闭警告，然后前往**系统设置 → 隐私与安全性**，滚动到**安全性**并点按 **仍要打开**，或
    - 清除 quarantine 属性：`xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 及更早版本也可右键点按 `Awake.app` → **打开** → **打开**
+   - 使用 DMG 时同样需要这些许可：打开磁盘映像时的提示没有「打开」按钮，请在**系统设置 → 隐私与安全性**中允许，复制到 `/Applications` 后再允许应用
 4. 也可以使用 Homebrew 安装（需要先 tap）：
    ```sh
    brew tap pmgwork/tap

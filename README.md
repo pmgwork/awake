@@ -28,12 +28,13 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 ## Installation
 
-1. Download `Awake-x.y.z.zip` from the [latest release](https://github.com/PMGWork/awake/releases/latest).
+1. Download `Awake-x.y.z.zip` from the [latest release](https://github.com/PMGWork/awake/releases/latest). Each release also includes `Awake-x.y.z.dmg`, which opens as a drag-to-Applications window.
 2. Unzip it and move `Awake.app` to `/Applications`.
 3. Builds are not notarized (no paid Apple Developer account), so the first launch needs one Gatekeeper step:
    - On macOS 15 or later (including 26/27): try to open `Awake.app` once and dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**, or
    - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - On macOS 14 or earlier, right-click `Awake.app` → **Open** → **Open** also works.
+   - With the DMG, macOS asks for the same approval of the disk image when you open it (that dialog has no *Open* button; use **System Settings → Privacy & Security**), then for the app after copying it to `/Applications`.
 4. Alternative: install with Homebrew (tap it first):
    ```sh
    brew tap pmgwork/tap

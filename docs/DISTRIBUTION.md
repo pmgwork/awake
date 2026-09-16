@@ -15,7 +15,9 @@
   Library Validation の関係で、Sparkle.framework をロードするには
   Apple Development 署名が必要（ad-hoc 署名ではロードできない）。
   他人のMacではGatekeeper警告が出る (仕様)。Developer ID・公証は
-  有料Program必須のため対象外。
+  有料Program必須のため対象外。ブラウザでダウンロードした DMG も
+  未公証のため、初回マウント時に Gatekeeper の確認が出る
+  （システム設定 → プライバシーとセキュリティ →「このまま開く」で許可できる）。
 - タグ形式: `vX.Y.Z` (例 `v0.1.3`)。Sparkle は `CFBundleVersion` で新旧を比較し、
   `scripts/package.sh` が `CURRENT_PROJECT_VERSION` に版数を入れる。
 
@@ -54,11 +56,16 @@
 
    初回は Sparkle 2.10.0 のツールを `dist/sparkle-tools/` にダウンロードし、
    EdDSA 鍵（Keychain）で ZIP に署名して `appcast.xml` を生成する。
+   DMG は `Awake.app` と `Applications` ショートカットを並べた
+   ドラッグ&ドロップ用レイアウト（640×400、アイコン 128px）で作成する。
+   レイアウトは Finder 経由で `.DS_Store` に書き込むため、GUI セッションが
+   ない場合はレイアウトなしの DMG にフォールバックする。
 4. GitHubでタグ + Release作成:
    - タグ `v0.1.3` をpush
    - Release名 `Awake v0.1.3`、Notesに変更点（**英語**）とSHA256を記載
    - 添付: `dist/Awake-0.1.3.zip` と `dist/appcast.xml`（両方必須）。
-     DMG・`.sha256` は任意（手動ダウンロード用）
+     `dist/Awake-0.1.3.dmg`（ドラッグ&ドロップ用）と `.sha256` も添付推奨
+     （手動ダウンロード用）
    - **Stable releaseとして公開** (pre-release/draftにしない。`SUFeedURL` は
      `releases/latest` を指すため、draft/pre-release は配信対象外)
 5. 動作確認: Sparkle 導入版（0.1.3 以降）を入れた確認用Macで

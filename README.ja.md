@@ -28,12 +28,13 @@ AIコーディングエージェントの実行中、Macのスリープを防ぐ
 
 ## インストール
 
-1. [最新リリース](https://github.com/PMGWork/awake/releases/latest) から `Awake-x.y.z.zip` をダウンロード
+1. [最新リリース](https://github.com/PMGWork/awake/releases/latest) から `Awake-x.y.z.zip` をダウンロード（各リリースには、Applications へドラッグするだけの `Awake-x.y.z.dmg` も添付されます）
 2. 展開して `Awake.app` を `/Applications` へ移動
 3. 公証（notarization）を行っていないため、初回起動時のみ Gatekeeper の回避操作が必要です
    - macOS 15 以降（26/27 を含む）: 一度 `Awake.app` を開こうとして警告を閉じ、**システム設定 → プライバシーとセキュリティ** の **セキュリティ** 欄で **このまま開く** をクリック
    - または quarantine 属性を削除: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - macOS 14 以前は右クリック → **開く** → **開く** でも可
+   - DMG を使う場合も同じ許可が必要です。ディスクイメージを開くときの警告には「開く」ボタンがないため **システム設定 → プライバシーとセキュリティ** から許可し、`/Applications` へコピーした後にアプリ側も許可します
 4. Homebrew を使う場合（先に tap します）:
    ```sh
    brew tap pmgwork/tap

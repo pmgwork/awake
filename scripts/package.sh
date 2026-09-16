@@ -71,15 +71,66 @@ cp -R "$BUILT_APP" "$DIST_DIR/stage/Awake.app"
 (cd "$DIST_DIR/stage" && zip -qr -y "$DIST_DIR/$ZIP_NAME" "Awake.app")
 rm -rf "$DIST_DIR/stage"
 
-if command -v hdiutil >/dev/null 2>&1; then
+# The DMG opens as a drag-to-Applications window: Awake.app on the left, an
+# Applications shortcut on the right, at a fixed size. The volume name is
+# stable so the layout is the same for every release.
+DMG_VOLUME_NAME="Awake"
+DMG_STAGE="$DIST_DIR/dmg"
+DMG_RW="$DIST_DIR/Awake-$VERSION-rw.sparsebundle"
+DMG_MOUNT_DIR="$DIST_DIR/dmg-mount/AwakeDMGBuild"
+
+cleanup_dmg() {
+  diskutil eject "$DMG_MOUNT_DIR" >/dev/null 2>&1 || true
+  rm -rf "$DMG_STAGE" "$DMG_RW" "$DIST_DIR/dmg-mount"
+}
+
+if command -v diskutil >/dev/null 2>&1; then
   echo "==> Creating DMG..."
-  rm -rf "$DIST_DIR/dmg" && mkdir -p "$DIST_DIR/dmg"
-  cp -R "$BUILT_APP" "$DIST_DIR/dmg/Awake.app"
-  hdiutil create -volname "Awake $VERSION" -srcfolder "$DIST_DIR/dmg" \
-    -ov -format UDZO "$DIST_DIR/$DMG_NAME"
-  rm -rf "$DIST_DIR/dmg"
+  trap cleanup_dmg EXIT
+  cleanup_dmg
+  mkdir -p "$DMG_STAGE"
+  cp -R "$BUILT_APP" "$DMG_STAGE/Awake.app"
+  ln -s /Applications "$DMG_STAGE/Applications"
+
+  # A writable sparse bundle is created first so Finder can record the window
+  # and icon positions in .DS_Store, then it is compressed to the final image.
+  diskutil image create from "$DMG_STAGE" "$DMG_RW" --format UDSB \
+    --volumeName "$DMG_VOLUME_NAME" >/dev/null
+  mkdir -p "$DMG_MOUNT_DIR"
+  diskutil image attach "$DMG_RW" --nobrowse \
+    --mountPoint "$DMG_MOUNT_DIR" >/dev/null
+
+  # Requires a logged-in Finder session; without one the DMG is still usable,
+  # just without the arranged icons.
+  if ! osascript <<'APPLESCRIPT'
+tell application "Finder"
+	tell disk "AwakeDMGBuild"
+		open
+		set current view of container window to icon view
+		set toolbar visible of container window to false
+		set statusbar visible of container window to false
+		set the bounds of container window to {200, 140, 840, 540}
+		set viewOptions to the icon view options of container window
+		set arrangement of viewOptions to not arranged
+		set icon size of viewOptions to 128
+		set position of item "Awake.app" of container window to {150, 180}
+		set position of item "Applications" of container window to {490, 180}
+		update without registering applications
+		delay 1
+		close
+	end tell
+end tell
+APPLESCRIPT
+  then
+    echo "warning: could not apply the Finder layout (no GUI session?); creating a plain DMG" >&2
+  fi
+
+  diskutil eject "$DMG_MOUNT_DIR" >/dev/null
+  diskutil image create from "$DMG_RW" "$DIST_DIR/$DMG_NAME" --format UDZO >/dev/null
+  cleanup_dmg
+  trap - EXIT
 else
-  echo "==> hdiutil not found, skipping DMG"
+  echo "==> diskutil not found, skipping DMG"
 fi
 
 echo "==> Checksums..."
