@@ -10,7 +10,6 @@ public final class SettingsWindowController {
     public static let shared = SettingsWindowController()
 
     private var window: NSWindow?
-    private let selection = SettingsTabSelection()
 
     public func showSettings(coordinator: AwakeCoordinator) {
         if let existing = window {
@@ -19,7 +18,7 @@ public final class SettingsWindowController {
             return
         }
 
-        let contentView = SettingsView(coordinator: coordinator, selection: selection)
+        let contentView = SettingsView(coordinator: coordinator)
         let hostingController = NSHostingController(rootView: contentView)
 
         let newWindow = NSWindow(

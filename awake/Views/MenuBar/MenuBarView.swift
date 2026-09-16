@@ -72,15 +72,17 @@ struct MenuBarView: View {
 
             // Bottom Footer
             HStack {
-                Button(action: openSettingsAction) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "gearshape")
-                        Text(L10n.string("Settings..."))
+                if #available(macOS 14.0, *) {
+                    SettingsLink {
+                        settingsLabel
                     }
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .buttonStyle(.borderless)
+                } else {
+                    Button(action: openSettingsAction) {
+                        settingsLabel
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
 
                 Spacer()
 
@@ -97,6 +99,15 @@ struct MenuBarView: View {
         }
         .padding(12)
         .frame(width: 280)
+    }
+
+    private var settingsLabel: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "gearshape")
+            Text(L10n.string("Settings..."))
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
     }
 
     private var primaryActionTitle: String {
