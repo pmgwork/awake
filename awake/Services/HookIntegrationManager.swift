@@ -58,45 +58,49 @@ public final class HookIntegrationManager: ObservableObject {
 
     public func install(_ provider: AgentProvider) {
         perform {
-            let bridge = try installBridge()
+            let bridge = try self.installBridge()
             if provider == .openCode {
-                try installOpenCodePlugin(bridgeURL: bridge)
+                try self.installOpenCodePlugin(bridgeURL: bridge)
             } else {
-                try mergeHookConfiguration(for: provider, bridgeURL: bridge)
+                try self.mergeHookConfiguration(for: provider, bridgeURL: bridge)
             }
-            settings.clearProviderTest(provider)
+        } onSuccess: { [weak self] in
+            self?.settings.clearProviderTest(provider)
         }
     }
 
     public func uninstall(_ provider: AgentProvider) {
         perform {
             if provider == .openCode {
-                try uninstallOpenCodePlugin()
+                try self.uninstallOpenCodePlugin()
             } else {
-                try removeOwnedHooks(for: provider)
+                try self.removeOwnedHooks(for: provider)
             }
-            settings.clearProviderTest(provider)
-            if !AgentProvider.allCases.contains(where: { installedEntryExists(for: $0) }) {
-                try? fileManager.removeItem(at: bridgeDestinationURL)
+            if !AgentProvider.allCases.contains(where: { self.installedEntryExists(for: $0) }) {
+                try? self.fileManager.removeItem(at: self.bridgeDestinationURL)
             }
+        } onSuccess: { [weak self] in
+            self?.settings.clearProviderTest(provider)
         }
     }
 
     public func test(_ provider: AgentProvider) {
         perform {
-            guard bridgeIsValid else { throw IntegrationError.bridgeUnavailable }
+            guard self.bridgeIsValid else { throw IntegrationError.bridgeUnavailable }
             let sessionID = "\(AgentHookEvent.integrationTestSessionIDPrefix)\(UUID().uuidString)"
-            try runBridge(provider: provider, sessionID: sessionID, state: .active, reason: "integration-test")
+            try self.runBridge(provider: provider, sessionID: sessionID, state: .active, reason: "integration-test")
             let found = AgentSessionStore.shared.loadValidEvents(cleaningInvalidFiles: false).contains {
                 $0.provider == provider && $0.sessionID == sessionID && $0.state == .active
             }
             guard found else { throw IntegrationError.testEventNotReceived }
-            try runBridge(provider: provider, sessionID: sessionID, state: .idle, reason: "integration-test-complete")
+            try self.runBridge(provider: provider, sessionID: sessionID, state: .idle, reason: "integration-test-complete")
             // Remove the synthetic session explicitly so no residue depends on
             // monitor poll timing. The monitor also ignores test traffic, so
             // this can never auto-start Keep Awake.
             AgentSessionStore.shared.remove(provider: provider, sessionID: sessionID)
-            settings.markProviderTested(provider)
+        } onSuccess: { [weak self] in
+            guard let self else { return }
+            self.settings.markProviderTested(provider)
             AgentEventMonitor.shared.reloadNow()
         }
     }
@@ -122,18 +126,33 @@ public final class HookIntegrationManager: ObservableObject {
         statuses = result
     }
 
-    private func perform(_ operation: () throws -> Void) {
+    /// Runs an operation off the main thread so a slow or wedged bridge can
+    /// never freeze the UI, then publishes the result on the main actor.
+    private func perform(_ operation: @escaping () throws -> Void, onSuccess: (() -> Void)? = nil) {
         guard !isWorking else { return }
         isWorking = true
         lastError = nil
-        do {
-            try operation()
-        } catch {
-            lastError = error.localizedDescription
-            NSLog("[HookIntegrationManager] %@", error.localizedDescription)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let outcome: Result<Void, Error>
+            do {
+                try operation()
+                outcome = .success(())
+            } catch {
+                outcome = .failure(error)
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch outcome {
+                case .success:
+                    onSuccess?()
+                case .failure(let error):
+                    self.lastError = error.localizedDescription
+                    NSLog("[HookIntegrationManager] %@", error.localizedDescription)
+                }
+                self.isWorking = false
+                self.refreshStatuses()
+            }
         }
-        isWorking = false
-        refreshStatuses()
     }
 
     private var awakeSupportURL: URL {
@@ -516,8 +535,27 @@ public final class HookIntegrationManager: ObservableObject {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try process.run()
-        process.waitUntilExit()
+        guard waitForExit(process, timeout: 10) else {
+            NSLog("[HookIntegrationManager] AwakeHookBridge timed out (provider: %@)", provider.rawValue)
+            throw IntegrationError.bridgeFailed
+        }
         guard process.terminationStatus == 0 else { throw IntegrationError.bridgeFailed }
+    }
+
+    /// Waits for a child process without pumping the caller's run loop and
+    /// without waiting forever on a wedged bridge.
+    private func waitForExit(_ process: Process, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        guard process.isRunning else { return true }
+        process.terminate()
+        let killDeadline = Date().addingTimeInterval(1)
+        while process.isRunning, Date() < killDeadline {
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        return false
     }
 
     private func readJSONObject(at url: URL, allowsJSONC: Bool = false) throws -> [String: Any] {
