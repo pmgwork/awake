@@ -182,6 +182,19 @@ public final class HookIntegrationManager: ObservableObject {
         return bridgeDestinationURL
     }
 
+    private var openCodeConfigurationURLs: [URL] {
+        let directory = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map(URL.init(fileURLWithPath:))
+            ?? homeURL.appendingPathComponent(".config", isDirectory: true)
+        let base = directory.appendingPathComponent("opencode", isDirectory: true)
+        let jsonc = base.appendingPathComponent("opencode.jsonc")
+        let json = base.appendingPathComponent("opencode.json")
+        var urls: [URL] = []
+        if fileManager.fileExists(atPath: jsonc.path) { urls.append(jsonc) }
+        if fileManager.fileExists(atPath: json.path) { urls.append(json) }
+        // The install target when neither file exists yet.
+        return urls.isEmpty ? [json] : urls
+    }
+
     private func configurationURL(for provider: AgentProvider) -> URL {
         switch provider {
         case .codex:
@@ -191,12 +204,15 @@ public final class HookIntegrationManager: ObservableObject {
         case .antigravity:
             return homeURL.appendingPathComponent(".gemini/config/hooks.json")
         case .openCode:
-            let directory = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map(URL.init(fileURLWithPath:))
-                ?? homeURL.appendingPathComponent(".config", isDirectory: true)
-            let base = directory.appendingPathComponent("opencode", isDirectory: true)
-            let jsonc = base.appendingPathComponent("opencode.jsonc")
-            return fileManager.fileExists(atPath: jsonc.path) ? jsonc : base.appendingPathComponent("opencode.json")
+            return openCodeConfigurationURLs[0]
         }
+    }
+
+    /// Every file that may contain this provider's Awake entry. OpenCode may
+    /// have both opencode.json and opencode.jsonc, and status checks must not
+    /// lose track of an entry just because the other file appeared later.
+    private func configurationURLs(for provider: AgentProvider) -> [URL] {
+        provider == .openCode ? openCodeConfigurationURLs : [configurationURL(for: provider)]
     }
 
     private func mergeHookConfiguration(for provider: AgentProvider, bridgeURL: URL) throws {
@@ -361,8 +377,7 @@ public final class HookIntegrationManager: ObservableObject {
     }
 
     private func uninstallOpenCodePlugin() throws {
-        let configURL = configurationURL(for: .openCode)
-        if fileManager.fileExists(atPath: configURL.path) {
+        for configURL in openCodeConfigurationURLs where fileManager.fileExists(atPath: configURL.path) {
             var root = try readJSONObject(at: configURL, allowsJSONC: true)
             for key in ["plugin", "plugins"] {
                 if var plugins = root[key] as? [Any] {
@@ -383,34 +398,47 @@ public final class HookIntegrationManager: ObservableObject {
     }
 
     private func installedEntryExists(for provider: AgentProvider) -> Bool {
-        let url = configurationURL(for: provider)
-        guard let data = try? Data(contentsOf: url),
-              let text = String(data: data, encoding: .utf8) else { return false }
-        // JSONSerialization escapes "/" as "\/", so normalize before path matching.
-        // The owner marker itself contains no slashes and is unaffected.
-        let normalized = text.replacingOccurrences(of: "\\/", with: "/")
-        if provider == .openCode {
-            return normalized.contains(openCodePluginDirectoryURL.path)
-                || normalized.contains(openCodePluginURL.absoluteString)
-                || normalized.contains(openCodePluginDirectoryURL.absoluteString)
+        for url in configurationURLs(for: provider) {
+            guard let data = try? Data(contentsOf: url),
+                  let text = String(data: data, encoding: .utf8) else { continue }
+            // JSONSerialization escapes "/" as "\/", so normalize before path matching.
+            // The owner marker itself contains no slashes and is unaffected.
+            let normalized = text.replacingOccurrences(of: "\\/", with: "/")
+            if provider == .openCode {
+                if normalized.contains(openCodePluginDirectoryURL.path)
+                    || normalized.contains(openCodePluginURL.absoluteString)
+                    || normalized.contains(openCodePluginDirectoryURL.absoluteString) {
+                    return true
+                }
+                continue
+            }
+            if normalized.contains("--owner \(Self.ownerMarker)")
+                || (provider == .antigravity && normalized.contains("\"\(Self.ownerMarker)\"")) {
+                return true
+            }
         }
-        return normalized.contains("--owner \(Self.ownerMarker)") || (provider == .antigravity && normalized.contains("\"\(Self.ownerMarker)\""))
+        return false
     }
 
     private func configurationIsValid(for provider: AgentProvider) -> Bool {
-        let url = configurationURL(for: provider)
-        return (try? readJSONObject(at: url, allowsJSONC: provider == .openCode)) != nil
+        configurationURLs(for: provider).contains {
+            (try? readJSONObject(at: $0, allowsJSONC: provider == .openCode)) != nil
+        }
     }
 
     private func entryReferencesCurrentPath(for provider: AgentProvider) -> Bool {
-        let url = configurationURL(for: provider)
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return false }
-        // Written JSON escapes "/" as "\/", so compare against the unescaped form.
-        let normalized = text.replacingOccurrences(of: "\\/", with: "/")
         let expected = provider == .openCode ? openCodePluginDirectoryURL.path : bridgeDestinationURL.path
-        return normalized.contains(expected)
-            || (provider == .openCode && normalized.contains(openCodePluginURL.absoluteString))
-            || (provider == .openCode && normalized.contains(openCodePluginDirectoryURL.absoluteString))
+        for url in configurationURLs(for: provider) {
+            guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            // Written JSON escapes "/" as "\/", so compare against the unescaped form.
+            let normalized = text.replacingOccurrences(of: "\\/", with: "/")
+            if normalized.contains(expected)
+                || (provider == .openCode && normalized.contains(openCodePluginURL.absoluteString))
+                || (provider == .openCode && normalized.contains(openCodePluginDirectoryURL.absoluteString)) {
+                return true
+            }
+        }
+        return false
     }
 
     private var openCodePluginIsValid: Bool {
@@ -529,8 +557,12 @@ public final class HookIntegrationManager: ObservableObject {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         if createsBackup, fileManager.fileExists(atPath: url.path) {
             let backup = url.appendingPathExtension("awake-backup")
-            try? fileManager.removeItem(at: backup)
-            try fileManager.copyItem(at: url, to: backup)
+            // Keep the first backup: it is the only copy of the file before
+            // Awake ever modified it (later writes contain the already
+            // rewritten file).
+            if !fileManager.fileExists(atPath: backup.path) {
+                try fileManager.copyItem(at: url, to: backup)
+            }
         }
         let temporary = directory.appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString)")
         try data.write(to: temporary, options: .atomic)
@@ -607,12 +639,23 @@ public final class HookIntegrationManager: ObservableObject {
                 }
                 continue
             }
+            if character == "," {
+                // JSONC permits trailing commas. Drop a comma only when the
+                // next non-whitespace character closes an array/object; string
+                // contents are never rewritten because this runs outside them.
+                var lookahead = next
+                while lookahead < text.endIndex, text[lookahead].isWhitespace {
+                    lookahead = text.index(after: lookahead)
+                }
+                if lookahead < text.endIndex, text[lookahead] == "}" || text[lookahead] == "]" {
+                    index = next
+                    continue
+                }
+            }
             result.append(character)
             index = next
         }
-        // JSONC permits trailing commas. Removing only commas followed by a
-        // closing array/object is safe after comments and strings are handled.
-        return result.replacingOccurrences(of: ",\\s*([}\\]])", with: "$1", options: .regularExpression)
+        return result
     }
 
     public enum IntegrationError: LocalizedError {

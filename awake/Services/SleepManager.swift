@@ -173,7 +173,12 @@ public final class SleepManager: ObservableObject {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/caffeinate")
         // -s: Prevent system sleep (on AC power) without simulating user activity or waking display
-        process.arguments = ["-s"]
+        // -w: Release the assertion and exit when Awake exits, so a crash or
+        //     force-quit cannot leave the Mac permanently awake.
+        process.arguments = [
+            "-s",
+            "-w", String(ProcessInfo.processInfo.processIdentifier),
+        ]
         do {
             try process.run()
             self.caffeinateProcess = process

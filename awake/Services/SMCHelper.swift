@@ -6,14 +6,18 @@
 import Foundation
 import AppKit
 import CryptoKit
+import Darwin
 
 public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-9"
+    private let helperProtocolVersion = "awake-smc-10"
     private let fanLeaseLock = NSLock()
     private var fanLeaseProcess: Process?
+    private let terminationLock = NSLock()
+    private var terminationRequested = false
+    private let readinessTimeout: TimeInterval = 45
 
     private let installStateLock = NSLock()
     private let installCheckLock = NSLock()
@@ -315,10 +319,10 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     /// Starts a helper that owns the manual fan override and watches the Awake
     /// process. If Awake exits or crashes, the helper restores system control.
     private func startInstalledFanControlLease(mode: String) -> Bool {
-        fanLeaseLock.lock()
-        defer { fanLeaseLock.unlock() }
-
-        stopInstalledFanControlLeaseLocked()
+        guard stopInstalledFanControlLease() else {
+            NSLog("[SMCHelper] Previous fan control lease did not exit; skipping mode %@", mode)
+            return false
+        }
 
         let process = Process()
         let stdout = Pipe()
@@ -332,37 +336,120 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         do {
             try process.run()
-            let readiness = try stdout.fileHandleForReading.read(upToCount: 6) ?? Data()
-            guard String(data: readiness, encoding: .utf8)?.hasPrefix("READY") == true,
-                  process.isRunning else {
-                if process.isRunning {
-                    process.terminate()
-                }
-                NSLog("[SMCHelper] Fan control lease did not become ready")
-                return false
-            }
-            fanLeaseProcess = process
-            NSLog("[SMCHelper] Fan control lease started (mode: %@, PID: %d)", mode, process.processIdentifier)
-            return true
         } catch {
             NSLog("[SMCHelper] Failed to start fan control lease: %@", error.localizedDescription)
             return false
         }
+
+        // Publish the process before waiting for readiness so a concurrent
+        // stop (mode change or app termination) can cancel it immediately
+        // instead of blocking on the lock for the whole engage.
+        fanLeaseLock.lock()
+        fanLeaseProcess = process
+        fanLeaseLock.unlock()
+
+        guard waitForReadiness(process, stdout: stdout, timeout: readinessTimeout),
+              process.isRunning else {
+            fanLeaseLock.lock()
+            if fanLeaseProcess === process {
+                fanLeaseProcess = nil
+            }
+            fanLeaseLock.unlock()
+            if process.isRunning {
+                process.terminate()
+            }
+            NSLog("[SMCHelper] Fan control lease did not become ready")
+            return false
+        }
+
+        NSLog("[SMCHelper] Fan control lease started (mode: %@, PID: %d)", mode, process.processIdentifier)
+        return true
     }
 
-    private func stopInstalledFanControlLease() {
+    /// Waits for the helper's READY handshake. The wait is bounded and checks
+    /// the termination flag so quitting Awake cannot hang behind a slow SMC
+    /// engage.
+    private func waitForReadiness(_ process: Process, stdout: Pipe, timeout: TimeInterval) -> Bool {
+        let handle = stdout.fileHandleForReading
+        let deadline = Date().addingTimeInterval(timeout)
+        var output = Data()
+
+        while Date() < deadline {
+            if isTerminationRequested || !process.isRunning {
+                return false
+            }
+            var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
+            let pollResult = poll(&descriptor, 1, 250)
+            if pollResult < 0 {
+                if errno == EINTR { continue }
+                return false
+            }
+            if pollResult == 0 { continue }
+
+            guard let chunk = try? handle.read(upToCount: 6), !chunk.isEmpty else {
+                return false
+            }
+            output.append(chunk)
+            if output.count >= 6 {
+                break
+            }
+        }
+
+        guard output.count >= 6 else { return false }
+        return String(data: output.prefix(6), encoding: .utf8)?.hasPrefix("READY") == true
+    }
+
+    /// Asks any in-flight helper startup to stop waiting so app termination is
+    /// not blocked by a slow SMC engage.
+    public func requestTermination() {
+        terminationLock.lock()
+        terminationRequested = true
+        terminationLock.unlock()
+    }
+
+    private var isTerminationRequested: Bool {
+        terminationLock.lock()
+        defer { terminationLock.unlock() }
+        return terminationRequested
+    }
+
+    @discardableResult
+    private func stopInstalledFanControlLease() -> Bool {
         fanLeaseLock.lock()
         defer { fanLeaseLock.unlock() }
-        stopInstalledFanControlLeaseLocked()
+        return stopInstalledFanControlLeaseLocked()
     }
 
-    private func stopInstalledFanControlLeaseLocked() {
-        guard let process = fanLeaseProcess else { return }
-        if process.isRunning {
-            process.terminate()
-            _ = waitForExit(process, timeout: 2)
-        }
+    /// Stops the lease and waits until the helper has actually exited. The old
+    /// helper's rollback must never overlap a replacement lease's engagement.
+    @discardableResult
+    private func stopInstalledFanControlLeaseLocked() -> Bool {
+        guard let process = fanLeaseProcess else { return true }
         fanLeaseProcess = nil
+        guard process.isRunning else { return true }
+
+        process.terminate()
+        if waitForExitWithoutTerminating(process, timeout: 6) {
+            return true
+        }
+
+        // A helper that ignores SIGTERM would keep writing manual fan targets
+        // while a replacement lease runs. Make sure it is really gone.
+        NSLog("[SMCHelper] Fan control lease did not exit after SIGTERM; sending SIGKILL")
+        kill(process.processIdentifier, SIGKILL)
+        if waitForExitWithoutTerminating(process, timeout: 2) {
+            return true
+        }
+        NSLog("[SMCHelper] Fan control lease is still running (PID: %d)", process.processIdentifier)
+        return false
+    }
+
+    private func waitForExitWithoutTerminating(_ process: Process, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        return !process.isRunning
     }
 
     /// Starts a root-owned limited-power assertion. The helper watches its
@@ -587,9 +674,23 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             return callSMC(connection, &input, &output) == KERN_SUCCESS && output.result == 0;
         }
 
+        static volatile sig_atomic_t shouldStop = 0;
+        static bool abortOnStop = true;
+        static pid_t expectedParentPID = 0;
+
+        static void handleStopSignal(int signalNumber) {
+            (void)signalNumber;
+            shouldStop = 1;
+        }
+
+        static bool parentDied(void) {
+            return expectedParentPID > 1 && getppid() != expectedParentPID;
+        }
+
         static bool writeKeyRetry(io_connect_t connection, const char *key, const uint8_t *bytes,
                                   uint32_t size, int attempts, useconds_t delay) {
             for (int attempt = 0; attempt < attempts; ++attempt) {
+                if (abortOnStop && (shouldStop || parentDied())) return false;
                 if (writeKey(connection, key, bytes, size)) return true;
                 if (attempt + 1 < attempts) usleep(delay);
             }
@@ -607,6 +708,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         }
 
         static bool engageManual(io_connect_t connection, const char *modeKey) {
+            if (shouldStop || parentDied()) return false;
             uint8_t manual = 1;
             if (writeKey(connection, modeKey, &manual, 1)) return true;
 
@@ -618,6 +720,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                 return false;
             }
             usleep(3000000);
+            if (shouldStop || parentDied()) return false;
             if (!writeKeyRetry(connection, modeKey, &manual, 1, 300, 100000)) {
                 fprintf(stderr, "thermal manager did not release %s", modeKey);
                 return false;
@@ -650,6 +753,9 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         }
 
         static void rollbackToAuto(io_connect_t connection, int fanCount) {
+            // Rollback must finish even when a stop was requested: turn off the
+            // abort checks that guard the manual-engage path.
+            abortOnStop = false;
             for (int fan = 0; fan < fanCount; ++fan) {
                 (void)restoreFanAuto(connection, fan);
             }
@@ -658,13 +764,6 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                 uint8_t release = 0;
                 (void)writeKeyRetry(connection, "Ftst", &release, 1, 20, 50000);
             }
-        }
-
-        static volatile sig_atomic_t shouldStop = 0;
-
-        static void handleStopSignal(int signalNumber) {
-            (void)signalNumber;
-            shouldStop = 1;
         }
 
         static int holdBatterySleepAssertion(void) {
@@ -711,7 +810,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-9");
+                puts("awake-smc-10");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-sleep") == 0) {
@@ -720,6 +819,15 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             const char *mode = argc > 1 ? argv[1] : "auto";
             if (strcmp(mode, "max") != 0 && strcmp(mode, "aggressive") != 0 && strcmp(mode, "moderate") != 0 && strcmp(mode, "auto") != 0) return 64;
             bool watchParent = argc > 2 && strcmp(argv[2], "watch-parent") == 0;
+
+            // Handlers are installed before any hardware write so that a stop
+            // request or a dead parent can still roll the fans back to system
+            // control instead of leaving them pinned in manual mode.
+            signal(SIGPIPE, SIG_IGN);
+            signal(SIGTERM, handleStopSignal);
+            signal(SIGINT, handleStopSignal);
+            expectedParentPID = getppid();
+            if (expectedParentPID <= 1) return 3;
 
             io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMCKeysEndpoint"));
             if (!service) service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"));
@@ -758,6 +866,11 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
             bool success = true;
             for (int fan = 0; fan < fanCount; ++fan) {
+                if (shouldStop || parentDied()) {
+                    fprintf(stderr, "cancelled before fan %d", fan);
+                    success = false;
+                    break;
+                }
                 char modeKey[5] = {0};
                 char maxKey[] = "F0Mx";
                 char targetKey[] = "F0Tg";
@@ -801,12 +914,14 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             }
             if (!success) rollbackToAuto(connection, fanCount);
             if (success && watchParent) {
-                pid_t awakePID = getppid();
-                signal(SIGTERM, handleStopSignal);
-                signal(SIGINT, handleStopSignal);
+                if (shouldStop || parentDied()) {
+                    rollbackToAuto(connection, fanCount);
+                    IOServiceClose(connection);
+                    return 5;
+                }
                 puts("READY");
                 fflush(stdout);
-                while (!shouldStop && getppid() == awakePID) sleep(1);
+                while (!shouldStop && getppid() == expectedParentPID) sleep(1);
                 rollbackToAuto(connection, fanCount);
             }
             IOServiceClose(connection);

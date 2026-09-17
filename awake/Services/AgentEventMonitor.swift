@@ -83,7 +83,7 @@ public final class AgentEventMonitor: ObservableObject {
         let terminalEvents = events.filter { $0.state == .idle || $0.state == .stale }
         if !terminalEvents.isEmpty {
             let store = self.store
-            queue.async { terminalEvents.forEach(store.remove) }
+            queue.async { terminalEvents.forEach(store.removeIfUnchanged) }
         }
     }
 

@@ -26,14 +26,17 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         configureTabs()
 
-        let initialSize = paneSizes[.general] ?? NSSize(width: SettingsTab.contentWidth, height: 480)
+        // The tab controller survives closing, so reopen with the tab the user
+        // was last viewing instead of always falling back to General.
+        let initialTab = selectedTab()
+        let initialSize = paneSizes[initialTab] ?? NSSize(width: SettingsTab.contentWidth, height: 480)
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: initialSize),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        window.title = SettingsTab.general.title
+        window.title = initialTab.title
         window.toolbarStyle = .preference
         window.contentViewController = tabController
         window.isReleasedWhenClosed = false
@@ -82,6 +85,12 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             width: SettingsTab.contentWidth,
             height: ceil(hostingView.fittingSize.height)
         )
+    }
+
+    private func selectedTab() -> SettingsTab {
+        let index = tabController.selectedTabViewItemIndex
+        guard SettingsTab.allCases.indices.contains(index) else { return .general }
+        return SettingsTab.allCases[index]
     }
 
     private func applySize(for tab: SettingsTab) {

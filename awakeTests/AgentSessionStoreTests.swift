@@ -143,4 +143,42 @@ final class AgentSessionStoreTests: XCTestCase {
         store.remove(provider: .claude, sessionID: "to-remove")
         XCTAssertTrue(store.loadValidEvents().isEmpty)
     }
+
+    func testCleanupDoesNotDeleteNewerActiveEvent() throws {
+        let now = Date()
+        let terminal = AgentHookEvent(
+            provider: .codex,
+            sessionID: "session-race",
+            state: .idle,
+            reason: "Stop",
+            occurredAt: now
+        )
+        try store.save(terminal)
+        // A new turn starts before the queued cleanup pass runs.
+        try store.save(AgentHookEvent(
+            provider: .codex,
+            sessionID: "session-race",
+            state: .active,
+            reason: "UserPromptSubmit",
+            occurredAt: now.addingTimeInterval(1)
+        ))
+
+        store.removeIfUnchanged(terminal)
+
+        XCTAssertEqual(store.loadValidEvents(cleaningInvalidFiles: false).map(\.state), [.active])
+    }
+
+    func testCleanupRemovesCurrentTerminalEvent() throws {
+        let event = AgentHookEvent(
+            provider: .claude,
+            sessionID: "session-cleanup",
+            state: .idle,
+            reason: "Stop"
+        )
+        try store.save(event)
+
+        store.removeIfUnchanged(event)
+
+        XCTAssertTrue(store.loadValidEvents(cleaningInvalidFiles: false).isEmpty)
+    }
 }

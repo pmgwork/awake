@@ -72,7 +72,7 @@ When the lid closes with no external display connected, Awake keeps the system a
 
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
-- Options: fan mode (Maximum / Aggressive / Auto), "Exclude Normal Clamshell" (leave control to macOS when an external display is connected), and "only on AC power".
+- Options: fan mode (Maximum 100% / Aggressive 75% / Moderate 50% / Auto), "Exclude Normal Clamshell" (leave control to macOS when an external display is connected), and "only on AC power".
 - To remove the helper completely: `sudo rm /Library/PrivilegedHelperTools/pmgwork.awake.smc`.
 
 ## Privacy

@@ -72,7 +72,7 @@ Awake はメニューバー専用アプリです（Dock にアイコンは表示
 
 - 初回のみ管理者パスワードを求め、専用ヘルパー `/Library/PrivilegedHelperTools/pmgwork.awake.smc`（`root:admin`、setuid root）をインストールします。
 - ヘルパーは Awake プロセスを監視し、Awake が終了・クラッシュした場合はファンを自動制御へ戻します。
-- オプション: ファンモード（最大／強冷却／自動）、通常のクラムシェルモードを除外（外部ディスプレイ接続時は macOS に任せる）、AC電源接続時のみ有効
+- オプション: ファンモード（最大100%／強冷却75%／中冷却50%／自動）、通常のクラムシェルモードを除外（外部ディスプレイ接続時は macOS に任せる）、AC電源接続時のみ有効
 - ヘルパーを完全に削除する場合: `sudo rm /Library/PrivilegedHelperTools/pmgwork.awake.smc`
 
 ## プライバシー

@@ -24,8 +24,12 @@ public final class FanController: ObservableObject {
     private var requestedMode: FanMode = .auto
     private var modeInFlight: FanMode?
     private var failedMode: FanMode?
+    private var failedAt: Date?
     private var testResetTimer: Timer?
     private let testDuration: TimeInterval = 60
+    /// A failed automatic restore is retried after this delay so the fail-safe
+    /// recovers on its own without hammering the SMC on every heartbeat.
+    private let autoRetryDelay: TimeInterval = 15
 
     private init() {
         NotificationCenter.default.addObserver(
@@ -46,6 +50,9 @@ public final class FanController: ObservableObject {
         cancelTestResetTimer()
         requestedMode = .auto
         isTestModeActive = false
+        // Let a helper that is still starting up give up instead of blocking
+        // termination behind the SMC engage.
+        SMCHelper.shared.requestTermination()
         queue.sync {
             _ = SMCHelper.shared.setFanAuto(allowAuthorizationPrompt: false)
         }
@@ -55,16 +62,30 @@ public final class FanController: ObservableObject {
     public func setFanMode(_ mode: FanMode) {
         if requestedMode != mode {
             failedMode = nil
+            failedAt = nil
         }
         requestedMode = mode
         applyRequestedModeIfNeeded()
     }
 
-    /// Safe revert to Auto mode (Fail-Safe requirement)
-    public func restoreAuto() {
+    /// Safe revert to Auto mode (Fail-Safe requirement).
+    ///
+    /// A failed restore is retried after `autoRetryDelay` instead of being
+    /// blocked forever; `force` is used by explicit user actions.
+    public func restoreAuto(force: Bool = false) {
         cancelTestResetTimer()
         if requestedMode != .auto {
             failedMode = nil
+            failedAt = nil
+        } else if !force,
+                  failedMode == .auto,
+                  let failedAt,
+                  Date().timeIntervalSince(failedAt) < autoRetryDelay {
+            // Still backing off: keep the failure so the 1 Hz heartbeat does
+            // not hammer the SMC with a failing restore.
+        } else {
+            failedMode = nil
+            failedAt = nil
         }
         requestedMode = .auto
         isTestModeActive = false
@@ -153,12 +174,14 @@ public final class FanController: ObservableObject {
         modeInFlight = nil
         if success {
             failedMode = nil
+            failedAt = nil
             activeMode = mode
             controlError = nil
             refreshFanStatus()
             refreshFanStatusAfterRamp()
         } else {
             failedMode = mode
+            failedAt = Date()
             isTestModeActive = false
             cancelTestResetTimer()
             controlError = errorMessage
@@ -175,10 +198,11 @@ public final class FanController: ObservableObject {
 
     public func testFanSpeed(mode: FanMode) {
         if mode == .auto {
-            restoreAuto()
+            restoreAuto(force: true)
             return
         }
         failedMode = nil
+        failedAt = nil
         requestedMode = mode
         isTestModeActive = true
         scheduleTestReset()
@@ -187,12 +211,14 @@ public final class FanController: ObservableObject {
 
     public func retryFanMode(_ mode: FanMode) {
         failedMode = nil
+        failedAt = nil
         requestedMode = activeMode
         setFanMode(mode)
     }
 
     public func allowPolicyRetry() {
         failedMode = nil
+        failedAt = nil
         requestedMode = activeMode
     }
 

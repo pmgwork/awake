@@ -83,12 +83,12 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
             if (event.state == .active || event.state == .waitingForInput),
                let pid = event.sourcePID,
                !Self.processIsSame(pid: pid, expectedStartTime: event.sourceProcessStartTime) {
-                if cleaningInvalidFiles { try? fileManager.removeItem(at: url) }
+                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
                 continue
             }
             if (event.state == .active || event.state == .waitingForInput),
                now.timeIntervalSince(event.occurredAt) > Self.orphanSessionTTL {
-                if cleaningInvalidFiles { try? fileManager.removeItem(at: url) }
+                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
                 continue
             }
             if let current = newestBySession[event.sessionKey], current.occurredAt > event.occurredAt {
@@ -105,6 +105,36 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
 
     public func remove(provider: AgentProvider, sessionID: String) {
         try? fileManager.removeItem(at: fileURL(provider: provider, sessionID: sessionID))
+    }
+
+    /// Removes an event only when the file still holds that exact event.
+    ///
+    /// Cleanup passes work from a snapshot, so an unconditional delete could
+    /// erase a newer active event that a provider wrote after the snapshot was
+    /// taken. The bridge writes under the same file lock, so read and delete
+    /// stay atomic with respect to hook traffic.
+    public func removeIfUnchanged(_ event: AgentHookEvent) {
+        removeIfUnchanged(
+            url: fileURL(provider: event.provider, sessionID: event.sessionID),
+            event: event
+        )
+    }
+
+    private func removeIfUnchanged(url: URL, event: AgentHookEvent) {
+        let lockURL = directoryURL.appendingPathComponent(".write.lock")
+        let descriptor = open(lockURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { return }
+        defer {
+            flock(descriptor, LOCK_UN)
+            close(descriptor)
+        }
+        guard flock(descriptor, LOCK_EX) == 0 else { return }
+        // Dates round-trip through ISO8601 with millisecond precision, so a
+        // freshly-created event can differ from its stored copy by <1 ms.
+        guard let current = try? read(url),
+              current.state == event.state,
+              abs(current.occurredAt.timeIntervalSince(event.occurredAt)) < 0.001 else { return }
+        try? fileManager.removeItem(at: url)
     }
 
     public func removeAll() {

@@ -72,7 +72,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 
 - 首次启用时会请求一次管理员密码，安装辅助工具 `/Library/PrivilegedHelperTools/pmgwork.awake.smc`（`root:admin`，setuid root）。
 - 该辅助工具会监视 Awake 进程；如果 Awake 退出或崩溃，会自动把风扇恢复为自动控制。
-- 选项：风扇模式（最大／强力／自动）、排除普通合盖模式（连接外接显示器时交给 macOS 控制）、仅在连接电源时启用
+- 选项：风扇模式（最大 100%／强力 75%／中等 50%／自动）、排除普通合盖模式（连接外接显示器时交给 macOS 控制）、仅在连接电源时启用
 - 如需彻底删除辅助工具：`sudo rm /Library/PrivilegedHelperTools/pmgwork.awake.smc`
 
 ## 隐私
