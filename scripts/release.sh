@@ -86,12 +86,22 @@ git remote get-url origin >/dev/null 2>&1 || die "no \"origin\" remote is config
 REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)" \
     || die "could not determine the GitHub repository for this checkout."
 
+# GitHub's "release by tag" API does not return draft releases, so drafts are
+# looked up through the releases list instead.
+release_id_for_tag() {
+    gh api "repos/$REPO/releases?per_page=100" --paginate \
+        --jq ".[] | select(.tag_name == \"$TAG\") | .id" 2>/dev/null \
+        | head -n 1
+}
+
 release_exists() {
-    gh api "repos/$REPO/releases/tags/$TAG" >/dev/null 2>&1
+    [ -n "$(release_id_for_tag)" ]
 }
 
 release_is_draft() {
-    [ "$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.draft' 2>/dev/null || echo false)" = "true" ]
+    release_id="$(release_id_for_tag)"
+    [ -n "$release_id" ] \
+        && [ "$(gh api "repos/$REPO/releases/$release_id" --jq '.draft' 2>/dev/null)" = "true" ]
 }
 
 # --- Publish mode ------------------------------------------------------------
@@ -99,8 +109,9 @@ if [ "$MODE" = "publish" ]; then
     release_exists || die "no GitHub Release for $TAG; run scripts/release.sh $VERSION first."
     release_is_draft || die "$TAG is already published."
 
+    release_id="$(release_id_for_tag)"
     for required in "Awake-$VERSION.zip" "appcast.xml"; do
-        gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].name' \
+        gh api "repos/$REPO/releases/$release_id" --jq '.assets[].name' \
             | grep -qx "$required" \
             || die "draft $TAG has no $required asset; re-run scripts/release.sh $VERSION."
     done
@@ -149,8 +160,7 @@ done
 [ -f "$DMG" ] || echo "warning: $DMG not found; the release will have no drag-and-drop DMG." >&2
 [ -f "$SHA" ] || echo "warning: $SHA not found; the release will have no checksums." >&2
 
-if ! grep -q "sparkle:version=\"$VERSION\"" "$APPCAST" \
-    && ! grep -q "sparkle:shortVersionString=\"$VERSION\"" "$APPCAST"; then
+if ! grep -qE "sparkle:(version|shortVersionString)(=\"|>)$VERSION(\"|<)" "$APPCAST"; then
     echo "warning: $APPCAST does not mention $VERSION; it may be stale." >&2
 fi
 
