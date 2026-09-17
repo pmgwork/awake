@@ -228,6 +228,18 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         guard allowAuthorizationPrompt else { return false }
 
+        // Manual modes must run under a lease that restores system control when
+        // Awake exits or crashes. A one-shot privileged command would leave the
+        // fans pinned with no owning process, so install the helper (same single
+        // authorization prompt) and start the normal lease instead.
+        if mode != "auto" {
+            guard installHelperToolSynchronously() else {
+                NSLog("[SMCHelper] Helper installation was cancelled or failed; refusing unsupervised fan control")
+                return false
+            }
+            return startInstalledFanControlLease(mode: mode)
+        }
+
         let helperSource = generateHelperSource()
         guard let tempDirectory = createPrivateTemporaryDirectory() else { return false }
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
@@ -487,62 +499,58 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         // Running this block at a higher QoS while synchronously awaiting that work
         // triggers Thread Performance Checker priority-inversion warnings.
         DispatchQueue.global(qos: .default).async {
-            let helperSource = self.generateHelperSource()
-            guard let tempDirectory = self.createPrivateTemporaryDirectory() else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            defer { try? FileManager.default.removeItem(at: tempDirectory) }
-            let tempSourcePath = tempDirectory.appendingPathComponent("smc_helper_source.c").path
-            let tempBinaryPath = tempDirectory.appendingPathComponent("pmgwork.awake.smc").path
-
-            do {
-                try helperSource.write(toFile: tempSourcePath, atomically: true, encoding: .utf8)
-
-                // Compile locally
-                let compileProc = Process()
-                compileProc.executableURL = URL(fileURLWithPath: "/usr/bin/clang")
-                compileProc.arguments = [
-                    tempSourcePath, "-o", tempBinaryPath, "-O2",
-                    "-framework", "IOKit", "-framework", "CoreFoundation"
-                ]
-                try compileProc.run()
-                compileProc.waitUntilExit()
-
-                if compileProc.terminationStatus != 0 {
-                    DispatchQueue.main.async { completion(false) }
-                    return
-                }
-
-                guard let digest = self.sha256(atPath: tempBinaryPath) else {
-                    DispatchQueue.main.async { completion(false) }
-                    return
-                }
-
-                let stagedPath = "/private/tmp/awake-smc-install-\(UUID().uuidString)"
-                let installCommand = self.secureRootInstallCommand(
-                    sourcePath: tempBinaryPath,
-                    stagedPath: stagedPath,
-                    expectedSHA256: digest
-                )
-
-                // Install with admin privileges
-                let appleScriptSource = self.authorizedAppleScriptSource(command: installCommand)
-                if let appleScript = NSAppleScript(source: appleScriptSource) {
-                    var errorDict: NSDictionary?
-                    appleScript.executeAndReturnError(&errorDict)
-                    let success = (errorDict == nil)
-                    DispatchQueue.main.async {
-                        completion(success)
-                    }
-                    return
-                }
-            } catch {
-                NSLog("[SMCHelper] Installation error: %@", error.localizedDescription)
-            }
-
-            DispatchQueue.main.async { completion(false) }
+            let success = self.installHelperToolSynchronously()
+            DispatchQueue.main.async { completion(success) }
         }
+    }
+
+    /// Synchronous helper install used by `installHelperTool` and by the manual
+    /// fan fallback, which must never leave fans in manual mode without a
+    /// parent-watching lease.
+    private func installHelperToolSynchronously() -> Bool {
+        let helperSource = generateHelperSource()
+        guard let tempDirectory = createPrivateTemporaryDirectory() else { return false }
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let tempSourcePath = tempDirectory.appendingPathComponent("smc_helper_source.c").path
+        let tempBinaryPath = tempDirectory.appendingPathComponent("pmgwork.awake.smc").path
+
+        do {
+            try helperSource.write(toFile: tempSourcePath, atomically: true, encoding: .utf8)
+
+            // Compile locally
+            let compileProc = Process()
+            compileProc.executableURL = URL(fileURLWithPath: "/usr/bin/clang")
+            compileProc.arguments = [
+                tempSourcePath, "-o", tempBinaryPath, "-O2",
+                "-framework", "IOKit", "-framework", "CoreFoundation"
+            ]
+            try compileProc.run()
+            compileProc.waitUntilExit()
+
+            guard compileProc.terminationStatus == 0 else { return false }
+            guard let digest = sha256(atPath: tempBinaryPath) else { return false }
+
+            let stagedPath = "/private/tmp/awake-smc-install-\(UUID().uuidString)"
+            let installCommand = secureRootInstallCommand(
+                sourcePath: tempBinaryPath,
+                stagedPath: stagedPath,
+                expectedSHA256: digest
+            )
+
+            // Install with admin privileges
+            guard let appleScript = NSAppleScript(source: authorizedAppleScriptSource(command: installCommand)) else {
+                return false
+            }
+            var errorDict: NSDictionary?
+            appleScript.executeAndReturnError(&errorDict)
+            guard errorDict == nil else { return false }
+        } catch {
+            NSLog("[SMCHelper] Installation error: %@", error.localizedDescription)
+            return false
+        }
+
+        // Confirm the installed binary reports the expected protocol version.
+        return performInstallCheck(usingCache: false)
     }
 
     private func createPrivateTemporaryDirectory() -> URL? {

@@ -75,6 +75,13 @@ struct CoolingSettingsView: View {
             refreshHelperState()
             fanController.refreshFanStatus()
         }
+        .onChange(of: fanController.activeMode) { _, _ in
+            // A manual fan mode may auto-install the helper on first use.
+            refreshHelperState()
+        }
+        .onChange(of: fanController.controlError) { _, _ in
+            refreshHelperState()
+        }
     }
 
     private func installHelper() {

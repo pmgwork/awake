@@ -32,6 +32,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private var cancellables = Set<AnyCancellable>()
+    private var popoverContentSizeObservation: NSKeyValueObservation?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureStatusItem()
@@ -68,7 +69,8 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
-        popover.contentViewController = NSHostingController(
+
+        let hostingController = NSHostingController(
             rootView: MenuBarView(
                 coordinator: coordinator,
                 settings: coordinator.settings,
@@ -77,6 +79,24 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
                 }
             )
         )
+        // SwiftUI only tracks its ideal size in `preferredContentSize` when
+        // this option is set, and NSPopover does not follow that property on
+        // its own. Observe it so rows that appear or disappear while the menu
+        // is open (grace period, agent sessions, downloads) resize the popover
+        // instead of clipping the controls below them.
+        hostingController.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = hostingController
+        popoverContentSizeObservation = hostingController.observe(
+            \.preferredContentSize,
+            options: [.new]
+        ) { [weak self] _, change in
+            guard let self,
+                  let size = change.newValue,
+                  size.width > 0,
+                  size.height > 0,
+                  self.popover.isShown else { return }
+            self.popover.contentSize = size
+        }
     }
 
     private func observeStatusChanges() {
