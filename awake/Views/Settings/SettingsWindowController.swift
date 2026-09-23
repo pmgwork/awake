@@ -113,7 +113,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             case .sessions:
                 SessionsSettingsView(
                     settings: AwakeCoordinator.shared.settings,
-                    screenBehaviorManager: AwakeCoordinator.shared.screenBehaviorManager
+                    screenBehaviorManager: AwakeCoordinator.shared.screenBehaviorManager,
+                    closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
             case .agents:
                 AgentSettingsView(

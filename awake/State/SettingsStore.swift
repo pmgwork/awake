@@ -32,6 +32,8 @@ public final class SettingsStore: ObservableObject {
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
+        static let lockGraceEnabled = "pmgwork.awake.lockGraceEnabled"
+        static let closedDisplayModeEnabled = "pmgwork.awake.closedDisplayModeEnabled"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
         static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
     }
@@ -157,6 +159,21 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
+    /// Opt-in: while a session is active, temporarily extend the automatic-lock
+    /// delay before the lid closes and restore it afterwards.
+    @Published public var lockGraceEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(lockGraceEnabled, forKey: Keys.lockGraceEnabled)
+        }
+    }
+
+    /// Opt-in to keeping the Mac running when the built-in display is closed.
+    @Published public var closedDisplayModeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(closedDisplayModeEnabled, forKey: Keys.closedDisplayModeEnabled)
+        }
+    }
+
     @Published public var hasCompletedOnboarding: Bool {
         didSet {
             UserDefaults.standard.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding)
@@ -258,7 +275,7 @@ public final class SettingsStore: ObservableObject {
         if UserDefaults.standard.object(forKey: Keys.preventDisplaySleep) != nil {
             self.preventDisplaySleep = UserDefaults.standard.bool(forKey: Keys.preventDisplaySleep)
         } else {
-            self.preventDisplaySleep = true
+            self.preventDisplaySleep = false
         }
 
         if UserDefaults.standard.object(forKey: Keys.preventScreenSaver) != nil {
@@ -266,6 +283,10 @@ public final class SettingsStore: ObservableObject {
         } else {
             self.preventScreenSaver = true
         }
+
+        self.lockGraceEnabled = UserDefaults.standard.bool(forKey: Keys.lockGraceEnabled)
+        self.closedDisplayModeEnabled = UserDefaults.standard.object(forKey: Keys.closedDisplayModeEnabled) == nil
+            ? true : UserDefaults.standard.bool(forKey: Keys.closedDisplayModeEnabled)
 
         if let data = UserDefaults.standard.data(forKey: Keys.providerLastTestedAt),
            let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {
@@ -319,8 +340,10 @@ public final class SettingsStore: ObservableObject {
         closedLidFanMode = .aggressive
         onlyOnACPower = false
         lowBatteryThreshold = 20
-        preventDisplaySleep = true
+        preventDisplaySleep = false
         preventScreenSaver = true
+        lockGraceEnabled = false
+        closedDisplayModeEnabled = true
     }
 
     public func markProviderTested(_ provider: AgentProvider, at date: Date = Date()) {

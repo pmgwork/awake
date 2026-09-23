@@ -140,7 +140,7 @@
 "These preferences apply only while Awake is actively preventing system sleep." = "これらの設定はAwakeがシステムスリープを防止している間だけ適用されます。";
 "Prevent Display Sleep" = "ディスプレイのスリープを防止";
 "Keeps connected displays on without waking a display that is already asleep." = "接続中のディスプレイをオンに保ち、すでにスリープ中の画面は起こしません。";
-"Prevent Screen Saver & Automatic Lock" = "スクリーンセーバーと自動ロックを防止";
+"Prevent Screen Saver & Idle Lock (Lid Open)" = "開蓋中のスクリーンセーバーとアイドルロックを防止";
 "Prevents the screen saver and automatic idle lock while Awake is active. Manual locking remains available." = "Awakeの動作中はスクリーンセーバーとアイドル時の自動ロックを防止します。手動でのロックは引き続き利用できます。";
 "By default, Awake keeps the system and display awake and prevents automatic idle locking. Disable both options above to restore normal display and locking behavior." = "初期状態ではシステムとディスプレイをスリープさせず、アイドル時の自動ロックも防止します。通常のディスプレイ動作と自動ロックに戻すには、上の2つの設定を無効にしてください。";
 "Display sleep prevention could not be enabled." = "ディスプレイのスリープ防止を有効にできませんでした。";
@@ -277,3 +277,12 @@
 "3 minutes" = "3分";
 "5 minutes" = "5分";
 "Releasing in %@" = "スリープ防止の解除まで %@";
+"Closed-Lid Auto-Lock Grace" = "閉蓋中の自動ロック猶予";
+"Defer Automatic Lock While Lid Is Closed" = "蓋を閉じている間は自動ロックを猶予する";
+"While a session is active, extends the password delay before the lid closes and restores the original setting afterwards. Manual locking remains available." = "セッション中、蓋を閉じる前からパスワード要求までの時間を延長し、終了時に元に戻します。手動でのロックは引き続き利用できます。";
+"Automatic lock grace is active." = "自動ロックを猶予中です。";
+"Automatic lock delay could not be changed on this macOS version." = "このmacOSでは自動ロックまでの時間を変更できませんでした。";
+"Could not restore the automatic lock setting." = "自動ロックの設定を元に戻せませんでした。";
+"Keep Mac Awake with Lid Closed" = "蓋を閉じてもMacを動かし続ける";
+"Closed-Display Mode" = "閉蓋モード";
+"Display & Lid During Sessions" = "セッション中のディスプレイと閉蓋";

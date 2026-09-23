@@ -13,6 +13,7 @@
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
 		B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CompletionGracePeriodTests.swift */; };
 		B20000000000000000000006 /* SMCHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* SMCHelperTests.swift */; };
+		B30000000000000000000001 /* ScreenLockGraceManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* ScreenLockGraceManagerTests.swift */; };
 		D15A557230530E7E00B14CCB /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = D15A557130530E7D00B14CCB /* AppIcon.icon */; };
 		E10000000000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E10000000000000000000002 /* Sparkle */; };
 /* End PBXBuildFile section */
@@ -56,6 +57,7 @@
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000002 /* CompletionGracePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGracePeriodTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000005 /* SMCHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMCHelperTests.swift; sourceTree = "<group>"; };
+		B30000000000000000000002 /* ScreenLockGraceManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenLockGraceManagerTests.swift; sourceTree = "<group>"; };
 		D15A557130530E7D00B14CCB /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -121,6 +123,7 @@
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				B20000000000000000000002 /* CompletionGracePeriodTests.swift */,
 				B20000000000000000000005 /* SMCHelperTests.swift */,
+				B30000000000000000000002 /* ScreenLockGraceManagerTests.swift */,
 			);
 			path = awakeTests;
 			sourceTree = "<group>";
@@ -284,6 +287,7 @@
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */,
 				B20000000000000000000006 /* SMCHelperTests.swift in Sources */,
+				B30000000000000000000001 /* ScreenLockGraceManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

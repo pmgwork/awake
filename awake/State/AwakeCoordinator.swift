@@ -33,6 +33,8 @@ public final class AwakeCoordinator: ObservableObject {
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
+    public let screenLockGraceManager = ScreenLockGraceManager.shared
+    public let closedDisplayModeManager = ClosedDisplayModeManager.shared
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
@@ -271,7 +273,11 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     public func evaluateState() {
-        defer { applyScreenBehaviorPolicy() }
+        defer {
+            applyScreenBehaviorPolicy()
+            applyLockGracePolicy()
+            applyClosedDisplayModePolicy()
+        }
         if !isLowBatteryCutoffActive {
             lowBatteryManualOverride = false
         }
@@ -541,7 +547,24 @@ public final class AwakeCoordinator: ObservableObject {
         screenBehaviorManager.update(
             sessionActive: isActive && currentExecutionState != .idle,
             preventDisplaySleep: settings.preventDisplaySleep,
-            preventScreenSaver: settings.preventScreenSaver
+            preventScreenSaver: settings.preventScreenSaver,
+            lidClosed: lidMonitor.isLidClosed
+        )
+    }
+
+    /// Undo the retired password-delay override, including stale values from
+    /// earlier versions. Clamshell sleep is now handled by a separate helper.
+    private func applyLockGracePolicy() {
+        screenLockGraceManager.update(
+            sessionActive: false,
+            enabled: false
+        )
+    }
+
+    private func applyClosedDisplayModePolicy() {
+        closedDisplayModeManager.update(
+            sessionActive: isActive && currentExecutionState != .idle,
+            enabled: settings.closedDisplayModeEnabled
         )
     }
 

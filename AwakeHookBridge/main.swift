@@ -1,6 +1,37 @@
 import Foundation
 import CryptoKit
 import Darwin
+import IOKit
+import IOKit.pwr_mgt
+
+// The parent keeps stdin open for the duration of a closed-display session.
+// EOF also arrives if Awake crashes, so the override can always be released.
+private enum ClamshellLease {
+    static func run() {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard service != 0 else { return }
+        defer { IOObjectRelease(service) }
+
+        var connection: io_connect_t = 0
+        guard IOServiceOpen(service, mach_task_self_, 0, &connection) == kIOReturnSuccess else { return }
+        defer { IOServiceClose(connection) }
+
+        func setDisabled(_ disabled: Bool) -> Bool {
+            var value: UInt64 = disabled ? 1 : 0
+            return withUnsafePointer(to: &value) { pointer in
+                IOConnectCallScalarMethod(connection, UInt32(kPMSetClamshellSleepState), pointer, 1, nil, nil)
+            } == kIOReturnSuccess
+        }
+
+        guard setDisabled(true) else { return }
+        defer { _ = setDisabled(false) }
+        FileHandle.standardOutput.write(Data("ready\n".utf8))
+
+        var byte: UInt8 = 0
+        // The parent sends a byte when stopping normally; EOF means it died.
+        while read(STDIN_FILENO, &byte, 1) < 0 && errno == EINTR {}
+    }
+}
 
 private enum Provider: String, Codable {
     case codex, claude, opencode, antigravity
@@ -24,6 +55,10 @@ private struct StoredEvent: Codable {
 
 private struct AwakeHookBridge {
     static func run() {
+        if ProcessInfo.processInfo.arguments.contains("--clamshell-lease") {
+            ClamshellLease.run()
+            return
+        }
         // A hook integration must never stop or fail the provider. All malformed
         // input and filesystem errors intentionally become a successful no-op.
         autoreleasepool {

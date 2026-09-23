@@ -5,6 +5,7 @@ import AppKit
 struct SessionsSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var screenBehaviorManager: ScreenBehaviorManager
+    @ObservedObject var closedDisplayModeManager: ClosedDisplayModeManager
 
     var body: some View {
         Form {
@@ -23,16 +24,22 @@ struct SessionsSettingsView: View {
             Section {
                 Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
                 Toggle(
-                    L10n.string("Prevent Screen Saver & Automatic Lock"),
+                    L10n.string("Prevent Screen Saver & Idle Lock (Lid Open)"),
                     isOn: $settings.preventScreenSaver
                 )
+                Toggle(L10n.string("Keep Mac Awake with Lid Closed"), isOn: $settings.closedDisplayModeEnabled)
 
                 if let error = screenBehaviorManager.lastError {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 }
+
+                if let error = closedDisplayModeManager.lastError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
             } header: {
-                Text(L10n.string("Display During Sessions"))
+                Text(L10n.string("Display & Lid During Sessions"))
             }
 
             Section {

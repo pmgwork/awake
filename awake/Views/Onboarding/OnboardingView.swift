@@ -207,7 +207,7 @@ struct OnboardingView: View {
             Section(L10n.string("Display During Sessions")) {
                 Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
                 Toggle(
-                    L10n.string("Prevent Screen Saver & Automatic Lock"),
+                    L10n.string("Prevent Screen Saver & Idle Lock (Lid Open)"),
                     isOn: $settings.preventScreenSaver
                 )
                 Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))

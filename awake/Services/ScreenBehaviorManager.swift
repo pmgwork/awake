@@ -81,12 +81,15 @@ public final class ScreenBehaviorManager: ObservableObject {
     public func update(
         sessionActive: Bool,
         preventDisplaySleep: Bool,
-        preventScreenSaver: Bool
+        preventScreenSaver: Bool,
+        lidClosed: Bool
     ) {
-        displaySleepPreventionRequested = sessionActive && preventDisplaySleep
+        // Closing the lid should turn off the built-in display even when the
+        // Mac itself is kept awake for background work.
+        displaySleepPreventionRequested = sessionActive && preventDisplaySleep && !lidClosed
 
         configureDisplaySleepPrevention(enabled: displaySleepPreventionRequested)
-        configureScreenSaverPrevention(enabled: sessionActive && preventScreenSaver)
+        configureScreenSaverPrevention(enabled: sessionActive && preventScreenSaver && !lidClosed)
         if screenSaverPreventionRequested {
             stopRunningScreenSaverIfNeeded()
         }
