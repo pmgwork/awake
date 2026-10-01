@@ -10,12 +10,9 @@ import Combine
 public final class AgentEventMonitor: ObservableObject {
     public static let shared = AgentEventMonitor()
 
-    @Published public private(set) var sessions: [AgentSession] = []
     @Published public private(set) var hasActiveSession = false
     @Published public private(set) var activeSessionCount = 0
-    @Published public private(set) var activeProviderNames: Set<String> = []
     @Published public private(set) var activeSessionCountByProvider: [AgentProvider: Int] = [:]
-    @Published public private(set) var lastEventAtByProvider: [AgentProvider: Date] = [:]
 
     private let store: AgentSessionStore
     private let queue = DispatchQueue(label: "pmgwork.awake.agent-event-monitor", qos: .utility)
@@ -62,29 +59,14 @@ public final class AgentEventMonitor: ObservableObject {
     }
 
     private func apply(_ events: [AgentHookEvent]) {
-        for event in events {
-            if let current = lastEventAtByProvider[event.provider] {
-                lastEventAtByProvider[event.provider] = max(current, event.occurredAt)
-            } else {
-                lastEventAtByProvider[event.provider] = event.occurredAt
-            }
-        }
-
-        sessions = Self.activeSessions(from: events, enabledProviders: enabledProviders)
+        let sessions = Self.activeSessions(from: events, enabledProviders: enabledProviders)
         activeSessionCount = sessions.count
         hasActiveSession = !sessions.isEmpty
-        activeProviderNames = Set(sessions.map { $0.provider.displayName })
         activeSessionCountByProvider = Dictionary(grouping: sessions, by: \.provider)
             .mapValues(\.count)
 
-        // Terminal events are kept long enough for this monitor to consume them,
-        // then removed. This also lets an idle event clear a state left while Awake
-        // was not running.
-        let terminalEvents = events.filter { $0.state == .idle || $0.state == .stale }
-        if !terminalEvents.isEmpty {
-            let store = self.store
-            queue.async { terminalEvents.forEach(store.removeIfUnchanged) }
-        }
+        // Retain the latest terminal event to reject delayed older activity,
+        // including after app restarts. A newer turn replaces the same file.
     }
 
     nonisolated public static func activeSessions(

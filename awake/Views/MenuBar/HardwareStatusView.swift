@@ -98,7 +98,7 @@ struct HardwareStatusView: View {
         if displayMonitor.hasExternalDisplay {
             return L10n.string("External Connected")
         } else if lidMonitor.isLidClosed {
-            return L10n.string("Closed / Sleeping")
+            return L10n.string("Lid Closed")
         } else {
             return L10n.string("Internal")
         }

@@ -8,8 +8,6 @@ import SwiftUI
 struct ModeSelectorView: View {
     @ObservedObject var coordinator: AwakeCoordinator
     @ObservedObject var settings: SettingsStore
-    @State private var showingCustomDurationPicker: Bool = false
-    @State private var customMinutes: Int = 45
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -69,7 +67,7 @@ struct ModeSelectorView: View {
                         Button(action: {
                             coordinator.setTimerDuration(preset.duration)
                         }) {
-                            Text(preset.title)
+                            Text(L10n.string(preset.title))
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)

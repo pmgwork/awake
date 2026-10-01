@@ -89,9 +89,4 @@ public final class PowerMonitor: ObservableObject {
             }
         }
     }
-
-    public func stopPolling() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
-    }
 }

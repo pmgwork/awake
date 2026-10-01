@@ -467,13 +467,14 @@ public final class HookIntegrationManager: ObservableObject {
         // Plugins written by older builds escaped "/" as "\/" via
         // JSONSerialization. Normalize so existing installs heal on refresh.
         let normalized = source.replacingOccurrences(of: "\\/", with: "/")
-        // Require the V2 event payload reader so older templates that silently
-        // ignored session events are reinstalled via Repair.
+        // Require V2 lifecycle handling and subscription recovery so older
+        // templates are reinstalled via Repair.
         return normalized.contains("pmgwork.awake")
             && normalized.contains("AwakePlugin")
             && normalized.contains("event.data ?? event.properties")
             && normalized.contains("async server()")
             && normalized.contains("session.execution.started")
+            && normalized.contains("subscription.disconnected")
             && normalized.contains(bridgeDestinationURL.path)
             && !normalized.contains("__AWAKE_BRIDGE_PATH__")
     }

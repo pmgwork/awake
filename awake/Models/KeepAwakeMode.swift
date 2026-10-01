@@ -26,31 +26,6 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    public var japaneseDisplayName: String {
-        switch self {
-        case .whileAgentRunning:
-            return "Agent起動中"
-        case .indefinitely:
-            return "ずっと"
-        case .timer:
-            return "時間制限"
-        case .whileDownloading:
-            return "ダウンロード中"
-        }
-    }
-
-    public var systemImage: String {
-        switch self {
-        case .whileAgentRunning:
-            return "cpu"
-        case .indefinitely:
-            return "infinity"
-        case .timer:
-            return "timer"
-        case .whileDownloading:
-            return "arrow.down.circle"
-        }
-    }
 }
 
 public struct TimerPreset: Identifiable, Hashable {

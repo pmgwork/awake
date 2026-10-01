@@ -32,10 +32,12 @@ struct AgentSettingsView: View {
 
                     Spacer(minLength: 12)
 
-                    Label(integrationFooterText, systemImage: integrationFooterIcon)
-                        .foregroundStyle(integrationFooterColor)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.trailing)
+                    if let error = integrationManager.lastError {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
             }
 
@@ -143,19 +145,6 @@ struct AgentSettingsView: View {
             .disabled(!toolInstalled)
             .help(toolInstalled ? L10n.string("Actions") : L10n.string("CLI not installed"))
         }
-    }
-
-    private var integrationFooterText: String {
-        if let error = integrationManager.lastError { return error }
-        return L10n.string("All integrations healthy.")
-    }
-
-    private var integrationFooterIcon: String {
-        integrationManager.lastError != nil ? "exclamationmark.triangle" : "checkmark.circle"
-    }
-
-    private var integrationFooterColor: Color {
-        integrationManager.lastError != nil ? .red : .secondary
     }
 
     private func providerStatusText(

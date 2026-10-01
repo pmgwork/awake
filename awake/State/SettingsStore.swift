@@ -5,7 +5,6 @@
 
 import Foundation
 import Combine
-import SwiftUI
 import ServiceManagement
 
 @MainActor
@@ -28,11 +27,9 @@ public final class SettingsStore: ObservableObject {
         static let lowBatteryThreshold = "pmgwork.awake.lowBatteryThreshold"
         static let launchAtLogin = "pmgwork.awake.launchAtLogin"
         static let notificationsEnabled = "pmgwork.awake.notificationsEnabled"
-        static let showTemperatureInMenuBar = "pmgwork.awake.showTemperatureInMenuBar"
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
-        static let lockGraceEnabled = "pmgwork.awake.lockGraceEnabled"
         static let closedDisplayModeEnabled = "pmgwork.awake.closedDisplayModeEnabled"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
         static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
@@ -45,6 +42,12 @@ public final class SettingsStore: ObservableObject {
     }
 
     @Published public private(set) var providerLastTestedAt: [AgentProvider: Date] = [:]
+
+    @Published public var language: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: AppLanguage.preferenceKey)
+        }
+    }
 
     @Published public var selectedMode: KeepAwakeModeType {
         didSet {
@@ -135,12 +138,6 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published public var showTemperatureInMenuBar: Bool {
-        didSet {
-            UserDefaults.standard.set(showTemperatureInMenuBar, forKey: Keys.showTemperatureInMenuBar)
-        }
-    }
-
     @Published public var showTimerInMenuBar: Bool {
         didSet {
             UserDefaults.standard.set(showTimerInMenuBar, forKey: Keys.showTimerInMenuBar)
@@ -156,14 +153,6 @@ public final class SettingsStore: ObservableObject {
     @Published public var preventScreenSaver: Bool {
         didSet {
             UserDefaults.standard.set(preventScreenSaver, forKey: Keys.preventScreenSaver)
-        }
-    }
-
-    /// Opt-in: while a session is active, temporarily extend the automatic-lock
-    /// delay before the lid closes and restore it afterwards.
-    @Published public var lockGraceEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(lockGraceEnabled, forKey: Keys.lockGraceEnabled)
         }
     }
 
@@ -183,6 +172,7 @@ public final class SettingsStore: ObservableObject {
     private var isSynchronizingLaunchAtLogin = false
 
     private init() {
+        language = AppLanguage.stored()
         // Load agents or default presets
         if let data = UserDefaults.standard.data(forKey: Keys.monitoredAgents),
            let decoded = try? JSONDecoder().decode([MonitoredAgent].self, from: data),
@@ -260,7 +250,6 @@ public final class SettingsStore: ObservableObject {
             self.lowBatteryThreshold = 20
         }
 
-        self.showTemperatureInMenuBar = UserDefaults.standard.bool(forKey: Keys.showTemperatureInMenuBar)
 
         if UserDefaults.standard.object(forKey: Keys.showTimerInMenuBar) != nil {
             self.showTimerInMenuBar = UserDefaults.standard.bool(forKey: Keys.showTimerInMenuBar)
@@ -284,7 +273,6 @@ public final class SettingsStore: ObservableObject {
             self.preventScreenSaver = true
         }
 
-        self.lockGraceEnabled = UserDefaults.standard.bool(forKey: Keys.lockGraceEnabled)
         self.closedDisplayModeEnabled = UserDefaults.standard.object(forKey: Keys.closedDisplayModeEnabled) == nil
             ? true : UserDefaults.standard.bool(forKey: Keys.closedDisplayModeEnabled)
 
@@ -302,23 +290,6 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    public func addCustomAgent(name: String, processNames: [String]) {
-        let cleanedNames = processNames.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        guard !name.isEmpty, !cleanedNames.isEmpty else { return }
-
-        let newAgent = MonitoredAgent(
-            name: name,
-            processNames: cleanedNames,
-            isEnabled: true,
-            isPreset: false
-        )
-        monitoredAgents.append(newAgent)
-    }
-
-    public func removeAgent(at indexSet: IndexSet) {
-        monitoredAgents.remove(atOffsets: indexSet)
-    }
-
     public func deleteAgent(id: String) {
         monitoredAgents.removeAll { $0.id == id }
     }
@@ -329,23 +300,6 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    public func resetToDefaults() {
-        monitoredAgents = MonitoredAgent.defaultPresets
-        agentMonitoringEnabled = true
-        downloadMonitoringEnabled = true
-        completionGraceDuration = 60
-        downloadFolderPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
-        closedLidCoolingEnabled = true
-        excludeNormalClamshell = true
-        closedLidFanMode = .aggressive
-        onlyOnACPower = false
-        lowBatteryThreshold = 20
-        preventDisplaySleep = false
-        preventScreenSaver = true
-        lockGraceEnabled = false
-        closedDisplayModeEnabled = true
-    }
-
     public func markProviderTested(_ provider: AgentProvider, at date: Date = Date()) {
         providerLastTestedAt[provider] = date
         saveProviderTestDates()
@@ -353,10 +307,6 @@ public final class SettingsStore: ObservableObject {
 
     public func completeOnboarding() {
         hasCompletedOnboarding = true
-    }
-
-    public func resetOnboardingForTesting() {
-        hasCompletedOnboarding = false
     }
 
     public func clearProviderTest(_ provider: AgentProvider) {

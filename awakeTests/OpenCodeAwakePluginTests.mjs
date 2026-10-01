@@ -5,12 +5,11 @@ import vm from "node:vm"
 
 const source = await readFile(new URL("../awake/Resources/Hooks/OpenCodeAwakePlugin.ts", import.meta.url), "utf8")
 
-async function run(events, { failSpawn = false, version = 2, verifyAbort = false } = {}) {
+function loadPlugin({ failSpawn = false, timers = { setTimeout, clearTimeout } } = {}) {
   const calls = []
-  let finish
-  const consumed = new Promise(resolve => { finish = resolve })
   const context = vm.createContext({
     AbortController,
+    ...timers,
     Bun: {
       spawn(args) {
         calls.push(Object.fromEntries(args.slice(1).reduce((pairs, value, index, values) => {
@@ -23,6 +22,13 @@ async function run(events, { failSpawn = false, version = 2, verifyAbort = false
     },
   })
   const plugin = vm.runInContext(source.replace("export default AwakePlugin", "AwakePlugin"), context)
+  return { calls, plugin }
+}
+
+async function run(events, { failSpawn = false, version = 2, verifyAbort = false } = {}) {
+  const { calls, plugin } = loadPlugin({ failSpawn })
+  let finish
+  const consumed = new Promise(resolve => { finish = resolve })
   if (version === 1) {
     const hooks = await plugin.server()
     for (const event of events) await hooks.event({ event })
@@ -35,6 +41,8 @@ async function run(events, { failSpawn = false, version = 2, verifyAbort = false
         signal = options.signal
         for (const event of events) yield event
         finish()
+        // Real subscriptions stay open until aborted or disconnected.
+        await new Promise(resolve => signal.addEventListener("abort", resolve, { once: true }))
       },
     },
   })
@@ -54,6 +62,93 @@ test("V2 data envelopes report busy, retry and idle for the correct session", as
     ["ses_v2", "active"],
     ["ses_v2", "idle"],
   ])
+})
+
+const drain = () => new Promise(resolve => setImmediate(resolve))
+
+function recoveryHarness() {
+  const pending = new Map()
+  let nextID = 0
+  const timers = {
+    setTimeout(callback, delay) { const id = ++nextID; pending.set(id, { callback, delay }); return id },
+    clearTimeout(id) { pending.delete(id) },
+  }
+  return { ...loadPlugin({ timers }), pending }
+}
+
+test("disconnect and EOF release sessions, then resubscribe and report new activity", async () => {
+  for (const failure of ["throw", "eof"]) {
+    const { calls, plugin, pending } = recoveryHarness()
+    let subscriptions = 0
+    const cleanup = plugin.setup({ event: { async *subscribe({ signal }) {
+      subscriptions++
+      yield { type: "session.execution.started", data: { sessionID: `ses_${subscriptions}` } }
+      if (subscriptions === 1) {
+        if (failure === "throw") throw new Error("Disconnected")
+        return
+      }
+      await new Promise(resolve => signal.addEventListener("abort", resolve, { once: true }))
+    } } })
+    await drain()
+    assert.deepEqual(calls.map(call => [call["--session-id"], call["--state"], call["--reason"]]), [
+      ["ses_1", "active", "session.execution.started"],
+      ["ses_1", "idle", "subscription.disconnected"],
+    ])
+    assert.equal(pending.size, 1)
+    const retry = [...pending.values()][0]
+    assert.equal(retry.delay, 1000)
+    retry.callback()
+    await drain()
+    assert.equal(subscriptions, 2)
+    assert.equal(calls.at(-1)["--session-id"], "ses_2")
+    assert.equal(calls.at(-1)["--state"], "active")
+    await cleanup()
+    await drain()
+    assert.equal(calls.at(-1)["--reason"], "plugin.unload")
+    assert.equal(pending.size, 0)
+  }
+})
+
+test("repeated connection failures back off, and unloading cancels the pending retry", async () => {
+  const { plugin, pending, calls } = recoveryHarness()
+  let subscriptions = 0
+  const cleanup = plugin.setup({ event: { subscribe() {
+    subscriptions++
+    throw new Error("Unavailable")
+  } } })
+  await drain()
+  for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
+    assert.equal(pending.size, 1)
+    const retry = [...pending.values()][0]
+    assert.equal(retry.delay, delay)
+    retry.callback()
+    await drain()
+  }
+  const attempts = subscriptions
+  await cleanup()
+  await drain()
+  assert.equal(pending.size, 0)
+  assert.equal(subscriptions, attempts)
+  assert.deepEqual(calls, [])
+})
+
+test("unloading ignores events still buffered by an aborted subscription", async () => {
+  const { plugin, pending, calls } = recoveryHarness()
+  let release
+  const ready = new Promise(resolve => { release = resolve })
+  const cleanup = plugin.setup({ event: { async *subscribe() {
+    yield { type: "session.execution.started", data: { sessionID: "before" } }
+    await ready
+    yield { type: "session.execution.started", data: { sessionID: "after" } }
+  } } })
+  await drain()
+  await cleanup()
+  release()
+  await drain()
+  assert.deepEqual(calls.map(call => [call["--session-id"], call["--state"]]), [
+    ["before", "active"], ["before", "idle"],
+  ])
+  assert.equal(pending.size, 0)
 })
 
 test("current V2 execution events track concurrent sessions across model steps", async () => {

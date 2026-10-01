@@ -3,39 +3,49 @@ import SwiftUI
 struct CoolingSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var fanController: FanController
+    @ObservedObject private var coordinator = AwakeCoordinator.shared
 
     @State private var isInstallingHelper = false
     @State private var isHelperInstalled = false
+    @State private var isCheckingHelper = false
     @State private var isHelperPresent = SMCHelper.shared.isHelperToolPresent()
     @State private var helperStatusText = ""
 
     var body: some View {
         Form {
             Section {
-                Toggle(L10n.string("Enable Closed-Lid Cooling"), isOn: $settings.closedLidCoolingEnabled)
+                Toggle(L10n.string("Enable Closed-Lid Cooling"), isOn: Binding(
+                    get: { settings.closedLidCoolingEnabled && isHelperInstalled },
+                    set: { enabled in
+                        if !enabled || canUseHelper {
+                            settings.closedLidCoolingEnabled = enabled
+                        }
+                    }
+                ))
                 Toggle(
-                    L10n.string("Exclude Normal Clamshell (Recommended)"),
+                    L10n.string("Use Automatic Fan Control with an External Display"),
                     isOn: $settings.excludeNormalClamshell
                 )
-                .disabled(!settings.closedLidCoolingEnabled)
+                .disabled(!settings.closedLidCoolingEnabled || !isHelperInstalled)
                 Toggle(
                     L10n.string("Closed-Lid Cooling only on AC Power"),
                     isOn: $settings.onlyOnACPower
                 )
-                .disabled(!settings.closedLidCoolingEnabled)
+                .disabled(!settings.closedLidCoolingEnabled || !isHelperInstalled)
 
                 Picker(L10n.string("Closed-Lid Fan Mode:"), selection: $settings.closedLidFanMode) {
                     ForEach(FanMode.allCases) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }
-                .disabled(!settings.closedLidCoolingEnabled)
+                .disabled(!settings.closedLidCoolingEnabled || !isHelperInstalled)
             } header: {
                 Text(L10n.string("Closed-Lid Cooling & Thermal Management"))
             }
+            .disabled(!canUseHelper)
 
             Section {
-                HStack(spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Label(helperStateTitle, systemImage: helperStateIcon)
                         .foregroundStyle(helperStateColor)
 
@@ -52,35 +62,44 @@ struct CoolingSettingsView: View {
                             Text(helperButtonTitle)
                         }
                     }
-                    .disabled(isInstallingHelper)
+                    .disabled(isInstallingHelper || isCheckingHelper || coordinator.isRemovingHardwareAuthorization)
+                    if isHelperPresent {
+                        HardwareAuthorizationRemovalButton(isBusy: isInstallingHelper || isCheckingHelper) {
+                            helperStatusText = ""
+                            await refreshHelperState()
+                        }
+                    }
                 }
 
                 HStack {
                     Button(L10n.string("Test 100% Spin")) {
                         fanController.testFanSpeed(mode: .maximum)
                     }
+                    .disabled(!canUseHelper)
                     Button(L10n.string("Restore Auto")) {
                         fanController.testFanSpeed(mode: .auto)
                     }
                 }
+                .disabled(coordinator.isRemovingHardwareAuthorization)
             } header: {
                 Text(L10n.string("Fan Control Helper"))
             } footer: {
-                Label(combinedFooterText, systemImage: combinedFooterIcon)
-                    .foregroundStyle(combinedFooterColor)
+                if let text = combinedFooterText {
+                    Label(text, systemImage: combinedFooterIcon)
+                        .foregroundStyle(combinedFooterColor)
+                }
             }
         }
         .formStyle(.grouped)
-        .onAppear {
-            refreshHelperState()
-            fanController.refreshFanStatus()
-        }
+        .task { await refreshHelperState() }
         .onChange(of: fanController.activeMode) { _, _ in
-            // A manual fan mode may auto-install the helper on first use.
-            refreshHelperState()
+            Task { await refreshHelperState() }
         }
         .onChange(of: fanController.controlError) { _, _ in
-            refreshHelperState()
+            Task { await refreshHelperState() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await refreshHelperState() }
         }
     }
 
@@ -88,15 +107,17 @@ struct CoolingSettingsView: View {
         helperStatusText = ""
         isInstallingHelper = true
         SMCHelper.shared.installHelperTool { success in
-            isInstallingHelper = false
-            isHelperPresent = SMCHelper.shared.isHelperToolPresent()
             Task { @MainActor in
-                let installed = await SMCHelper.shared.refreshHelperInstallState()
-                isHelperInstalled = success && installed
-                helperStatusText = isHelperInstalled
-                    ? L10n.string("Helper update successful!")
+                await refreshHelperState()
+                isInstallingHelper = false
+                helperStatusText = success && isHelperInstalled
+                    ? ""
                     : L10n.string("Helper update cancelled or failed.")
-                if isHelperInstalled { fanController.allowPolicyRetry() }
+                if success && isHelperInstalled && !coordinator.isRemovingHardwareAuthorization {
+                    settings.closedLidCoolingEnabled = true
+                    fanController.allowPolicyRetry()
+                    coordinator.evaluateState()
+                }
             }
         }
     }
@@ -104,14 +125,22 @@ struct CoolingSettingsView: View {
     /// The helper check launches a privileged binary, so it must stay off the
     /// main thread. `@State` initializers are re-evaluated on every view
     /// re-creation, which previously spawned a process during view updates.
-    private func refreshHelperState() {
-        isHelperPresent = SMCHelper.shared.isHelperToolPresent()
-        Task { @MainActor in
-            isHelperInstalled = await SMCHelper.shared.refreshHelperInstallState()
+    private func refreshHelperState() async {
+        while isCheckingHelper {
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(25))
         }
+        isCheckingHelper = true
+        isHelperPresent = SMCHelper.shared.isHelperToolPresent()
+        isHelperInstalled = await SMCHelper.shared.refreshHelperInstallState()
+        isCheckingHelper = false
     }
 
-    private var combinedFooterText: String {
+    private var canUseHelper: Bool {
+        isHelperInstalled && !isCheckingHelper && !isInstallingHelper && !coordinator.isRemovingHardwareAuthorization
+    }
+
+    private var combinedFooterText: String? {
         if let error = fanController.controlError { return error }
         if fanController.isTestModeActive {
             return L10n.string("Fan test ends after 60 seconds and returns to the current cooling policy.")
@@ -122,7 +151,7 @@ struct CoolingSettingsView: View {
     private var combinedFooterIcon: String {
         if fanController.controlError != nil { return "exclamationmark.triangle" }
         if fanController.isTestModeActive { return "timer" }
-        return isHelperInstalled ? "checkmark.circle" : "info.circle"
+        return "info.circle"
     }
 
     private var combinedFooterColor: Color {
@@ -132,8 +161,8 @@ struct CoolingSettingsView: View {
 
     private var helperButtonTitle: String {
         if isInstallingHelper { return L10n.string("Updating...") }
-        if isHelperInstalled { return L10n.string("Reinstall Helper...") }
-        return isHelperPresent ? L10n.string("Update Helper...") : L10n.string("Install Helper...")
+        if isHelperInstalled { return L10n.string("Reinstall...") }
+        return isHelperPresent ? L10n.string("Update...") : L10n.string("Install...")
     }
 
     private var helperStateTitle: String {
@@ -153,10 +182,8 @@ struct CoolingSettingsView: View {
         return isHelperInstalled ? .green : .secondary
     }
 
-    private var helperFooterText: String {
-        if isHelperInstalled {
-            return L10n.string("The current helper is installed and ready for fan control.")
-        }
+    private var helperFooterText: String? {
+        if isHelperInstalled { return nil }
         return isHelperPresent
             ? L10n.string("A newer helper is required for this Mac and battery closed-lid operation.")
             : L10n.string("macOS requires administrator permission once to control hardware fans on Apple Silicon.")

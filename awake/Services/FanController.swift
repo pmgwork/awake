@@ -6,16 +6,14 @@
 import Foundation
 import Combine
 import AppKit
-import IOKit
 
 @MainActor
 public final class FanController: ObservableObject {
     public static let shared = FanController()
 
-    @Published public private(set) var currentStatus: FanStatus = FanStatus(mode: .auto, isOverridden: false)
     @Published public private(set) var activeMode: FanMode = .auto
     @Published public private(set) var isTestModeActive: Bool = false
-    @Published public private(set) var testModeEndDate: Date?
+    private var testModeEndDate: Date?
     @Published public private(set) var controlError: String?
 
     // SMC helper processes run at Default QoS. Matching their caller avoids a
@@ -38,7 +36,6 @@ public final class FanController: ObservableObject {
             name: NSApplication.willTerminateNotification,
             object: nil
         )
-        refreshFanStatus()
         recoverAutomaticControlIfNeeded()
     }
 
@@ -177,15 +174,12 @@ public final class FanController: ObservableObject {
             failedAt = nil
             activeMode = mode
             controlError = nil
-            refreshFanStatus()
-            refreshFanStatusAfterRamp()
         } else {
             failedMode = mode
             failedAt = Date()
             isTestModeActive = false
             cancelTestResetTimer()
             controlError = errorMessage
-            refreshFanStatus()
         }
 
         // The policy may have changed while the SMC command was running. Apply
@@ -209,36 +203,19 @@ public final class FanController: ObservableObject {
         applyRequestedModeIfNeeded()
     }
 
-    public func retryFanMode(_ mode: FanMode) {
-        failedMode = nil
-        failedAt = nil
-        requestedMode = activeMode
-        setFanMode(mode)
-    }
-
     public func allowPolicyRetry() {
         failedMode = nil
         failedAt = nil
         requestedMode = activeMode
     }
 
-    public func refreshFanStatus() {
-        let mode = self.activeMode
-        let overridden = (mode != .auto)
-        let liveRPM = SMCClient.shared.getFanCurrentRPM(fanIndex: 0)
-        let maxRPM = SMCClient.shared.getFanMaxRPM(fanIndex: 0) ?? 6000
-        self.currentStatus = FanStatus(
-            mode: mode,
-            currentRPM: liveRPM,
-            maxRPM: maxRPM,
-            isOverridden: overridden
-        )
-    }
-
-    private func refreshFanStatusAfterRamp() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.refreshFanStatus()
+    public func prepareForHelperRemoval() async -> Bool {
+        restoreAuto(force: true)
+        let deadline = Date().addingTimeInterval(60)
+        while modeInFlight != nil, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
         }
+        return modeInFlight == nil && activeMode == .auto && controlError == nil
     }
 
     // MARK: - SMC Control Implementations
@@ -269,7 +246,6 @@ public final class FanController: ObservableObject {
                 if success {
                     FanController.shared.activeMode = .auto
                     FanController.shared.controlError = nil
-                    FanController.shared.refreshFanStatus()
                 } else {
                     FanController.shared.controlError = L10n.string("Fans may be in manual mode. Restore Auto or restart the Mac.")
                 }

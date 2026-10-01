@@ -8,6 +8,7 @@
 
 import SwiftUI
 import AppKit
+import Combine
 
 @MainActor
 public final class SettingsWindowController: NSObject, NSWindowDelegate {
@@ -16,6 +17,33 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private let tabController = SettingsTabViewController()
     private var paneSizes: [SettingsTab: NSSize] = [:]
+    private var languageSubscription: AnyCancellable?
+
+    private override init() {
+        super.init()
+        languageSubscription = SettingsStore.shared.$language
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refreshLanguage() }
+    }
+
+    private func refreshLanguage() {
+        for (tab, item) in zip(SettingsTab.allCases, tabController.tabViewItems) {
+            item.label = tab.title
+            item.image = tab.toolbarImage
+        }
+        // NSTabViewController creates native toolbar items whose labels also
+        // need updating after the SwiftUI panes have changed language.
+        if let toolbar = window?.toolbar {
+            for (item, tab) in zip(toolbar.items.filter { $0.itemIdentifier != .flexibleSpace }, SettingsTab.allCases) {
+                item.label = tab.title
+                item.paletteLabel = tab.title
+                item.toolTip = tab.title
+            }
+        }
+        configureTabs()
+        applySize(for: selectedTab())
+    }
 
     public func show() {
         if let window {
@@ -102,7 +130,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func paneView(for tab: SettingsTab) -> some View {
-        Group {
+        LocalizedView {
             switch tab {
             case .general:
                 GeneralSettingsView(

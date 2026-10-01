@@ -99,27 +99,12 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         return newestBySession.values.sorted { $0.occurredAt < $1.occurredAt }
     }
 
-    public func remove(_ event: AgentHookEvent) {
-        remove(provider: event.provider, sessionID: event.sessionID)
-    }
-
     public func remove(provider: AgentProvider, sessionID: String) {
         try? fileManager.removeItem(at: fileURL(provider: provider, sessionID: sessionID))
     }
 
-    /// Removes an event only when the file still holds that exact event.
-    ///
-    /// Cleanup passes work from a snapshot, so an unconditional delete could
-    /// erase a newer active event that a provider wrote after the snapshot was
-    /// taken. The bridge writes under the same file lock, so read and delete
-    /// stay atomic with respect to hook traffic.
-    public func removeIfUnchanged(_ event: AgentHookEvent) {
-        removeIfUnchanged(
-            url: fileURL(provider: event.provider, sessionID: event.sessionID),
-            event: event
-        )
-    }
-
+    /// Deletes an expired snapshot under the bridge's write lock, preserving
+    /// a newer event that arrived while the cleanup pass was running.
     private func removeIfUnchanged(url: URL, event: AgentHookEvent) {
         let lockURL = directoryURL.appendingPathComponent(".write.lock")
         let descriptor = open(lockURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
@@ -135,15 +120,6 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
               current.state == event.state,
               abs(current.occurredAt.timeIntervalSince(event.occurredAt)) < 0.001 else { return }
         try? fileManager.removeItem(at: url)
-    }
-
-    public func removeAll() {
-        guard let urls = try? fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil) else {
-            return
-        }
-        for url in urls where url.pathExtension == "json" {
-            try? fileManager.removeItem(at: url)
-        }
     }
 
     public func fileURL(provider: AgentProvider, sessionID: String) -> URL {

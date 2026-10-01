@@ -36,8 +36,7 @@ public final class SleepManager: ObservableObject {
     private var closedLidAssertionAppliesToBattery = false
     private var caffeinateProcess: Process?
     private var batteryAssertionProcess: Process?
-    @Published public private(set) var isSleepPrevented: Bool = false
-    @Published public private(set) var isClosedLidMode: Bool = false
+    private var isClosedLidMode = false
     @Published public private(set) var health: SleepPreventionHealth = .inactive
     @Published public private(set) var lastError: String?
 
@@ -145,6 +144,18 @@ public final class SleepManager: ObservableObject {
         releaseAllAssertions()
     }
 
+    @MainActor
+    public func prepareForHelperRemoval() async -> Bool {
+        let retiringProcess = batteryAssertionProcess
+        releaseAllAssertions()
+        guard let retiringProcess else { return true }
+        let deadline = Date().addingTimeInterval(3)
+        while retiringProcess.isRunning, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return !retiringProcess.isRunning && retiringProcess.terminationStatus == 0
+    }
+
     private func releaseClosedLidAssertion() {
         if closedLidAssertionID != 0 {
             IOPMAssertionRelease(closedLidAssertionID)
@@ -163,7 +174,6 @@ public final class SleepManager: ObservableObject {
             assertionID = 0
         }
         releaseClosedLidAssertion()
-        isSleepPrevented = false
         isClosedLidMode = false
         health = .inactive
         lastError = nil
@@ -242,7 +252,6 @@ public final class SleepManager: ObservableObject {
             isEffective = assertionID != 0
         }
 
-        isSleepPrevented = isEffective
         lastError = failures.isEmpty ? nil : failures.joined(separator: " ")
 
         if !isEffective {

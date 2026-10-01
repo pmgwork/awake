@@ -10,6 +10,11 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Picker(L10n.string("Language"), selection: $settings.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.displayName).tag(language)
+                    }
+                }
                 Toggle(L10n.string("Launch Awake at Login"), isOn: $settings.launchAtLogin)
                 Toggle(L10n.string("Enable Notifications"), isOn: $settings.notificationsEnabled)
                 if settings.notificationsEnabled && notificationManager.authorizationStatus == .denied {
@@ -53,8 +58,6 @@ struct GeneralSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("Software Updates"))
-            } footer: {
-                Text(L10n.string("Updates are downloaded and installed inside Awake."))
             }
 
             Section {
@@ -79,7 +82,9 @@ struct GeneralSettingsView: View {
     @ViewBuilder
     private var lastCheckedText: some View {
         if let lastChecked = updater.lastUpdateCheckDate {
-            Text(L10n.format("Last checked %@", lastChecked.formatted(date: .abbreviated, time: .shortened)))
+            Text(L10n.format("Last checked %@", lastChecked.formatted(
+                Date.FormatStyle(date: .abbreviated, time: .shortened).locale(settings.language.locale)
+            )))
         } else {
             Text(L10n.string("Not Checked"))
         }

@@ -12,7 +12,9 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-10"
+    private let helperProtocolVersion = "awake-smc-11"
+
+    var closedDisplayHelperURL: URL { URL(fileURLWithPath: helperToolPath) }
     private let fanLeaseLock = NSLock()
     private var fanLeaseProcess: Process?
     private let terminationLock = NSLock()
@@ -21,6 +23,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
     private let installStateLock = NSLock()
     private let installCheckLock = NSLock()
+    private let helperMutationLock = NSLock()
     private let installCheckQueue = DispatchQueue(label: "pmgwork.awake.smchelper.installcheck", qos: .utility)
     private var cachedInstallCheck: (date: Date, installed: Bool)?
     private let installCheckTTL: TimeInterval = 30
@@ -504,10 +507,32 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         }
     }
 
+    /// Call only after the coordinator has released all hardware leases.
+    public func removeHelperTool() async -> Bool {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .default).async {
+                self.helperMutationLock.lock()
+                defer { self.helperMutationLock.unlock() }
+                let command = "/bin/rm -f -- \(self.shellQuote(self.helperToolPath))"
+                guard let script = NSAppleScript(source: self.authorizedAppleScriptSource(command: command)) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                var error: NSDictionary?
+                script.executeAndReturnError(&error)
+                let removed = error == nil && !self.isHelperToolPresent()
+                if removed { self.storeInstallState(false) }
+                continuation.resume(returning: removed)
+            }
+        }
+    }
+
     /// Synchronous helper install used by `installHelperTool` and by the manual
     /// fan fallback, which must never leave fans in manual mode without a
     /// parent-watching lease.
     private func installHelperToolSynchronously() -> Bool {
+        helperMutationLock.lock()
+        defer { helperMutationLock.unlock() }
         let helperSource = generateHelperSource()
         guard let tempDirectory = createPrivateTemporaryDirectory() else { return false }
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
@@ -619,9 +644,12 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         #include <stdint.h>
         #include <stdio.h>
         #include <signal.h>
+        #include <poll.h>
+        #include <errno.h>
         #include <string.h>
         #include <unistd.h>
         #include <IOKit/pwr_mgt/IOPMLib.h>
+        #include <IOKit/pwr_mgt/IOPM.h>
 
         typedef struct {
             uint32_t key;
@@ -816,10 +844,48 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             return 0;
         }
 
+        static int holdClamshellOverride(void) {
+            pid_t awakePID = getppid();
+            if (awakePID <= 1) return 3;
+            signal(SIGPIPE, SIG_IGN);
+            signal(SIGTERM, handleStopSignal);
+            signal(SIGINT, handleStopSignal);
+
+            io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"));
+            if (!service) return 1;
+            io_connect_t connection = 0;
+            IOReturn result = IOServiceOpen(service, mach_task_self(), 0, &connection);
+            IOObjectRelease(service);
+            if (result != kIOReturnSuccess) return 2;
+
+            uint64_t disabled = 1;
+            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+            if (result != kIOReturnSuccess) {
+                IOServiceClose(connection);
+                return 9;
+            }
+            puts("ready");
+            fflush(stdout);
+            // Stop on stdin closure, a signal, or parent death. Poll also keeps
+            // restoration bounded when an inherited pipe remains open.
+            struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
+            while (!shouldStop && getppid() == awakePID) {
+                int ready = poll(&input, 1, 1000);
+                if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+            }
+            disabled = 0;
+            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+            IOServiceClose(connection);
+            return result == kIOReturnSuccess ? 0 : 9;
+        }
+
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-10");
+                puts("awake-smc-11");
                 return 0;
+            }
+            if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
+                return holdClamshellOverride();
             }
             if (argc > 1 && strcmp(argv[1], "hold-sleep") == 0) {
                 return holdBatterySleepAssertion();

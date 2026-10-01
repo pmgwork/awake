@@ -15,8 +15,7 @@ public final class ScreenBehaviorManager: ObservableObject {
 
     private static let userActivityRefreshInterval: TimeInterval = 30
 
-    @Published public private(set) var isDisplaySleepPrevented = false
-    @Published public private(set) var isScreenSaverPrevented = false
+    private var isDisplaySleepPrevented = false
     @Published public private(set) var lastError: String?
 
     private let screenSaverBundleIdentifier = "com.apple.ScreenSaver.Engine"
@@ -82,14 +81,16 @@ public final class ScreenBehaviorManager: ObservableObject {
         sessionActive: Bool,
         preventDisplaySleep: Bool,
         preventScreenSaver: Bool,
-        lidClosed: Bool
+        lidClosed: Bool,
+        hasExternalDisplay: Bool
     ) {
-        // Closing the lid should turn off the built-in display even when the
-        // Mac itself is kept awake for background work.
-        displaySleepPreventionRequested = sessionActive && preventDisplaySleep && !lidClosed
+        let policy = DisplayBehaviorPolicy(
+            lidClosed: lidClosed, hasExternalDisplay: hasExternalDisplay
+        )
+        displaySleepPreventionRequested = sessionActive && preventDisplaySleep && policy.allowsScreenPrevention
 
         configureDisplaySleepPrevention(enabled: displaySleepPreventionRequested)
-        configureScreenSaverPrevention(enabled: sessionActive && preventScreenSaver && !lidClosed)
+        configureScreenSaverPrevention(enabled: sessionActive && preventScreenSaver && policy.allowsScreenPrevention)
         if screenSaverPreventionRequested {
             stopRunningScreenSaverIfNeeded()
         }
@@ -139,7 +140,6 @@ public final class ScreenBehaviorManager: ObservableObject {
         guard enabled else {
             releaseUserActivityAssertion()
             screenSaverControlFailed = false
-            isScreenSaverPrevented = false
             return
         }
 
@@ -167,7 +167,6 @@ public final class ScreenBehaviorManager: ObservableObject {
         )
         guard result == kIOReturnSuccess, screenSaverActivityAssertionID != 0 else {
             screenSaverControlFailed = true
-            isScreenSaverPrevented = false
             NSLog(
                 "[ScreenBehaviorManager] Failed to declare continuous user activity: %d", result)
             return
@@ -175,7 +174,6 @@ public final class ScreenBehaviorManager: ObservableObject {
 
         lastUserActivityDeclaration = now
         screenSaverControlFailed = false
-        isScreenSaverPrevented = true
     }
 
     private func releaseUserActivityAssertion() {

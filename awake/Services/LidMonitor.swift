@@ -6,14 +6,12 @@
 import Foundation
 import Combine
 import IOKit
-import IOKit.pwr_mgt
 
 @MainActor
 public final class LidMonitor: ObservableObject {
     public static let shared = LidMonitor()
 
     @Published public private(set) var isLidClosed: Bool = false
-    @Published public private(set) var lidState: LidState = .open
 
     private var notifyPort: IONotificationPortRef?
     private var notificationObject: io_object_t = 0
@@ -38,7 +36,6 @@ public final class LidMonitor: ObservableObject {
     public func checkLidState() {
         let rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
         guard rootDomain != 0 else {
-            self.lidState = .unknown
             self.isLidClosed = false
             return
         }
@@ -51,11 +48,9 @@ public final class LidMonitor: ObservableObject {
             0
         )?.takeRetainedValue() as? Bool {
             self.isLidClosed = property
-            self.lidState = property ? .closed : .open
         } else {
             // Desktops (Mac Studio / Mac mini / iMac / Mac Pro) do not have AppleClamshellState
             self.isLidClosed = false
-            self.lidState = .open
         }
     }
 
@@ -100,10 +95,5 @@ public final class LidMonitor: ObservableObject {
                 LidMonitor.shared.checkLidState()
             }
         }
-    }
-
-    public func stopPolling() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
     }
 }

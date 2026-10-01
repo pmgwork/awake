@@ -49,33 +49,14 @@ public nonisolated extension SMCParamStruct {
         }
     }
 
-    var keyInfoDataAttributes: UInt8 {
-        get { withUnsafeBytes(of: self) { $0[36] } }
-        set { withUnsafeMutableBytes(of: &self) { $0[36] = newValue } }
-    }
-
     var result: UInt8 {
         get { withUnsafeBytes(of: self) { $0[40] } }
         set { withUnsafeMutableBytes(of: &self) { $0[40] = newValue } }
     }
 
-    var status: UInt8 {
-        get { withUnsafeBytes(of: self) { $0[41] } }
-        set { withUnsafeMutableBytes(of: &self) { $0[41] = newValue } }
-    }
-
     var data8: UInt8 {
         get { withUnsafeBytes(of: self) { $0[42] } }
         set { withUnsafeMutableBytes(of: &self) { $0[42] = newValue } }
-    }
-
-    var data32: UInt32 {
-        get {
-            withUnsafeBytes(of: self) { $0.load(fromByteOffset: 44, as: UInt32.self) }
-        }
-        set {
-            withUnsafeMutableBytes(of: &self) { $0.storeBytes(of: newValue, toByteOffset: 44, as: UInt32.self) }
-        }
     }
 
     func getBytes() -> [UInt8] {
@@ -97,12 +78,8 @@ public nonisolated final class SMCClient: @unchecked Sendable {
     public static let shared = SMCClient()
 
     private enum Selector: UInt8 {
-        case open = 0
-        case close = 1
-        case call = 2
         case readKey = 5
         case writeKey = 6
-        case getKeyFromIndex = 8
         case getKeyInfo = 9
     }
 
@@ -310,28 +287,12 @@ public nonisolated final class SMCClient: @unchecked Sendable {
         return readInt(key: "FNum") ?? 0
     }
 
-    public func getFanCurrentRPM(fanIndex: Int) -> Int? {
-        let key = "F\(fanIndex)Ac"
-        if let val = readFloat(key: key) {
-            return Int(val)
-        }
-        return nil
-    }
-
     public func getFanMaxRPM(fanIndex: Int) -> Int? {
         let key = "F\(fanIndex)Mx"
         if let val = readFloat(key: key) {
             return Int(val)
         }
         return 6000
-    }
-
-    public func getFanMinRPM(fanIndex: Int) -> Int? {
-        let key = "F\(fanIndex)Mn"
-        if let val = readFloat(key: key) {
-            return Int(val)
-        }
-        return 1200
     }
 
     public func setFanManualMode(fanIndex: Int, manual: Bool) -> Bool {

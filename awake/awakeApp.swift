@@ -10,6 +10,7 @@ import Combine
 @main
 struct awakeApp: App {
     @NSApplicationDelegateAdaptor(AwakeAppDelegate.self) private var appDelegate
+    @ObservedObject private var settings = SettingsStore.shared
 
     var body: some Scene {
         Settings {
@@ -17,7 +18,7 @@ struct awakeApp: App {
         }
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button(L10n.string("Settings...")) {
+                Button(L10n.string("Settings...", language: settings.language)) {
                     SettingsWindowController.shared.show()
                 }
                 .keyboardShortcut(",", modifiers: .command)
@@ -70,14 +71,15 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.animates = true
 
+        let coordinator = self.coordinator
         let hostingController = NSHostingController(
-            rootView: MenuBarView(
+            rootView: LocalizedView { MenuBarView(
                 coordinator: coordinator,
                 settings: coordinator.settings,
                 popoverCloseAction: { [weak self] in
                     self?.popover.performClose(nil)
                 }
-            )
+            ) }
         )
         // SwiftUI only tracks its ideal size in `preferredContentSize` when
         // this option is set, and NSPopover does not follow that property on
@@ -184,20 +186,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var iconName: String {
-        guard coordinator.isActive else {
-            return "MenuBarCup"
-        }
-
-        switch coordinator.currentExecutionState {
-        case .idle:
-            return "MenuBarCupActive"
-        case .awakeLidOpen:
-            return "MenuBarCupActive"
-        case .awakeClosedLidCooling:
-            return "MenuBarCupActive"
-        case .normalClamshell:
-            return "MenuBarCupActive"
-        }
+        coordinator.isActive ? "MenuBarCupActive" : "MenuBarCup"
     }
 
     private var isAutomaticMonitoring: Bool {

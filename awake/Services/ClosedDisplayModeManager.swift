@@ -14,14 +14,25 @@ import Foundation
 public final class ClosedDisplayModeManager: NSObject, ObservableObject {
     public static let shared = ClosedDisplayModeManager()
 
-    @Published public private(set) var isActive = false
     @Published public private(set) var lastError: String?
+    @Published public private(set) var isHelperInstalled = false
+    @Published public private(set) var isCheckingHelper = false
+
+    private let helperURL: URL
+    private let helperCheck: () async -> Bool
 
     private var process: Process?
     private var input: Pipe?
     private var requested = false
+    private var isStopping = false
+    private var restorationFailed = false
 
-    private override init() {
+    init(
+        helperURL: URL = SMCHelper.shared.closedDisplayHelperURL,
+        helperCheck: @escaping () async -> Bool = { await SMCHelper.shared.refreshHelperInstallState() }
+    ) {
+        self.helperURL = helperURL
+        self.helperCheck = helperCheck
         super.init()
         NotificationCenter.default.addObserver(
             self, selector: #selector(stop), name: NSApplication.willTerminateNotification, object: nil
@@ -38,26 +49,38 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
             // Wait for a previous helper to release the override before
             // starting another one, including after a rapid stop/start.
             if process.isRunning { return }
-            isActive = false
             self.process = nil
             input = nil
         }
-        start()
+        guard !isCheckingHelper else { return }
+        Task { await refreshHelperState() }
+    }
+
+    public func refreshHelperState() async {
+        // An install/removal refresh must not return an older in-flight result.
+        while isCheckingHelper {
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        isCheckingHelper = true
+        isHelperInstalled = await helperCheck()
+        isCheckingHelper = false
+        guard requested else { return }
+        guard isHelperInstalled else {
+            lastError = L10n.string("Install or update the helper to keep your Mac awake with the lid closed.")
+            return
+        }
+        if process == nil { start() }
     }
 
     private func start() {
-        let helperURL = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/AwakeHookBridge")
-        guard FileManager.default.isExecutableFile(atPath: helperURL.path) else {
-            lastError = "The closed-display helper is missing."
-            return
-        }
-
+        isStopping = false
+        restorationFailed = false
         let process = Process()
         let input = Pipe()
         let output = Pipe()
         process.executableURL = helperURL
-        process.arguments = ["--clamshell-lease"]
+        process.arguments = ["hold-clamshell"]
         process.standardInput = input
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
@@ -66,6 +89,24 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
             handle.readabilityHandler = nil
             guard let self, let process else { return }
             Task { @MainActor in self.handleReady(data, from: process) }
+        }
+        process.terminationHandler = { [weak self] process in
+            output.fileHandleForReading.readabilityHandler = nil
+            Task { @MainActor in
+                guard let self, self.process === process else { return }
+                self.process = nil
+                self.input = nil
+                if self.isStopping && process.terminationStatus != 0 {
+                    self.restorationFailed = true
+                }
+                if self.requested && self.isStopping && process.terminationStatus == 0 {
+                    await self.refreshHelperState()
+                } else if self.requested {
+                    self.lastError = L10n.string("The closed-display override could not be enabled.")
+                } else if process.terminationStatus != 0 {
+                    self.lastError = L10n.string("Normal lid sleep could not be restored.")
+                }
+            }
         }
         do {
             try process.run()
@@ -78,26 +119,35 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
         }
     }
 
+    public func prepareForHelperRemoval() async -> Bool {
+        let retiringProcess = process
+        stop()
+        guard let retiringProcess else { return !restorationFailed }
+        let deadline = Date().addingTimeInterval(3)
+        while retiringProcess.isRunning, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return !retiringProcess.isRunning && retiringProcess.terminationStatus == 0
+    }
+
     private func handleReady(_ data: Data, from process: Process) {
-        guard self.process === process, requested else { return }
+        guard self.process === process, requested, !isStopping else { return }
         if data == Data("ready\n".utf8), process.isRunning {
-            isActive = true
             lastError = nil
         } else {
-            lastError = "The closed-display override could not be enabled."
+            lastError = L10n.string("The closed-display override could not be enabled.")
         }
     }
 
     @objc private func stop() {
         requested = false
         lastError = nil
-        guard let process else { return }
-        isActive = false
+        guard process != nil else { return }
+        isStopping = true
         // A normal stop still goes through the helper's restoration path.
         input?.fileHandleForWriting.closeFile()
-        if !process.isRunning {
-            self.process = nil
-            input = nil
-        }
+        input = nil
+        // Keep the process until the termination callback records restoration
+        // success/failure, even if it has already exited.
     }
 }

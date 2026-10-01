@@ -55,7 +55,7 @@ function createReporter() {
   }
   return {
     handle,
-    cleanup: () => Promise.all([...active].map(sessionID => send(sessionID, "idle", "plugin.unload"))),
+    cleanup: (reason = "plugin.unload") => Promise.all([...active].map(sessionID => send(sessionID, "idle", reason))),
   }
 }
 
@@ -69,12 +69,31 @@ const AwakePlugin = {
     const controller = new AbortController()
     const reporter = createReporter()
     void (async () => {
-      try {
-        for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
-          await reporter.handle(event)
+      let retryDelay = 1000
+      while (!controller.signal.aborted) {
+        try {
+          for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
+            if (controller.signal.aborted) break
+            await reporter.handle(event)
+            retryDelay = 1000
+          }
+        } catch (_) {
+          // A failed stream must release its sessions and retry independently
+          // of plugin teardown. Normal stream EOF uses the same recovery path.
         }
-      } catch (_) {
-        // Abort and server shutdown are expected lifecycle events.
+        if (controller.signal.aborted) break
+        await reporter.cleanup("subscription.disconnected")
+        await new Promise(resolve => {
+          const finish = () => {
+            clearTimeout(timer)
+            controller.signal.removeEventListener("abort", finish)
+            resolve()
+          }
+          const timer = setTimeout(finish, retryDelay)
+          controller.signal.addEventListener("abort", finish, { once: true })
+          if (controller.signal.aborted) finish()
+        })
+        retryDelay = Math.min(retryDelay * 2, 30000)
       }
     })()
 

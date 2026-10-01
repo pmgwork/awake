@@ -5,7 +5,6 @@
 
 import Foundation
 import Combine
-import SwiftUI
 
 @MainActor
 public final class AwakeCoordinator: ObservableObject {
@@ -13,13 +12,11 @@ public final class AwakeCoordinator: ObservableObject {
 
     // MARK: - Published State
     @Published public private(set) var isActive: Bool = false
-    @Published public private(set) var currentExecutionState: AppExecutionState = .idle
+    @Published public private(set) var isRemovingHardwareAuthorization = false
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
     @Published public private(set) var completionGraceEndDate: Date?
     @Published public private(set) var remainingGraceSeconds: Int = 0
-    @Published public private(set) var lastStateChange: Date = Date()
-    @Published public private(set) var statusMessage: String = L10n.string("Idle")
 
     // Sub-services
     public let settings = SettingsStore.shared
@@ -33,7 +30,7 @@ public final class AwakeCoordinator: ObservableObject {
     public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
-    public let screenLockGraceManager = ScreenLockGraceManager.shared
+    private let legacyScreenLockRecovery = LegacyScreenLockRecovery.shared
     public let closedDisplayModeManager = ClosedDisplayModeManager.shared
 
     private var cancellables = Set<AnyCancellable>()
@@ -67,26 +64,19 @@ public final class AwakeCoordinator: ObservableObject {
     /// `userInitiated: true`, which lets them start even below the battery
     /// cutoff; automatic starts stay paused while the cutoff applies.
     public func startKeepAwake(userInitiated: Bool = false) {
-        guard !isActive else { return }
+        guard !isActive, !isRemovingHardwareAuthorization else { return }
         if settings.selectedMode == .whileAgentRunning {
             guard settings.agentMonitoringEnabled, eventMonitor.hasActiveSession else {
-                statusMessage = settings.agentMonitoringEnabled
-                    ? L10n.string("Waiting for Monitored Agent...")
-                    : L10n.string("Agent Monitoring Paused")
                 return
             }
         }
         if settings.selectedMode == .whileDownloading {
             guard settings.downloadMonitoringEnabled, downloadMonitor.isDownloading else {
-                statusMessage = settings.downloadMonitoringEnabled
-                    ? L10n.string("Waiting for Download...")
-                    : L10n.string("Download Monitoring Paused")
                 return
             }
         }
         if isLowBatteryCutoffActive {
             guard userInitiated else {
-                statusMessage = L10n.format("Automatic Start Paused (Battery %d%% or Lower)", settings.lowBatteryThreshold)
                 return
             }
             // A manual start below the threshold is allowed; remember it so the
@@ -95,23 +85,10 @@ public final class AwakeCoordinator: ObservableObject {
             lowBatteryManualOverride = true
         }
 
-        switch settings.selectedMode {
-        case .whileAgentRunning:
-            isActive = true
-            statusMessage = eventMonitor.hasActiveSession
-                ? L10n.string("Agent Running: Keep Awake Active")
-                : L10n.string("Waiting for Monitored Agent...")
-        case .indefinitely:
-            isActive = true
-            statusMessage = L10n.string("Keep Awake Active (Indefinitely)")
-        case .timer:
-            isActive = true
+        isActive = true
+        if settings.selectedMode == .timer {
             setTimerEndDate(Date().addingTimeInterval(settings.selectedTimerDuration))
             updateRemainingTimerSeconds()
-            statusMessage = L10n.format("Keep Awake Active (Timer: %@)", formattedRemainingTime)
-        case .whileDownloading:
-            isActive = true
-            statusMessage = L10n.string("Download Running: Keep Awake Active")
         }
 
         evaluateState()
@@ -121,7 +98,6 @@ public final class AwakeCoordinator: ObservableObject {
     public func stopKeepAwake(reason: String? = nil, notify: Bool = false) {
         guard isActive else { return }
 
-        let stopReason = reason ?? L10n.string("Awake is no longer preventing system sleep.")
         isActive = false
         lowBatteryManualOverride = false
         completionGrace.reset()
@@ -129,21 +105,39 @@ public final class AwakeCoordinator: ObservableObject {
         remainingGraceSeconds = 0
         remainingTimerSeconds = 0
         setTimerEndDate(nil)
-        statusMessage = L10n.string("Keep Awake Stopped")
 
         evaluateState()
         if notify {
             sendNotification(
                 title: L10n.string("Keep Awake Deactivated"),
-                body: stopReason,
+                body: reason ?? L10n.string("Awake is no longer preventing system sleep."),
                 identifier: "awake-deactivated-\(UUID().uuidString)"
             )
         }
     }
 
+    public func removeHardwareAuthorization() async -> Bool {
+        guard !isRemovingHardwareAuthorization else { return false }
+        isRemovingHardwareAuthorization = true
+        defer { isRemovingHardwareAuthorization = false }
+
+        // Block automatic restarts while each existing helper releases its
+        // override. Never delete the privileged tool if restoration fails.
+        let sleepStopped = await sleepManager.prepareForHelperRemoval()
+        stopKeepAwake()
+        let lidStopped = await closedDisplayModeManager.prepareForHelperRemoval()
+        let fansStopped = await fanController.prepareForHelperRemoval()
+        guard sleepStopped, lidStopped, fansStopped else { return false }
+        guard await SMCHelper.shared.removeHelperTool() else { return false }
+        settings.closedDisplayModeEnabled = false
+        settings.closedLidCoolingEnabled = false
+        await closedDisplayModeManager.refreshHelperState()
+        return true
+    }
+
     public func toggleKeepAwake() {
         if isActive {
-            stopKeepAwake(reason: L10n.string("Manually stopped by user."))
+            stopKeepAwake()
         } else {
             startKeepAwake(userInitiated: true)
         }
@@ -165,7 +159,6 @@ public final class AwakeCoordinator: ObservableObject {
         settings.agentMonitoringEnabled = enabled
 
         if enabled {
-            statusMessage = L10n.string("Waiting for Monitored Agent...")
             if eventMonitor.hasActiveSession {
                 startKeepAwake(userInitiated: true)
             } else {
@@ -173,9 +166,8 @@ public final class AwakeCoordinator: ObservableObject {
             }
         } else {
             if isActive && settings.selectedMode == .whileAgentRunning {
-                stopKeepAwake(reason: L10n.string("Agent monitoring was paused."))
+                stopKeepAwake()
             } else {
-                statusMessage = L10n.string("Agent Monitoring Paused")
                 evaluateState()
             }
         }
@@ -186,16 +178,14 @@ public final class AwakeCoordinator: ObservableObject {
         settings.downloadMonitoringEnabled = enabled
 
         if enabled {
-            statusMessage = L10n.string("Waiting for Download...")
             if downloadMonitor.isDownloading {
                 startKeepAwake(userInitiated: true)
             } else {
                 evaluateState()
             }
         } else if isActive && settings.selectedMode == .whileDownloading {
-            stopKeepAwake(reason: L10n.string("Download monitoring was paused."))
+            stopKeepAwake()
         } else {
-            statusMessage = L10n.string("Download Monitoring Paused")
             evaluateState()
         }
     }
@@ -208,7 +198,6 @@ public final class AwakeCoordinator: ObservableObject {
         }
 
         settings.selectedMode = mode
-        statusMessage = L10n.string("Idle")
         evaluateState()
     }
 
@@ -231,43 +220,12 @@ public final class AwakeCoordinator: ObservableObject {
 
     public var formattedTimerEndTime: String? {
         guard let timerEndDate else { return nil }
-        return timerEndDate.formatted(date: .omitted, time: .shortened)
+        return timerEndDate.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened).locale(settings.language.locale)
+        )
     }
 
-    public var formattedMenuStatus: String {
-        if completionGraceEndDate != nil {
-            return formattedGraceStatus
-        }
-        if !isActive {
-            if settings.selectedMode == .whileAgentRunning {
-                return settings.agentMonitoringEnabled
-                    ? L10n.string("Monitoring (Waiting for Agent)")
-                    : L10n.string("Agent Monitoring Paused")
-            }
-            if settings.selectedMode == .whileDownloading {
-                return settings.downloadMonitoringEnabled
-                    ? L10n.string("Monitoring (Waiting for Download)")
-                    : L10n.string("Download Monitoring Paused")
-            }
-            return L10n.string("Idle")
-        }
-        switch settings.selectedMode {
-        case .whileAgentRunning:
-            if eventMonitor.hasActiveSession {
-                return L10n.format("Running (%@)", eventMonitor.activeProviderNames.sorted().joined(separator: ", "))
-            } else {
-                return L10n.string("Active (Waiting for Agent)")
-            }
-        case .indefinitely:
-            return L10n.string("Active (Indefinitely)")
-        case .timer:
-            return L10n.format("Active (%@)", formattedRemainingTime)
-        case .whileDownloading:
-            return L10n.format("Downloading (%d)", downloadMonitor.activeDownloadCount)
-        }
-    }
-
-    // MARK: - State Machine Evaluation
+    // MARK: - Sleep Prevention Policy
     public var formattedGraceStatus: String {
         L10n.format("Releasing in %@", String(format: "%d:%02d", remainingGraceSeconds / 60, remainingGraceSeconds % 60))
     }
@@ -275,9 +233,10 @@ public final class AwakeCoordinator: ObservableObject {
     public func evaluateState() {
         defer {
             applyScreenBehaviorPolicy()
-            applyLockGracePolicy()
+            legacyScreenLockRecovery.restoreIfNeeded()
             applyClosedDisplayModePolicy()
         }
+        guard !isRemovingHardwareAuthorization else { return }
         if !isLowBatteryCutoffActive {
             lowBatteryManualOverride = false
         }
@@ -303,17 +262,12 @@ public final class AwakeCoordinator: ObservableObject {
             completionGrace.update(isRunning: isRunning, now: now)
             completionGraceEndDate = completionGrace.endDate(duration: settings.completionGraceDuration)
             remainingGraceSeconds = completionGrace.remainingSeconds(duration: settings.completionGraceDuration, now: now)
-            if isRunning {
-                statusMessage = L10n.string(isAgentMode ? "Agent Running: Keep Awake Active" : "Download Running: Keep Awake Active")
-            } else {
-                statusMessage = formattedGraceStatus
-                if remainingGraceSeconds == 0 {
-                    stopKeepAwake(
-                        reason: L10n.string(isAgentMode ? "All monitored agents finished." : "All downloads finished."),
-                        notify: !isAgentMode
-                    )
-                    return
-                }
+            if !isRunning && remainingGraceSeconds == 0 {
+                stopKeepAwake(
+                    reason: L10n.string(isAgentMode ? "All monitored agents finished." : "All downloads finished."),
+                    notify: !isAgentMode
+                )
+                return
             }
         }
 
@@ -329,26 +283,6 @@ public final class AwakeCoordinator: ObservableObject {
 
         guard isActive else {
             // Idle State
-            transition(to: .idle)
-            sleepManager.disableSleepPrevention()
-            if !fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
-            return
-        }
-
-        if settings.selectedMode == .whileAgentRunning && !eventMonitor.hasActiveSession && completionGraceEndDate == nil {
-            transition(to: .idle)
-            statusMessage = L10n.string("Waiting for Monitored Agent...")
-            sleepManager.disableSleepPrevention()
-            if !fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
-            return
-        }
-        if settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading && completionGraceEndDate == nil {
-            transition(to: .idle)
-            statusMessage = L10n.string("Waiting for Download...")
             sleepManager.disableSleepPrevention()
             if !fanController.isTestModeActive {
                 fanController.restoreAuto()
@@ -362,7 +296,6 @@ public final class AwakeCoordinator: ObservableObject {
 
         if !isClosed {
             // Awake / Lid Open
-            transition(to: .awakeLidOpen)
             // caffeinate -s is AC-only. On battery, arm a limited-power system
             // assertion before the lid closes so the app remains scheduled long
             // enough to apply the M3/M4 fan unlock sequence.
@@ -376,7 +309,6 @@ public final class AwakeCoordinator: ObservableObject {
             }
         } else if hasExternal && settings.excludeNormalClamshell {
             // Awake / Normal Clamshell (External Display Connected)
-            transition(to: .normalClamshell)
             sleepManager.enableSleepPrevention(closedLid: false)
             if !fanController.isTestModeActive {
                 fanController.restoreAuto()
@@ -385,32 +317,23 @@ public final class AwakeCoordinator: ObservableObject {
             // Awake / Closed Lid Mode (No External Display)
             if settings.onlyOnACPower && !isAC {
                 // AC power required but on battery: do not run fan cooling
-                transition(to: .awakeLidOpen)
                 sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
                 if !fanController.isTestModeActive {
                     fanController.restoreAuto()
                 }
-            } else if settings.closedLidCoolingEnabled {
+            } else if settings.closedLidCoolingEnabled && SMCHelper.shared.checkHelperInstalled() {
                 // Apply Closed Lid Cooling
-                transition(to: .awakeClosedLidCooling)
                 sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
                 if !fanController.isTestModeActive {
                     fanController.setFanMode(settings.closedLidFanMode)
                 }
             } else {
-                transition(to: .awakeLidOpen)
                 sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
                 if !fanController.isTestModeActive {
                     fanController.restoreAuto()
                 }
             }
         }
-    }
-
-    private func transition(to state: AppExecutionState) {
-        guard currentExecutionState != state else { return }
-        currentExecutionState = state
-        lastStateChange = Date()
     }
 
     // MARK: - Subscriptions & Heartbeat
@@ -524,9 +447,6 @@ public final class AwakeCoordinator: ObservableObject {
         heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 let coordinator = AwakeCoordinator.shared
-                if coordinator.isActive && coordinator.settings.selectedMode == .timer {
-                    coordinator.updateRemainingTimerSeconds()
-                }
                 coordinator.evaluateState()
             }
         }
@@ -545,26 +465,22 @@ public final class AwakeCoordinator: ObservableObject {
 
     private func applyScreenBehaviorPolicy() {
         screenBehaviorManager.update(
-            sessionActive: isActive && currentExecutionState != .idle,
+            sessionActive: isActive,
             preventDisplaySleep: settings.preventDisplaySleep,
             preventScreenSaver: settings.preventScreenSaver,
-            lidClosed: lidMonitor.isLidClosed
-        )
-    }
-
-    /// Undo the retired password-delay override, including stale values from
-    /// earlier versions. Clamshell sleep is now handled by a separate helper.
-    private func applyLockGracePolicy() {
-        screenLockGraceManager.update(
-            sessionActive: false,
-            enabled: false
+            lidClosed: lidMonitor.isLidClosed,
+            hasExternalDisplay: displayMonitor.hasExternalDisplay
         )
     }
 
     private func applyClosedDisplayModePolicy() {
+        let policy = DisplayBehaviorPolicy(
+            lidClosed: lidMonitor.isLidClosed,
+            hasExternalDisplay: displayMonitor.hasExternalDisplay
+        )
         closedDisplayModeManager.update(
-            sessionActive: isActive && currentExecutionState != .idle,
-            enabled: settings.closedDisplayModeEnabled
+            sessionActive: isActive && !isRemovingHardwareAuthorization,
+            enabled: settings.closedDisplayModeEnabled && policy.needsClosedDisplayOverride
         )
     }
 
@@ -613,14 +529,12 @@ public final class AwakeCoordinator: ObservableObject {
         }
         guard !isLowBatteryCutoffActive else {
             setTimerEndDate(nil)
-            statusMessage = L10n.format("Automatic Start Paused (Battery %d%% or Lower)", settings.lowBatteryThreshold)
             return
         }
 
         timerEndDate = endDate
         updateRemainingTimerSeconds()
         isActive = true
-        statusMessage = L10n.format("Keep Awake Active (Timer: %@)", formattedRemainingTime)
         evaluateState()
     }
 }

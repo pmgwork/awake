@@ -5,12 +5,21 @@
 
 import SwiftUI
 import AppKit
+import Combine
 
 @MainActor
 public final class OnboardingWindowController {
     public static let shared = OnboardingWindowController()
 
     private var window: NSWindow?
+    private var languageSubscription: AnyCancellable?
+
+    private init() {
+        languageSubscription = SettingsStore.shared.$language
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.window?.title = L10n.string("Welcome to Awake") }
+    }
 
     public func showOnboarding(coordinator: AwakeCoordinator) {
         if let existing = window {
@@ -18,7 +27,7 @@ public final class OnboardingWindowController {
             return
         }
 
-        let contentView = OnboardingView(
+        let contentView = LocalizedView { OnboardingView(
             settings: coordinator.settings,
             notificationManager: NotificationManager.shared,
             eventMonitor: coordinator.eventMonitor,
@@ -26,7 +35,7 @@ public final class OnboardingWindowController {
             onFinished: { [weak self] in
                 self?.closeOnboarding()
             }
-        )
+        ) }
         let hostingController = NSHostingController(rootView: contentView)
 
         let newWindow = NSWindow(

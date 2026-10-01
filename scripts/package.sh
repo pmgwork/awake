@@ -8,12 +8,12 @@
 #
 # Usage:
 #   scripts/package.sh [version]
-#   e.g. scripts/package.sh 0.2.0
+#   e.g. scripts/package.sh 0.4.1
 # Output: dist/Awake-<version>.zip (+ .dmg when hdiutil available),
 #         dist/Awake-<version>.sha256, dist/appcast.xml
 set -eu
 
-VERSION="${1:-0.2.0}"
+VERSION="${1:-0.4.1}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$PROJECT_DIR/dist"
 APP_NAME="awake.app"

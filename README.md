@@ -45,7 +45,7 @@ Awake runs only in the menu bar (no Dock icon).
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.
   - *Indefinitely* — until you stop it.
 - Settings:
-  - **General** — launch at login, notifications, battery cutoff, and updates.
+  - **General** — language (system default, English, or Japanese), launch at login, notifications, battery cutoff, and updates.
   - **Sessions** — completion grace period, remaining time in the menu bar, display and screen saver, and download folder.
   - **Agents** — link or unlink each provider and watch live sessions.
   - **Cooling** — closed-lid cooling, fan mode, and fan diagnostics.
@@ -64,16 +64,17 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 - Only entries owned by Awake (marked with `--owner pmgwork.awake`) are added or removed.
 - Before the first change, the original file is backed up next to it as `<file>.awake-backup`.
 - **Unlink** in Settings → Agents removes only Awake's entries.
-- Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700) and are deleted as sessions end.
+- Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700). The latest event per session is retained after completion to reject delayed older events, and is replaced when a new turn starts.
 
 ## Closed-lid cooling
 
 When the lid closes with no external display connected, Awake keeps the system awake and can spin the fans to prevent heat build-up during unattended runs.
 
+- Check authorization and install or update the shared privileged helper under Settings → Sessions → Closed-Lid Helper. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
-- Options: fan mode (Maximum 100% / Aggressive 75% / Moderate 50% / Auto), "Exclude Normal Clamshell" (leave control to macOS when an external display is connected), and "only on AC power".
-- To remove the helper completely: `sudo rm /Library/PrivilegedHelperTools/pmgwork.awake.smc`.
+- Options: fan mode (Maximum 100% / Aggressive 75% / Moderate 50% / Auto), "Use Automatic Fan Control with an External Display" (leave control to macOS when the lid is closed and an external display is connected), and "only on AC power".
+- Use Remove Authorization in Settings → Sessions or Settings → Cooling to revoke access. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
 
 ## Privacy
 

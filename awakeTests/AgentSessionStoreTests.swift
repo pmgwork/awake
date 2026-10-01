@@ -41,6 +41,49 @@ final class AgentSessionStoreTests: XCTestCase {
         XCTAssertEqual(events.map(\.reason), ["Stop"])
     }
 
+    @MainActor
+    func testConsumedTerminalEventRejectsDelayedActivityAndAllowsNewTurn() async throws {
+        let now = Date()
+        try store.save(AgentHookEvent(
+            provider: .codex, sessionID: "finished", state: .idle,
+            reason: "Stop", occurredAt: now
+        ))
+        let monitor = AgentEventMonitor(store: store, startsAutomatically: false)
+        // A second poll also drains any cleanup queued by the first poll.
+        await reload(monitor)
+        await reload(monitor)
+        XCTAssertFalse(monitor.hasActiveSession)
+        XCTAssertEqual(store.loadValidEvents().map(\.state), [.idle])
+
+        // A new store instance proves ordering survives app restarts.
+        let reopened = AgentSessionStore(directoryURL: directoryURL)
+        try reopened.save(AgentHookEvent(
+            provider: .codex, sessionID: "finished", state: .active,
+            reason: "delayed PreToolUse", occurredAt: now.addingTimeInterval(-1)
+        ))
+        await reload(monitor)
+        XCTAssertFalse(monitor.hasActiveSession)
+        XCTAssertEqual(reopened.loadValidEvents().map(\.state), [.idle])
+
+        try reopened.save(AgentHookEvent(
+            provider: .codex, sessionID: "finished", state: .active,
+            reason: "UserPromptSubmit", occurredAt: now.addingTimeInterval(1)
+        ))
+        await reload(monitor)
+        XCTAssertTrue(monitor.hasActiveSession)
+        XCTAssertEqual(monitor.activeSessionCount, 1)
+        XCTAssertEqual(monitor.activeSessionCountByProvider, [.codex: 1])
+    }
+
+    @MainActor
+    private func reload(_ monitor: AgentEventMonitor) async {
+        let applied = expectation(description: "Monitor applied snapshot")
+        let subscription = monitor.$activeSessionCount.dropFirst().sink { _ in applied.fulfill() }
+        monitor.reloadNow()
+        await fulfillment(of: [applied], timeout: 2)
+        subscription.cancel()
+    }
+
     func testMultipleSessionsAreAggregatedIndependently() {
         let now = Date()
         let events = [
@@ -142,43 +185,5 @@ final class AgentSessionStoreTests: XCTestCase {
 
         store.remove(provider: .claude, sessionID: "to-remove")
         XCTAssertTrue(store.loadValidEvents().isEmpty)
-    }
-
-    func testCleanupDoesNotDeleteNewerActiveEvent() throws {
-        let now = Date()
-        let terminal = AgentHookEvent(
-            provider: .codex,
-            sessionID: "session-race",
-            state: .idle,
-            reason: "Stop",
-            occurredAt: now
-        )
-        try store.save(terminal)
-        // A new turn starts before the queued cleanup pass runs.
-        try store.save(AgentHookEvent(
-            provider: .codex,
-            sessionID: "session-race",
-            state: .active,
-            reason: "UserPromptSubmit",
-            occurredAt: now.addingTimeInterval(1)
-        ))
-
-        store.removeIfUnchanged(terminal)
-
-        XCTAssertEqual(store.loadValidEvents(cleaningInvalidFiles: false).map(\.state), [.active])
-    }
-
-    func testCleanupRemovesCurrentTerminalEvent() throws {
-        let event = AgentHookEvent(
-            provider: .claude,
-            sessionID: "session-cleanup",
-            state: .idle,
-            reason: "Stop"
-        )
-        try store.save(event)
-
-        store.removeIfUnchanged(event)
-
-        XCTAssertTrue(store.loadValidEvents(cleaningInvalidFiles: false).isEmpty)
     }
 }

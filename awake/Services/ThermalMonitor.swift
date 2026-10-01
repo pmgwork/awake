@@ -53,17 +53,11 @@ public final class ThermalMonitor: ObservableObject {
     }
 
     public func startMonitoring() {
-        stopMonitoring()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Task { @MainActor in
                 ThermalMonitor.shared.updateThermalState()
             }
         }
-    }
-
-    public func stopMonitoring() {
-        timer?.invalidate()
-        timer = nil
     }
 
     public func updateThermalState() {
