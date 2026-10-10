@@ -21,7 +21,7 @@ struct CoolingSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else if canUseHelper {
-                    Text(L10n.string("Every cooling mode except System runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart."))
+                    Text(L10n.string("Every cooling mode runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart."))
                 } else {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to control the fans."))
                 }

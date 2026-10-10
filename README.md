@@ -68,19 +68,18 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 
 ## Cooling
 
-Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**; every mode except System runs the fans at the speed set in Settings → Cooling (default 100%).
+Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**; every mode runs the fans at the speed set in Settings → Cooling (default 100%). While cooling is stopped or paused, macOS controls the fans.
 
 | Mode | Behavior |
 |---|---|
-| Forced | Fans stay up until you stop cooling |
-| For Duration | 5 / 10 / 15 / 30 minutes, then back to System |
+| Indefinitely | Fans stay up until you stop cooling |
+| For Duration | 5 / 10 / 15 / 30 minutes, then fans go back to macOS |
 | While Agent Is Running | While a monitored agent is running (by default only with the lid closed). Starts when selected; pause or resume it from the menu (default) |
-| System | macOS controls the fans |
 
 - Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
-- Cooling stops when the battery reaches the low-battery cutoff. Forced and timed cooling are not kept after a relaunch.
+- Cooling stops when the battery reaches the low-battery cutoff. Indefinite and timed cooling are not kept after a relaunch.
 - "While Agent Is Running" options: "Only While the Lid Is Closed" (on by default), "Leave Fans to macOS with an External Display" (when the lid is closed and an external display is connected), and "Only When Plugged In".
 - Use Remove… in Settings → Permissions to remove the helper. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
 

@@ -5,26 +5,23 @@
 
 import Foundation
 
-/// Who decides the fan speed once cooling is started. Everything except
-/// `.system` runs the fans at the cooling fan speed.
+/// When the fans run at the cooling fan speed once cooling is started.
+/// Stopping (or pausing) any mode leaves the fans to the system.
 public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
     case whileAgentRunning
     case timed
     case forced
-    case system
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .forced:
-            return L10n.string("Forced")
+            return L10n.string("Indefinitely")
         case .timed:
             return L10n.string("For Duration")
         case .whileAgentRunning:
             return L10n.string("While Agent Is Running")
-        case .system:
-            return L10n.string("System")
         }
     }
 
@@ -33,7 +30,7 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
     public var survivesRelaunch: Bool {
         switch self {
         case .whileAgentRunning: return true
-        case .forced, .timed, .system: return false
+        case .forced, .timed: return false
         }
     }
 

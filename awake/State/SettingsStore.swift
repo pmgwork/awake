@@ -278,8 +278,9 @@ public final class SettingsStore: ObservableObject {
             self.coolingArmed = savedCoolingMode.survivesRelaunch
                 && UserDefaults.standard.bool(forKey: Keys.coolingArmed)
         } else if UserDefaults.standard.string(forKey: Keys.coolingMode) != nil {
-            // A mode that no longer exists.
-            self.coolingMode = .system
+            // A mode that no longer exists, such as "system" (fans left to
+            // macOS), which is now just a stopped mode.
+            self.coolingMode = .whileAgentRunning
             self.coolingArmed = false
         } else {
             // Closed-lid cooling used to be a separate setting that was on by
@@ -287,7 +288,7 @@ public final class SettingsStore: ObservableObject {
             // which is also the default for new installs.
             let legacyEnabled = UserDefaults.standard.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
                 ? true : UserDefaults.standard.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
-            self.coolingMode = legacyEnabled ? .whileAgentRunning : .system
+            self.coolingMode = .whileAgentRunning
             self.coolingArmed = legacyEnabled
         }
         let savedBoostDuration = UserDefaults.standard.double(forKey: Keys.forcedCoolingDuration)

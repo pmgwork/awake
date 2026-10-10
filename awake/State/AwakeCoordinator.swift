@@ -136,10 +136,10 @@ public final class AwakeCoordinator: ObservableObject {
         }
     }
 
-    /// Starts the selected cooling mode. Refused for System, or when the helper
-    /// is missing or the battery fail-safe applies.
+    /// Starts the selected cooling mode. Refused when the helper is missing or
+    /// the battery fail-safe applies.
     public func startCooling() {
-        guard settings.coolingMode != .system, canUseForcedCooling else { return }
+        guard canUseForcedCooling else { return }
         resetCoolingState()
         if settings.coolingMode == .timed {
             forcedCoolingEndDate = Date().addingTimeInterval(settings.forcedCoolingDuration)
@@ -384,8 +384,6 @@ public final class AwakeCoordinator: ObservableObject {
         var active = false
         if settings.coolingArmed && SMCHelper.shared.checkHelperInstalled() {
             switch settings.coolingMode {
-            case .system:
-                break
             case .forced:
                 active = true
             case .timed:

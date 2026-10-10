@@ -161,8 +161,6 @@
 "Remove…" = "削除…";
 
 "Cooling Mode" = "冷却モード";
-"Forced" = "強制";
-"System" = "システム";
 "5m" = "5分";
 "10m" = "10分";
 "Start Cooling" = "冷却を開始";
@@ -181,7 +179,7 @@
 "Only While the Lid Is Closed" = "蓋を閉じている間だけ";
 "Only When Plugged In" = "電源アダプタ接続時のみ";
 "Runs the fans while a monitored agent is working. It starts as soon as you select it in the menu, and you can pause it there." = "監視中のエージェントが作業している間、ファンを回します。メニューで選ぶとすぐに始まり、メニューから一時停止できます。";
-"Every cooling mode except System runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart." = "「システム」以外の冷却モードは、この速度でファンを回します。バッテリー残量が「停止するバッテリー残量」を下回っている間は使えません。Awakeを再起動しても続くのは「エージェント実行中」だけです。";
+"Every cooling mode runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart." = "冷却モードはすべて、この速度でファンを回します。バッテリー残量が「停止するバッテリー残量」を下回っている間は使えません。Awakeを再起動しても続くのは「エージェント実行中」だけです。";
 "Pause Agent Cooling" = "エージェント冷却を一時停止";
 "Resume Agent Cooling" = "エージェント冷却を再開";
 "The fans may still be under manual control. Restart your Mac to return them to automatic control." = "ファンが手動制御のままの可能性があります。Macを再起動すると自動制御に戻ります。";

@@ -105,17 +105,15 @@ struct MenuBarView: View {
 
     @ViewBuilder
     private var coolingActionButton: some View {
-        if settings.coolingMode != .system {
-            Button(action: {
-                coordinator.toggleCooling()
-            }) {
-                Label(coolingActionTitle, systemImage: coolingActionSystemImage)
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.blue)
+        Button(action: {
+            coordinator.toggleCooling()
+        }) {
+            Label(coolingActionTitle, systemImage: coolingActionSystemImage)
+            .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .tint(.blue)
     }
 
     private var coolingActionTitle: String {
