@@ -69,6 +69,12 @@ for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/Awa
     exit 1
   fi
 done
+# An instrumented build of Awake still running on this Mac can drop one into
+# the bundle while it is being built.
+if find "$BUILT_APP" -name '*.profraw' | grep -q .; then
+  echo "default.profraw found in $BUILT_APP; quit instrumented Awake builds and rebuild." >&2
+  exit 1
+fi
 
 echo "==> Architectures: $(lipo -archs "$BUILT_APP/Contents/MacOS/awake")"
 
