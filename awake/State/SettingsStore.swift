@@ -22,6 +22,8 @@ public final class SettingsStore: ObservableObject {
         static let legacyClosedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
         static let excludeNormalClamshell = "pmgwork.awake.excludeNormalClamshell"
         static let coolingFanMode = "pmgwork.awake.coolingFanMode"
+        /// Renamed to coolingFanMode; read once to migrate.
+        static let legacyClosedLidFanMode = "pmgwork.awake.closedLidFanMode"
         static let onlyOnACPower = "pmgwork.awake.onlyOnACPower"
         static let agentCoolingRequiresLidClosed = "pmgwork.awake.agentCoolingRequiresLidClosed"
         static let forcedCoolingDuration = "pmgwork.awake.forcedCoolingDuration"
@@ -254,11 +256,13 @@ public final class SettingsStore: ObservableObject {
             self.excludeNormalClamshell = true
         }
 
-        if let fanRaw = UserDefaults.standard.string(forKey: Keys.coolingFanMode),
-           let fan = FanMode(rawValue: fanRaw), fan != .auto {
+        let fanRaw = UserDefaults.standard.string(forKey: Keys.coolingFanMode)
+            ?? UserDefaults.standard.string(forKey: Keys.legacyClosedLidFanMode)
+        if let fan = fanRaw.flatMap(FanMode.init(rawValue:)), fan != .auto {
             self.coolingFanMode = fan
         } else {
-            self.coolingFanMode = .maximum
+            // Existing installs keep the old closed-lid default.
+            self.coolingFanMode = isExistingInstall ? .aggressive : .maximum
         }
 
         self.onlyOnACPower = UserDefaults.standard.bool(forKey: Keys.onlyOnACPower)
