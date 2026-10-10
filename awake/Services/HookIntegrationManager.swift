@@ -48,6 +48,24 @@ public final class HookIntegrationManager: ObservableObject {
         refreshStatuses()
     }
 
+    /// Hooks call the copy in Application Support, which app updates don't
+    /// touch, so replace it when it differs from the bundled bridge.
+    public func updateInstalledBridgeIfNeeded() {
+        let bundledURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/AwakeHookBridge", isDirectory: false)
+        guard fileManager.fileExists(atPath: bridgeDestinationURL.path),
+              fileManager.fileExists(atPath: bundledURL.path),
+              AgentProvider.allCases.contains(where: { installedEntryExists(for: $0) }),
+              !fileManager.contentsEqual(atPath: bundledURL.path, andPath: bridgeDestinationURL.path)
+        else { return }
+        do {
+            _ = try installBridge()
+        } catch {
+            NSLog("[HookIntegrationManager] Failed to update the hook bridge: %@", error.localizedDescription)
+        }
+        refreshStatuses()
+    }
+
     public func status(for provider: AgentProvider) -> HookIntegrationStatus {
         statuses[provider] ?? .unlinked
     }

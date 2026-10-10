@@ -49,6 +49,12 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         // schedule (and the user's preference) lives in AppUpdater.
         _ = AppUpdater.shared
 
+        #if !DEBUG
+        // Release builds only, so tests and development runs never replace
+        // the bridge that the user's hooks call.
+        HookIntegrationManager.shared.updateInstalledBridgeIfNeeded()
+        #endif
+
         #if DEBUG
         // Opens a settings tab on launch so each pane can be captured.
         if let raw = UserDefaults.standard.string(forKey: "AwakeDebugSettingsTab"),

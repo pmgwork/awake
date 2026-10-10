@@ -47,6 +47,8 @@ DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild \
   -configuration Release \
   MARKETING_VERSION="$VERSION" \
   CURRENT_PROJECT_VERSION="$VERSION" \
+  CLANG_COVERAGE_MAPPING=NO \
+  CLANG_ENABLE_CODE_COVERAGE=NO \
   -destination 'generic/platform=macOS' \
   -derivedDataPath "$DIST_DIR/DerivedData" \
   build
@@ -56,6 +58,17 @@ if [ ! -d "$BUILT_APP" ]; then
   echo "Build output not found: $BUILT_APP" >&2
   exit 1
 fi
+
+# Coverage-instrumented binaries write default.profraw into the current
+# directory; the hook bridge runs inside users' projects, so never ship one.
+echo "==> Checking for coverage instrumentation..."
+for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/AwakeHookBridge"; do
+  [ -f "$binary" ] || { echo "Binary not found: $binary" >&2; exit 1; }
+  if DEVELOPER_DIR="$DEVELOPER_DIR" xcrun nm "$binary" | grep -q __llvm_profile; then
+    echo "Coverage instrumentation found in $binary" >&2
+    exit 1
+  fi
+done
 
 echo "==> Architectures: $(lipo -archs "$BUILT_APP/Contents/MacOS/awake")"
 
