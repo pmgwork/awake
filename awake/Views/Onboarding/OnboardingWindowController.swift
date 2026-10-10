@@ -10,6 +10,7 @@ import Combine
 @MainActor
 public final class OnboardingWindowController {
     public static let shared = OnboardingWindowController()
+    static let contentSize = NSSize(width: 600, height: 540)
 
     private var window: NSWindow?
     private var languageSubscription: AnyCancellable?
@@ -32,6 +33,7 @@ public final class OnboardingWindowController {
             notificationManager: NotificationManager.shared,
             eventMonitor: coordinator.eventMonitor,
             integrationManager: coordinator.hookIntegrationManager,
+            closedDisplayModeManager: coordinator.closedDisplayModeManager,
             onFinished: { [weak self] in
                 self?.closeOnboarding()
             }
@@ -39,12 +41,11 @@ public final class OnboardingWindowController {
         let hostingController = NSHostingController(rootView: contentView)
 
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 560),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            contentRect: NSRect(origin: .zero, size: Self.contentSize),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        newWindow.contentMinSize = NSSize(width: 560, height: 500)
         newWindow.title = L10n.string("Welcome to Awake")
         newWindow.contentViewController = hostingController
         newWindow.center()
@@ -72,6 +73,9 @@ public final class OnboardingWindowController {
 
     fileprivate func handleClosed() {
         window = nil
+        // Closing the window counts as finishing, so the guide does not come
+        // back on every launch. It stays available from Settings > General.
+        SettingsStore.shared.completeOnboarding()
     }
 }
 

@@ -17,25 +17,18 @@ struct MenuBarView: View {
                 settings: settings
             )
 
-            Divider()
-            HardwareStatusView(
-                lidMonitor: coordinator.lidMonitor,
-                displayMonitor: coordinator.displayMonitor,
-                powerMonitor: coordinator.powerMonitor,
-                thermalMonitor: coordinator.thermalMonitor,
-                fanController: coordinator.fanController,
-                sleepManager: coordinator.sleepManager
-            )
-
-            if coordinator.completionGraceEndDate != nil {
+            Button(action: {
+                coordinator.togglePrimaryAction()
+            }) {
                 Label(
-                    coordinator.formattedGraceStatus,
-                    systemImage: "hourglass"
+                    primaryActionTitle,
+                    systemImage: primaryActionSystemImage
                 )
-                .font(.system(size: 11))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.orange)
 
             if settings.selectedMode == .whileAgentRunning {
                 Divider()
@@ -56,20 +49,18 @@ struct MenuBarView: View {
                 )
             }
 
-            Divider()
+            if coordinator.canUseForcedCooling {
+                Divider()
 
-            Button(action: {
-                coordinator.togglePrimaryAction()
-            }) {
-                Label(
-                    primaryActionTitle,
-                    systemImage: primaryActionSystemImage
+                CoolingModeSelectorView(
+                    coordinator: coordinator,
+                    settings: settings
                 )
-                .frame(maxWidth: .infinity)
+
+                coolingActionButton
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(primaryActionTint)
+
+            Divider()
 
             // Bottom Footer
             HStack {
@@ -95,7 +86,7 @@ struct MenuBarView: View {
     private var settingsLabel: some View {
         HStack(spacing: 4) {
             Image(systemName: "gearshape")
-            Text(L10n.string("Settings..."))
+            Text(L10n.string("Settings…"))
         }
         .font(.system(size: 11))
         .foregroundStyle(.secondary)
@@ -110,6 +101,35 @@ struct MenuBarView: View {
             settingsLabel
         }
         .buttonStyle(.borderless)
+    }
+
+    @ViewBuilder
+    private var coolingActionButton: some View {
+        if settings.coolingMode != .system {
+            Button(action: {
+                coordinator.toggleCooling()
+            }) {
+                Label(coolingActionTitle, systemImage: coolingActionSystemImage)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.blue)
+        }
+    }
+
+    private var coolingActionTitle: String {
+        if settings.coolingMode.startsOnSelect {
+            return settings.coolingArmed ? L10n.string("Pause Agent Cooling") : L10n.string("Resume Agent Cooling")
+        }
+        return settings.coolingArmed ? L10n.string("Stop Cooling") : L10n.string("Start Cooling")
+    }
+
+    private var coolingActionSystemImage: String {
+        if settings.coolingMode.startsOnSelect {
+            return settings.coolingArmed ? "pause.fill" : "play.fill"
+        }
+        return settings.coolingArmed ? "stop.fill" : "fanblades.fill"
     }
 
     private var primaryActionTitle: String {
@@ -135,16 +155,6 @@ struct MenuBarView: View {
         }
         return coordinator.isActive ? "stop.fill" : "play.fill"
     }
-
-    private var primaryActionTint: Color {
-        if settings.selectedMode == .whileAgentRunning {
-            return settings.agentMonitoringEnabled ? .orange : .accentColor
-        }
-        if settings.selectedMode == .whileDownloading {
-            return settings.downloadMonitoringEnabled ? .orange : .accentColor
-        }
-        return coordinator.isActive ? .red : .accentColor
-    }
 }
 
 private struct DownloadStatusView: View {
@@ -167,7 +177,7 @@ private struct DownloadStatusView: View {
             }
 
             if monitor.activeFileNames.isEmpty {
-                Text(L10n.string("No active downloads."))
+                Text(L10n.string("No downloads in progress."))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             } else {

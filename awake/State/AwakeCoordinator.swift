@@ -15,8 +15,10 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var isRemovingHardwareAuthorization = false
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
-    @Published public private(set) var completionGraceEndDate: Date?
-    @Published public private(set) var remainingGraceSeconds: Int = 0
+    /// End of the timed cooling mode; `nil` in every other mode.
+    @Published public private(set) var forcedCoolingEndDate: Date?
+    /// Whether the cooling mode currently wants the fans at 100%.
+    @Published public private(set) var isForcedCoolingActive = false
 
     // Sub-services
     public let settings = SettingsStore.shared
@@ -35,7 +37,6 @@ public final class AwakeCoordinator: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
-    private var completionGrace = CompletionGracePeriod()
     /// Set when the user manually starts Keep Awake while the low-battery
     /// cutoff applies. It suspends the fail-safe for that session so a manual
     /// start is not immediately undone by the heartbeat.
@@ -100,26 +101,87 @@ public final class AwakeCoordinator: ObservableObject {
 
         isActive = false
         lowBatteryManualOverride = false
-        completionGrace.reset()
-        completionGraceEndDate = nil
-        remainingGraceSeconds = 0
         remainingTimerSeconds = 0
         setTimerEndDate(nil)
 
         evaluateState()
         if notify {
             sendNotification(
-                title: L10n.string("Keep Awake Deactivated"),
-                body: reason ?? L10n.string("Awake is no longer preventing system sleep."),
+                title: L10n.string("Keep Awake Stopped"),
+                body: reason ?? L10n.string("Your Mac can sleep normally again."),
                 identifier: "awake-deactivated-\(UUID().uuidString)"
             )
         }
+    }
+
+    // MARK: - Forced Cooling
+
+    /// Whether the fan helper is installed and no battery fail-safe blocks
+    /// manual fan control.
+    public var canUseForcedCooling: Bool {
+        !isRemovingHardwareAuthorization &&
+            !isLowBatteryCutoffEnforced &&
+            SMCHelper.shared.checkHelperInstalled()
+    }
+
+    /// Selects a cooling mode. Switching modes while cooling is running stops
+    /// it, like switching a Keep Awake mode; conditional modes start waiting
+    /// for their condition right away.
+    public func selectCoolingMode(_ mode: CoolingMode) {
+        guard settings.coolingMode != mode else { return }
+        settings.coolingMode = mode
+        stopCooling()
+        if mode.startsOnSelect {
+            startCooling()
+        }
+    }
+
+    /// Starts the selected cooling mode. Refused for System, or when the helper
+    /// is missing or the battery fail-safe applies.
+    public func startCooling() {
+        guard settings.coolingMode != .system, canUseForcedCooling else { return }
+        resetCoolingState()
+        if settings.coolingMode == .timed {
+            forcedCoolingEndDate = Date().addingTimeInterval(settings.forcedCoolingDuration)
+        }
+        settings.coolingArmed = true
+        evaluateState()
+    }
+
+    public func stopCooling() {
+        settings.coolingArmed = false
+        resetCoolingState()
+        evaluateState()
+    }
+
+    public func toggleCooling() {
+        if settings.coolingArmed {
+            stopCooling()
+        } else {
+            startCooling()
+        }
+    }
+
+    public func setCoolingDuration(_ duration: TimeInterval) {
+        guard duration > 0 else { return }
+        settings.forcedCoolingDuration = duration
+        if settings.coolingArmed && settings.coolingMode == .timed {
+            forcedCoolingEndDate = Date().addingTimeInterval(duration)
+            evaluateState()
+        }
+    }
+
+    private func resetCoolingState() {
+        forcedCoolingEndDate = nil
     }
 
     public func removeHardwareAuthorization() async -> Bool {
         guard !isRemovingHardwareAuthorization else { return false }
         isRemovingHardwareAuthorization = true
         defer { isRemovingHardwareAuthorization = false }
+        settings.coolingArmed = false
+        resetCoolingState()
+        setForcedCoolingActive(false)
 
         // Block automatic restarts while each existing helper releases its
         // override. Never delete the privileged tool if restoration fails.
@@ -130,7 +192,6 @@ public final class AwakeCoordinator: ObservableObject {
         guard sleepStopped, lidStopped, fansStopped else { return false }
         guard await SMCHelper.shared.removeHelperTool() else { return false }
         settings.closedDisplayModeEnabled = false
-        settings.closedLidCoolingEnabled = false
         await closedDisplayModeManager.refreshHelperState()
         return true
     }
@@ -218,18 +279,7 @@ public final class AwakeCoordinator: ObservableObject {
         return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
-    public var formattedTimerEndTime: String? {
-        guard let timerEndDate else { return nil }
-        return timerEndDate.formatted(
-            Date.FormatStyle(date: .omitted, time: .shortened).locale(settings.language.locale)
-        )
-    }
-
     // MARK: - Sleep Prevention Policy
-    public var formattedGraceStatus: String {
-        L10n.format("Releasing in %@", String(format: "%d:%02d", remainingGraceSeconds / 60, remainingGraceSeconds % 60))
-    }
-
     public func evaluateState() {
         defer {
             applyScreenBehaviorPolicy()
@@ -250,7 +300,7 @@ public final class AwakeCoordinator: ObservableObject {
             }
             if isActive, let batteryLevel = powerMonitor.batteryLevel {
                 NSLog("[AwakeCoordinator] Battery reached %d%%. Turning Awake off.", batteryLevel)
-                stopKeepAwake(reason: L10n.format("Battery reached %d%%. Awake was turned off.", batteryLevel), notify: true)
+                stopKeepAwake(reason: L10n.format("Battery is at %d%%, so Keep Awake stopped.", batteryLevel), notify: true)
                 return
             }
         }
@@ -258,13 +308,9 @@ public final class AwakeCoordinator: ObservableObject {
         if isActive && (settings.selectedMode == .whileAgentRunning || settings.selectedMode == .whileDownloading) {
             let isAgentMode = settings.selectedMode == .whileAgentRunning
             let isRunning = isAgentMode ? eventMonitor.hasActiveSession : downloadMonitor.isDownloading
-            let now = Date()
-            completionGrace.update(isRunning: isRunning, now: now)
-            completionGraceEndDate = completionGrace.endDate(duration: settings.completionGraceDuration)
-            remainingGraceSeconds = completionGrace.remainingSeconds(duration: settings.completionGraceDuration, now: now)
-            if !isRunning && remainingGraceSeconds == 0 {
+            if !isRunning {
                 stopKeepAwake(
-                    reason: L10n.string(isAgentMode ? "All monitored agents finished." : "All downloads finished."),
+                    reason: L10n.string(isAgentMode ? "All monitored agents have finished." : "All downloads finished."),
                     notify: !isAgentMode
                 )
                 return
@@ -276,17 +322,17 @@ public final class AwakeCoordinator: ObservableObject {
             updateRemainingTimerSeconds()
             if remainingTimerSeconds <= 0 {
                 NSLog("[AwakeCoordinator] Timer expired. Stopping Keep Awake.")
-                stopKeepAwake(reason: L10n.string("Timer period completed."), notify: true)
+                stopKeepAwake(reason: L10n.string("The set time has ended."), notify: true)
                 return
             }
         }
 
+        updateForcedCooling()
+
         guard isActive else {
             // Idle State
             sleepManager.disableSleepPrevention()
-            if !fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
+            applyFanPolicy()
             return
         }
 
@@ -304,36 +350,74 @@ public final class AwakeCoordinator: ObservableObject {
                 prepareForClosedLid: !isAC,
                 appliesToBattery: !isAC
             )
-            if !fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
         } else if hasExternal && settings.excludeNormalClamshell {
             // Awake / Normal Clamshell (External Display Connected)
             sleepManager.enableSleepPrevention(closedLid: false)
-            if !fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
         } else {
             // Awake / Closed Lid Mode (No External Display)
-            if settings.onlyOnACPower && !isAC {
-                // AC power required but on battery: do not run fan cooling
-                sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
-                if !fanController.isTestModeActive {
-                    fanController.restoreAuto()
+            sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
+        }
+        // Fans last, once the sleep assertion is in place.
+        applyFanPolicy()
+    }
+
+    /// Runs the fans at the cooling fan speed while a cooling mode wants it,
+    /// and hands them back to the system otherwise. A fan test owns the fans
+    /// while it runs.
+    private func applyFanPolicy() {
+        guard !fanController.isTestModeActive else { return }
+        if isForcedCoolingActive {
+            fanController.setFanMode(settings.coolingFanMode)
+        } else {
+            fanController.restoreAuto()
+        }
+    }
+
+    private func updateForcedCooling(now: Date = Date()) {
+        if settings.coolingArmed && (isLowBatteryCutoffEnforced || isRemovingHardwareAuthorization) {
+            settings.coolingArmed = false
+            resetCoolingState()
+        }
+
+        // While the helper is missing (or its state is still being read at
+        // launch) a started mode stays started but cannot act yet.
+        var active = false
+        if settings.coolingArmed && SMCHelper.shared.checkHelperInstalled() {
+            switch settings.coolingMode {
+            case .system:
+                break
+            case .forced:
+                active = true
+            case .timed:
+                if let end = forcedCoolingEndDate, end > now {
+                    active = true
+                } else {
+                    // The timer ran out: stop, keeping the selected mode.
+                    settings.coolingArmed = false
+                    resetCoolingState()
                 }
-            } else if settings.closedLidCoolingEnabled && SMCHelper.shared.checkHelperInstalled() {
-                // Apply Closed Lid Cooling
-                sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
-                if !fanController.isTestModeActive {
-                    fanController.setFanMode(settings.closedLidFanMode)
-                }
-            } else {
-                sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
-                if !fanController.isTestModeActive {
-                    fanController.restoreAuto()
-                }
+            case .whileAgentRunning:
+                active = isAgentCoolingNeeded
             }
         }
+        setForcedCoolingActive(active)
+    }
+
+    /// A monitored agent is running, narrowed by the options: lid closed
+    /// (unless an external display is attached and left to the system) and
+    /// AC power.
+    private var isAgentCoolingNeeded: Bool {
+        guard eventMonitor.hasActiveSession else { return false }
+        if settings.onlyOnACPower && !powerMonitor.isOnACPower { return false }
+        guard settings.agentCoolingRequiresLidClosed else { return true }
+        guard lidMonitor.isLidClosed else { return false }
+        return !(displayMonitor.hasExternalDisplay && settings.excludeNormalClamshell)
+    }
+
+    private func setForcedCoolingActive(_ active: Bool) {
+        // @Published fires on every assignment, and this runs on the 1 Hz heartbeat.
+        guard isForcedCoolingActive != active else { return }
+        isForcedCoolingActive = active
     }
 
     // MARK: - Subscriptions & Heartbeat
@@ -521,8 +605,8 @@ public final class AwakeCoordinator: ObservableObject {
         guard endDate > Date() else {
             setTimerEndDate(nil)
             sendNotification(
-                title: L10n.string("Keep Awake Deactivated"),
-                body: L10n.string("Timer period completed."),
+                title: L10n.string("Keep Awake Stopped"),
+                body: L10n.string("The set time has ended."),
                 identifier: "awake-state-change"
             )
             return

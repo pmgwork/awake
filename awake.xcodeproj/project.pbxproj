@@ -11,7 +11,6 @@
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
-		B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CompletionGracePeriodTests.swift */; };
 		B20000000000000000000006 /* SMCHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* SMCHelperTests.swift */; };
 		B30000000000000000000001 /* LegacyScreenLockRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */; };
 		C40000000000000000000001 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40000000000000000000002 /* LocalizationTests.swift */; };
@@ -56,7 +55,6 @@
 		A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000012 /* AgentSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionStoreTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B20000000000000000000002 /* CompletionGracePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGracePeriodTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000005 /* SMCHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMCHelperTests.swift; sourceTree = "<group>"; };
 		B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyScreenLockRecoveryTests.swift; sourceTree = "<group>"; };
 		C40000000000000000000002 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
@@ -124,7 +122,6 @@
 			children = (
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				C40000000000000000000002 /* LocalizationTests.swift */,
-				B20000000000000000000002 /* CompletionGracePeriodTests.swift */,
 				B20000000000000000000005 /* SMCHelperTests.swift */,
 				B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */,
 			);
@@ -289,7 +286,6 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				C40000000000000000000001 /* LocalizationTests.swift in Sources */,
-				B20000000000000000000001 /* CompletionGracePeriodTests.swift in Sources */,
 				B20000000000000000000006 /* SMCHelperTests.swift in Sources */,
 				B30000000000000000000001 /* LegacyScreenLockRecoveryTests.swift in Sources */,
 			);

@@ -10,24 +10,19 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(L10n.string("Language"), selection: $settings.language) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.displayName).tag(language)
-                    }
-                }
                 Toggle(L10n.string("Launch Awake at Login"), isOn: $settings.launchAtLogin)
                 Toggle(L10n.string("Enable Notifications"), isOn: $settings.notificationsEnabled)
                 if settings.notificationsEnabled && notificationManager.authorizationStatus == .denied {
                     Label(
-                        L10n.string("Notifications are disabled in System Settings."),
+                        L10n.string("Notifications are turned off in System Settings."),
                         systemImage: "exclamationmark.triangle"
                     )
                     .foregroundStyle(.red)
                 }
-                Picker(L10n.string("Battery Cutoff When Unplugged"), selection: $settings.lowBatteryThreshold) {
-                    Text(L10n.string("Off")).tag(0)
-                    ForEach([5, 10, 15, 20, 25], id: \.self) { threshold in
-                        Text("\(threshold)%").tag(threshold)
+                Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
+                Picker(L10n.string("Language"), selection: $settings.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.displayName).tag(language)
                     }
                 }
             } header: {
@@ -36,7 +31,7 @@ struct GeneralSettingsView: View {
 
             Section {
                 Toggle(
-                    L10n.string("Automatically check for updates"),
+                    L10n.string("Check for Updates Automatically"),
                     isOn: Binding(
                         get: { updater.automaticallyChecksForUpdates },
                         set: { updater.setAutomaticallyChecksForUpdates($0) }
@@ -62,7 +57,7 @@ struct GeneralSettingsView: View {
 
             Section {
                 LabeledContent(L10n.string("Version"), value: appVersion)
-                Button(L10n.string("Show Welcome Guide...")) {
+                Button(L10n.string("Show Welcome Guide…")) {
                     OnboardingWindowController.shared.showOnboarding(coordinator: AwakeCoordinator.shared)
                 }
             } header: {

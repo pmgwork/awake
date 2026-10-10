@@ -1,11 +1,13 @@
 //
-//  AgentSettingsView.swift
+//  MonitoringSettingsView.swift
 //  Awake
 //
 
 import SwiftUI
+import AppKit
 
-struct AgentSettingsView: View {
+/// What the "While Agent Is Running" and "While Downloading" modes watch.
+struct MonitoringSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var eventMonitor: AgentEventMonitor
     @ObservedObject var integrationManager: HookIntegrationManager
@@ -19,7 +21,7 @@ struct AgentSettingsView: View {
                     providerRow(agent)
                 }
             } header: {
-                Text(L10n.string("Supported Providers"))
+                Text(L10n.string("Agents"))
             } footer: {
                 HStack {
                     Button {
@@ -41,6 +43,26 @@ struct AgentSettingsView: View {
                 }
             }
 
+            Section {
+                LabeledContent {
+                    HStack {
+                        Text(settings.downloadFolderPath)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Button(L10n.string("Choose…")) {
+                            chooseDownloadFolder()
+                        }
+                    }
+                } label: {
+                    Text(L10n.string("Monitored Folder"))
+                }
+            } header: {
+                Text(L10n.string("Download Monitoring"))
+            } footer: {
+                Text(L10n.string("Awake looks for the temporary files that browsers create for unfinished downloads."))
+            }
+
             let customAgents = settings.monitoredAgents.filter { !$0.isPreset }
             if !customAgents.isEmpty {
                 Section {
@@ -52,7 +74,7 @@ struct AgentSettingsView: View {
                         } label: {
                             VStack(alignment: .leading) {
                                 Text(agent.name)
-                                Text(L10n.string("Hook integration is required; custom agents are not available in this release."))
+                                Text(L10n.string("Custom agents need hook integration, so they aren't supported in this version."))
                                     .font(.callout)
                                     .foregroundStyle(.secondary)
                             }
@@ -62,7 +84,6 @@ struct AgentSettingsView: View {
                     Text(L10n.string("Saved Custom Agents"))
                 }
             }
-
         }
         .formStyle(.grouped)
         .disabled(integrationManager.isWorking)
@@ -118,7 +139,7 @@ struct AgentSettingsView: View {
             .disabled(!canMonitor)
             .help(canMonitor
                   ? L10n.format("Monitor %@", provider.displayName)
-                  : L10n.string("Link this provider before enabling monitoring."))
+                  : L10n.string("Link this agent to monitor it."))
 
             Menu {
                 if status == .unlinked || status == .needsRepair {
@@ -144,6 +165,19 @@ struct AgentSettingsView: View {
             .fixedSize()
             .disabled(!toolInstalled)
             .help(toolInstalled ? L10n.string("Actions") : L10n.string("CLI not installed"))
+        }
+    }
+
+    private func chooseDownloadFolder() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.string("Choose Download Folder")
+        panel.prompt = L10n.string("Choose")
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: settings.downloadFolderPath, isDirectory: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            settings.downloadFolderPath = url.path
         }
     }
 
@@ -177,10 +211,10 @@ struct AgentSettingsView: View {
         var message: String {
             kind == .install
                 ? L10n.format(
-                    "Awake will back up and update only its own %@ entry in your user configuration.",
+                    "Awake backs up your configuration and changes only its own %@ entry.",
                     provider.integrationKind
                 )
-                : L10n.string("Only the configuration and files owned by Awake will be removed.")
+                : L10n.string("Only the settings and files that Awake added are removed.")
         }
     }
 }

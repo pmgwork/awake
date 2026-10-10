@@ -12,8 +12,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 - **Agent-driven keep awake** — follows Codex, Claude Code, OpenCode, and Antigravity through their own hook events. No process polling.
 - **Other keep-awake modes** — for a fixed duration (15m–3h), while a download is in progress, or indefinitely.
-- **Completion grace period** — stays awake for another 1–5 minutes after the last agent or download finishes.
-- **Closed-lid cooling** — optional fan control while the lid is closed and no external display is attached (Apple Silicon).
+- **Closed-lid cooling** — optional fan control while an agent is running, by default only with the lid closed (Apple Silicon).
 - **Battery protection** — turns everything off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
@@ -40,15 +39,16 @@ Awake runs only in the menu bar (no Dock icon).
 
 - **Left-click** the menu bar cup to open the menu. **Right-click** to toggle the current mode's primary action.
 - Modes:
-  - *While Agent is Running* — keeps the Mac awake while a linked agent has an active session.
+  - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session.
   - *For Duration* — countdown timer (15m / 30m / 1h / 2h / 3h), remembered across launches.
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.
   - *Indefinitely* — until you stop it.
 - Settings:
-  - **General** — language (system default, English, or Japanese), launch at login, notifications, battery cutoff, and updates.
-  - **Sessions** — completion grace period, remaining time in the menu bar, display and screen saver, and download folder.
-  - **Agents** — link or unlink each provider and watch live sessions.
-  - **Cooling** — closed-lid cooling, fan mode, and fan diagnostics.
+  - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
+  - **Keep Awake** — display and screen saver, closed-lid operation, and battery cutoff.
+  - **Monitor** — link or unlink each agent provider, watch live sessions, and choose the download folder.
+  - **Cooling** — fan speed, and options for the agent mode.
+  - **Permissions** — install, update, or remove the shared helper.
 
 ## Agent integrations
 
@@ -66,15 +66,23 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 - **Unlink** in Settings → Agents removes only Awake's entries.
 - Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700). The latest event per session is retained after completion to reject delayed older events, and is replaced when a new turn starts.
 
-## Closed-lid cooling
+## Cooling
 
-When the lid closes with no external display connected, Awake keeps the system awake and can spin the fans to prevent heat build-up during unattended runs.
+Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**; every mode except System runs the fans at the speed set in Settings → Cooling (default 100%).
 
-- Check authorization and install or update the shared privileged helper under Settings → Sessions → Closed-Lid Helper. Closed-lid operation and fan control use the same helper.
+| Mode | Behavior |
+|---|---|
+| Forced | Fans stay up until you stop cooling |
+| For Duration | 5 / 10 / 15 / 30 minutes, then back to System |
+| While Agent Is Running | While a monitored agent is running (by default only with the lid closed). Starts when selected; pause or resume it from the menu (default) |
+| System | macOS controls the fans |
+
+- Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
-- Options: fan mode (Maximum 100% / Aggressive 75% / Moderate 50% / Auto), "Use Automatic Fan Control with an External Display" (leave control to macOS when the lid is closed and an external display is connected), and "only on AC power".
-- Use Remove Authorization in Settings → Sessions or Settings → Cooling to revoke access. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
+- Cooling stops when the battery reaches the low-battery cutoff. Forced and timed cooling are not kept after a relaunch.
+- "While Agent Is Running" options: "Only While the Lid Is Closed" (on by default), "Leave Fans to macOS with an External Display" (when the lid is closed and an external display is connected), and "Only When Plugged In".
+- Use Remove… in Settings → Permissions to remove the helper. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
 
 ## Privacy
 
@@ -118,7 +126,7 @@ Release (distribution) steps are documented in `docs/DISTRIBUTION.md`.
 | --- | --- |
 | macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
 | In-app updates fail | Replace the app with the latest release from GitHub |
-| Fan control is unavailable | Settings → Cooling → **Install Helper** / **Update Helper** |
+| Fan control is unavailable | Settings → Permissions → **Install** / **Update** |
 | Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
 
 ## License

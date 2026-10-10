@@ -6,61 +6,79 @@ struct OnboardingView: View {
     @ObservedObject var notificationManager: NotificationManager
     @ObservedObject var eventMonitor: AgentEventMonitor
     @ObservedObject var integrationManager: HookIntegrationManager
+    @ObservedObject var closedDisplayModeManager: ClosedDisplayModeManager
     var onFinished: () -> Void
 
-    @State private var step: Step = .welcome
+    @State private var step: Step = Step.initial
     @State private var pendingProvider: AgentProvider?
 
-    private enum Step: Int {
+    enum Step: Int, CaseIterable {
         case welcome
-        case preferences
         case agents
+        case permissions
+        case preferences
         case completion
+
+        static var initial: Step {
+            #if DEBUG
+            // Lets screenshots of each page be taken without clicking through.
+            if UserDefaults.standard.object(forKey: "AwakeDebugOnboardingStep") != nil,
+               let step = Step(rawValue: UserDefaults.standard.integer(forKey: "AwakeDebugOnboardingStep")) {
+                return step
+            }
+            #endif
+            return .welcome
+        }
+
+        var symbol: String {
+            switch self {
+            case .welcome: return "cup.and.saucer"
+            case .agents: return "cpu"
+            case .permissions: return "lock.shield"
+            case .preferences: return "gearshape"
+            case .completion: return "checkmark.circle"
+            }
+        }
 
         var title: String {
             switch self {
             case .welcome: return "Welcome to Awake"
-            case .preferences: return "General Preferences"
-            case .agents: return "AI Agent Hook Integrations"
+            case .agents: return "Link Your Agents"
+            case .permissions: return "Closed Lid & Fans"
+            case .preferences: return "Preferences"
             case .completion: return "You're Ready"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .welcome, .completion: return ""
+            case .agents: return "Awake keeps your Mac awake while a linked agent is working and lets it sleep when the work is done."
+            case .permissions: return "Optional. You need this only to keep working with the lid closed or to control the fans."
+            case .preferences: return "You can change these later in Settings."
             }
         }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            contentArea
+            Group {
+                switch step {
+                case .welcome: welcomePage
+                case .completion: completionPage
+                default: formPage
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
-
-            HStack {
-                Button(L10n.string("Back")) {
-                    moveBackward()
-                }
-                .disabled(step == .welcome)
-
-                Spacer()
-
-                if step != .completion {
-                    Button(L10n.string("Set Up Later")) {
-                        finish()
-                    }
-                }
-
-                Button(L10n.string(step == .completion ? "Done" : "Continue")) {
-                    if step == .completion {
-                        finish()
-                    } else {
-                        moveForward()
-                    }
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding()
+            footer
         }
-        .frame(minWidth: 560, minHeight: 500)
+        .frame(width: OnboardingWindowController.contentSize.width,
+               height: OnboardingWindowController.contentSize.height)
         .onAppear {
-            refreshStatus()
+            notificationManager.refreshAuthorizationStatus()
+            integrationManager.refreshStatuses()
         }
         .confirmationDialog(
             L10n.string("Hook Integration"),
@@ -82,99 +100,223 @@ struct OnboardingView: View {
         } message: {
             if let provider = pendingProvider {
                 Text(L10n.format(
-                    "Awake will back up and update only its own %@ entry in your user configuration.",
+                    "Awake backs up your configuration and changes only its own %@ entry.",
                     provider.integrationKind
                 ))
             }
         }
     }
 
-    @ViewBuilder
-    private var contentArea: some View {
-        if step == .welcome {
-            welcomePage
-        } else if step == .completion {
-            completionPage
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(L10n.string(step.title))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .accessibilityAddTraits(.isHeader)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
+    // MARK: - Footer
 
-                Form {
-                    pageContent
-                }
-                .formStyle(.grouped)
+    private var footer: some View {
+        HStack(spacing: 12) {
+            stepIndicator
+
+            Spacer()
+
+            if step != .welcome {
+                Button(L10n.string("Back")) { move(by: -1) }
+            }
+            if step != .completion {
+                Button(L10n.string("Set Up Later")) { finish() }
+            }
+            Button(L10n.string(primaryButtonTitle)) {
+                if step == .completion { finish() } else { move(by: 1) }
+            }
+            .keyboardShortcut(.defaultAction)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+    }
+
+    private var primaryButtonTitle: String {
+        switch step {
+        case .welcome: return "Get Started"
+        case .completion: return "Done"
+        default: return "Continue"
+        }
+    }
+
+    private var stepIndicator: some View {
+        HStack(spacing: 6) {
+            ForEach(Step.allCases, id: \.self) { item in
+                Circle()
+                    .fill(item == step ? Color.accentColor : Color.secondary.opacity(0.35))
+                    .frame(width: 7, height: 7)
             }
         }
+        .accessibilityElement()
+        .accessibilityLabel(L10n.format("Step %d of %d", step.rawValue + 1, Step.allCases.count))
     }
 
-    @ViewBuilder
-    private var pageContent: some View {
-        switch step {
-        case .welcome:
-            welcomePage
-        case .preferences:
-            preferencesPage
-        case .agents:
-            agentsPage
-        case .completion:
-            completionPage
-        }
-    }
+    // MARK: - Pages
 
     private var welcomePage: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                VStack(spacing: 14) {
-                    if let appIcon = AppIcon.image(size: 96) {
-                        Image(nsImage: appIcon)
-                            .accessibilityHidden(true)
-                    }
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                if let appIcon = AppIcon.image(size: 88) {
+                    Image(nsImage: appIcon)
+                        .accessibilityHidden(true)
+                }
+                Text(L10n.string("Welcome to Awake"))
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .accessibilityAddTraits(.isHeader)
+                Text(L10n.string("Awake keeps your Mac awake while AI coding agents work, even with the lid closed. This short guide sets up the essentials."))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-                    Text(L10n.string("Welcome to Awake"))
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+            VStack(alignment: .leading, spacing: 14) {
+                feature(symbol: "cpu", title: "While Agent Is Running",
+                        description: "Stay awake while your linked agents are working.")
+                feature(symbol: "timer", title: "For Duration",
+                        description: "Stay awake for a set time, then sleep as usual.")
+                feature(symbol: "arrow.down.circle", title: "While Downloading",
+                        description: "Stay awake until the downloads in a folder finish.")
+                feature(symbol: "fanblades", title: "Cooling",
+                        description: "Run the fans faster while an agent works with the lid closed.")
+            }
+            .frame(maxWidth: 420, alignment: .leading)
+        }
+        .padding(.horizontal, 48)
+        .padding(.vertical, 28)
+    }
+
+    private var formPage: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: step.symbol)
+                    .font(.system(size: 26, weight: .regular))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 34)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string(step.title))
+                        .font(.title2)
+                        .fontWeight(.semibold)
                         .accessibilityAddTraits(.isHeader)
-
-                    Text(L10n.string("Awake keeps your Mac awake while AI coding agents run, even with the lid closed. This short setup covers the essentials."))
-                        .font(.body)
+                    Text(L10n.string(step.subtitle))
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-
-                VStack(alignment: .leading, spacing: 20) {
-                    welcomeFeature(
-                        symbol: "cpu",
-                        title: "While Agent is Running",
-                        description: "Awake follows activity from your linked agents."
-                    )
-                    welcomeFeature(
-                        symbol: "timer",
-                        title: "For Duration",
-                        description: "Keep working for a set time, then return to normal sleep."
-                    )
-                    welcomeFeature(
-                        symbol: "infinity",
-                        title: "Indefinitely",
-                        description: "Stay awake until you choose to stop."
-                    )
-                }
-                .frame(maxWidth: 440, alignment: .leading)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 40)
-            .padding(.vertical, 36)
+            .padding(.horizontal, 28)
+            .padding(.top, 26)
+            .padding(.bottom, 4)
+
+            Form {
+                switch step {
+                case .agents: agentsContent
+                case .permissions: permissionsContent
+                case .preferences: preferencesContent
+                case .welcome, .completion: EmptyView()
+                }
+            }
+            .formStyle(.grouped)
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 
-    private func welcomeFeature(symbol: String, title: String, description: String) -> some View {
+    @ViewBuilder
+    private var agentsContent: some View {
+        Section {
+            ForEach(AgentProvider.allCases) { provider in
+                providerRow(provider)
+            }
+        } footer: {
+            HStack {
+                Button {
+                    eventMonitor.reloadNow()
+                    integrationManager.refreshStatuses()
+                } label: {
+                    Label(L10n.string("Refresh"), systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.link)
+                Spacer(minLength: 12)
+                if let error = integrationManager.lastError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var permissionsContent: some View {
+        Section {
+            HelperAuthorizationRow(
+                closedDisplayModeManager: closedDisplayModeManager,
+                allowsRemoval: false,
+                onInstalled: { settings.closedDisplayModeEnabled = true }
+            )
+            Toggle(L10n.string("Stay Awake with the Lid Closed"), isOn: Binding(
+                get: { settings.closedDisplayModeEnabled && closedDisplayModeManager.isHelperInstalled },
+                set: { settings.closedDisplayModeEnabled = $0 }
+            ))
+            .disabled(!closedDisplayModeManager.isHelperInstalled)
+        } footer: {
+            Text(L10n.string("Closed-lid operation and fan control use this helper. macOS asks for an administrator password the first time."))
+        }
+    }
+
+    @ViewBuilder
+    private var preferencesContent: some View {
+        Section {
+            Toggle(L10n.string("Launch Awake at Login"), isOn: $settings.launchAtLogin)
+            Toggle(L10n.string("Enable Notifications"), isOn: $settings.notificationsEnabled)
+            if settings.notificationsEnabled && notificationManager.authorizationStatus == .denied {
+                Label(
+                    L10n.string("Notifications are turned off in System Settings."),
+                    systemImage: "exclamationmark.triangle"
+                )
+                .foregroundStyle(.red)
+            }
+            Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
+        }
+
+        Section {
+            Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
+            Toggle(
+                L10n.string("Prevent Screen Saver and Auto-Lock"),
+                isOn: $settings.preventScreenSaver
+            )
+        } footer: {
+            Text(L10n.string("These settings apply only while Keep Awake is on."))
+        }
+    }
+
+    private var completionPage: some View {
+        VStack(spacing: 22) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.green)
+                .accessibilityHidden(true)
+            Text(L10n.string("You're Ready"))
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 14) {
+                feature(symbol: "cursorarrow.click", title: "Left-Click the Cup",
+                        description: "Choose a mode and start Keep Awake or Cooling.")
+                feature(symbol: "cursorarrow.click.2", title: "Right-Click the Cup",
+                        description: "Start or stop Keep Awake, or pause monitoring, with one click.")
+                feature(symbol: "gearshape", title: "Settings",
+                        description: "Open Settings from the menu at any time. You can reopen this guide from General.")
+            }
+            .frame(maxWidth: 420, alignment: .leading)
+        }
+        .padding(.horizontal, 48)
+        .padding(.vertical, 28)
+    }
+
+    private func feature(symbol: String, title: String, description: String) -> some View {
         Label {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(L10n.string(title))
                     .fontWeight(.semibold)
                 Text(L10n.string(description))
@@ -190,68 +332,6 @@ struct OnboardingView: View {
         }
     }
 
-    private var preferencesPage: some View {
-        Group {
-            Section(L10n.string("General")) {
-                Toggle(L10n.string("Enable Notifications"), isOn: $settings.notificationsEnabled)
-                if notificationManager.authorizationStatus == .denied {
-                    Label(
-                        L10n.string("Notifications are disabled in System Settings."),
-                        systemImage: "exclamationmark.triangle"
-                    )
-                    .foregroundStyle(.secondary)
-                }
-                Toggle(L10n.string("Launch Awake at Login"), isOn: $settings.launchAtLogin)
-            }
-
-            Section(L10n.string("Display During Sessions")) {
-                Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
-                Toggle(
-                    L10n.string("Prevent Screen Saver & Idle Lock (Lid Open)"),
-                    isOn: $settings.preventScreenSaver
-                )
-                Text(L10n.string("These preferences apply only while Awake is actively preventing system sleep."))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var agentsPage: some View {
-        Group {
-            Section(L10n.string("Supported Providers")) {
-                ForEach(AgentProvider.allCases) { provider in
-                    providerRow(provider)
-                }
-            }
-
-            if let error = integrationManager.lastError {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red)
-            }
-        }
-    }
-
-    private var completionPage: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.green)
-                .accessibilityHidden(true)
-            Text(L10n.string("You're Ready"))
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .accessibilityAddTraits(.isHeader)
-            Text(L10n.string("Left-click the menu-bar cup for status, right-click to toggle Awake. You can revisit settings anytime from Settings...."))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: 440)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(40)
-    }
-
     private func providerRow(_ provider: AgentProvider) -> some View {
         let agent = settings.monitoredAgents.first { $0.provider == provider }
         let status = integrationManager.status(for: provider)
@@ -261,6 +341,7 @@ struct OnboardingView: View {
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(provider.displayName)
+                    .fontWeight(.medium)
                 Text(isInstalled ? status.label : L10n.string("CLI not installed"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -268,50 +349,40 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Toggle(
-                L10n.format("Monitor %@", provider.displayName),
-                isOn: Binding(
-                    get: { canMonitor && (agent?.isEnabled ?? false) },
-                    set: { enabled in
-                        if let agent, canMonitor, enabled != agent.isEnabled {
-                            settings.toggleAgent(id: agent.id)
-                        }
-                    }
-                )
-            )
-            .labelsHidden()
-            .disabled(!canMonitor)
-
             switch status {
             case .unlinked, .needsRepair:
                 Button(status == .needsRepair ? L10n.string("Repair") : L10n.string("Link")) {
                     pendingProvider = provider
                 }
                 .disabled(!isInstalled)
-                .frame(minWidth: 64)
             case .unverified, .linked:
-                Button(L10n.string("Test")) {
-                    integrationManager.test(provider)
-                }
-                .frame(minWidth: 64)
+                Toggle(
+                    L10n.format("Monitor %@", provider.displayName),
+                    isOn: Binding(
+                        get: { canMonitor && (agent?.isEnabled ?? false) },
+                        set: { enabled in
+                            if let agent, canMonitor, enabled != agent.isEnabled {
+                                settings.toggleAgent(id: agent.id)
+                            }
+                        }
+                    )
+                )
+                .labelsHidden()
+                .disabled(!canMonitor)
             }
         }
     }
 
-    private func moveForward() {
-        guard let next = Step(rawValue: step.rawValue + 1) else { return }
+    // MARK: - Navigation
+
+    private func move(by offset: Int) {
+        guard let next = Step(rawValue: step.rawValue + offset) else { return }
         step = next
-        if next == .agents { integrationManager.refreshStatuses() }
-    }
-
-    private func moveBackward() {
-        guard let previous = Step(rawValue: step.rawValue - 1) else { return }
-        step = previous
-    }
-
-    private func refreshStatus() {
-        notificationManager.refreshAuthorizationStatus()
-        integrationManager.refreshStatuses()
+        switch next {
+        case .agents: integrationManager.refreshStatuses()
+        case .permissions: Task { await closedDisplayModeManager.refreshHelperState() }
+        default: break
+        }
     }
 
     private func finish() {

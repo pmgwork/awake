@@ -16,7 +16,7 @@ public enum KeepAwakeModeType: String, Codable, CaseIterable, Identifiable {
     public var displayName: String {
         switch self {
         case .whileAgentRunning:
-            return L10n.string("While Agent is Running")
+            return L10n.string("While Agent Is Running")
         case .indefinitely:
             return L10n.string("Indefinitely")
         case .timer:

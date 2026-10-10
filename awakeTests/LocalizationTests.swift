@@ -6,7 +6,7 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.string("Language", language: .english), "Language")
         XCTAssertEqual(L10n.string("Language", language: .japanese), "言語")
         XCTAssertEqual(L10n.string("Language", language: .english), "Language")
-        XCTAssertEqual(L10n.string("System Default", language: .japanese), "システム設定に従う")
+        XCTAssertEqual(L10n.string("System Default", language: .japanese), "システムに合わせる")
     }
 
     func testJapaneseFormattingAndMissingTranslationFallback() {

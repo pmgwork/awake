@@ -67,7 +67,7 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
         isCheckingHelper = false
         guard requested else { return }
         guard isHelperInstalled else {
-            lastError = L10n.string("Install or update the helper to keep your Mac awake with the lid closed.")
+            lastError = L10n.string("Install or update the helper in Permissions to stay awake with the lid closed.")
             return
         }
         if process == nil { start() }
@@ -102,9 +102,9 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
                 if self.requested && self.isStopping && process.terminationStatus == 0 {
                     await self.refreshHelperState()
                 } else if self.requested {
-                    self.lastError = L10n.string("The closed-display override could not be enabled.")
+                    self.lastError = L10n.string("Couldn't keep the Mac awake with the lid closed.")
                 } else if process.terminationStatus != 0 {
-                    self.lastError = L10n.string("Normal lid sleep could not be restored.")
+                    self.lastError = L10n.string("Couldn't restore normal sleep when the lid closes.")
                 }
             }
         }
@@ -135,7 +135,7 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
         if data == Data("ready\n".utf8), process.isRunning {
             lastError = nil
         } else {
-            lastError = L10n.string("The closed-display override could not be enabled.")
+            lastError = L10n.string("Couldn't keep the Mac awake with the lid closed.")
         }
     }
 

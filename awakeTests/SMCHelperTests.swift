@@ -49,7 +49,7 @@ final class ClosedDisplayModeManagerTests: XCTestCase {
         manager.update(sessionActive: true, enabled: true)
         await manager.refreshHelperState()
         XCTAssertFalse(manager.isHelperInstalled)
-        XCTAssertEqual(manager.lastError, L10n.string("Install or update the helper to keep your Mac awake with the lid closed."))
+        XCTAssertEqual(manager.lastError, L10n.string("Install or update the helper in Permissions to stay awake with the lid closed."))
         manager.update(sessionActive: false, enabled: true)
         XCTAssertNil(manager.lastError)
     }

@@ -45,7 +45,13 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         applySize(for: selectedTab())
     }
 
-    public func show() {
+    /// Opens the window on `tab`, or on the last viewed tab when nil.
+    func show(tab: SettingsTab? = nil) {
+        if let tab, let index = SettingsTab.allCases.firstIndex(of: tab) {
+            configureTabs()
+            tabController.selectedTabViewItemIndex = index
+            applySize(for: tab)
+        }
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -138,14 +144,14 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
                     notificationManager: NotificationManager.shared,
                     updater: AppUpdater.shared
                 )
-            case .sessions:
-                SessionsSettingsView(
+            case .keepAwake:
+                KeepAwakeSettingsView(
                     settings: AwakeCoordinator.shared.settings,
                     screenBehaviorManager: AwakeCoordinator.shared.screenBehaviorManager,
                     closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
-            case .agents:
-                AgentSettingsView(
+            case .monitoring:
+                MonitoringSettingsView(
                     settings: AwakeCoordinator.shared.settings,
                     eventMonitor: AwakeCoordinator.shared.eventMonitor,
                     integrationManager: AwakeCoordinator.shared.hookIntegrationManager
@@ -153,7 +159,13 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             case .cooling:
                 CoolingSettingsView(
                     settings: AwakeCoordinator.shared.settings,
-                    fanController: AwakeCoordinator.shared.fanController
+                    fanController: AwakeCoordinator.shared.fanController,
+                    closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
+                )
+            case .permissions:
+                PermissionsSettingsView(
+                    settings: AwakeCoordinator.shared.settings,
+                    closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
             }
         }

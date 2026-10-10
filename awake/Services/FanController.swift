@@ -120,7 +120,7 @@ public final class FanController: ObservableObject {
             controller.finishApplying(
                 mode: .auto,
                 success: success,
-                errorMessage: L10n.string("Could not restore automatic fan control. Restart the Mac if manual control remains active.")
+                errorMessage: L10n.string("Couldn't return the fans to automatic control. If they stay fast, restart your Mac.")
             )
         }
     }
@@ -134,7 +134,7 @@ public final class FanController: ObservableObject {
             controller.finishApplying(
                 mode: .maximum,
                 success: success,
-                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. See the diagnostic log.")
+                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. Check the diagnostic log.")
             )
         }
     }
@@ -148,7 +148,7 @@ public final class FanController: ObservableObject {
             controller.finishApplying(
                 mode: .aggressive,
                 success: success,
-                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. See the diagnostic log.")
+                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. Check the diagnostic log.")
             )
         }
     }
@@ -162,7 +162,7 @@ public final class FanController: ObservableObject {
             controller.finishApplying(
                 mode: .moderate,
                 success: success,
-                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. See the diagnostic log.")
+                errorMessage: L10n.string("Fan control failed because the SMC rejected the command. Check the diagnostic log.")
             )
         }
     }
@@ -247,7 +247,7 @@ public final class FanController: ObservableObject {
                     FanController.shared.activeMode = .auto
                     FanController.shared.controlError = nil
                 } else {
-                    FanController.shared.controlError = L10n.string("Fans may be in manual mode. Restore Auto or restart the Mac.")
+                    FanController.shared.controlError = L10n.string("The fans may still be under manual control. Restart your Mac to return them to automatic control.")
                 }
             }
         }

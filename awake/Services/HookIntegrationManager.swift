@@ -66,6 +66,8 @@ public final class HookIntegrationManager: ObservableObject {
             }
         } onSuccess: { [weak self] in
             self?.settings.clearProviderTest(provider)
+            // Linking is how users say they want this agent watched.
+            self?.settings.enableAgent(for: provider)
         }
     }
 
@@ -703,12 +705,12 @@ public final class HookIntegrationManager: ObservableObject {
 
         public var errorDescription: String? {
             switch self {
-            case .bundledBridgeMissing: return L10n.string("The bundled AwakeHookBridge is missing.")
+            case .bundledBridgeMissing: return L10n.string("The AwakeHookBridge included with Awake is missing.")
             case .invalidBridgeSignature: return L10n.string("AwakeHookBridge failed signature validation.")
             case .bridgeUnavailable: return L10n.string("AwakeHookBridge is not installed or is damaged.")
             case .bridgeFailed: return L10n.string("AwakeHookBridge did not complete successfully.")
             case .pluginResourceMissing: return L10n.string("The OpenCode plugin resource is missing.")
-            case .testEventNotReceived: return L10n.string("Awake did not receive the integration test event.")
+            case .testEventNotReceived: return L10n.string("Awake didn't receive the test event.")
             case let .invalidConfiguration(path): return L10n.format("The provider configuration is invalid: %@", path)
             }
         }

@@ -26,9 +26,17 @@ struct ModeSelectorView: View {
                                   ? "largecircle.fill.circle"
                                   : "circle")
                                 .font(.system(size: 16))
-                                .foregroundStyle(settings.selectedMode == mode ? Color.accentColor : Color.secondary)
+                                .foregroundStyle(settings.selectedMode == mode ? Color.orange : Color.secondary)
                             Text(mode.displayName)
                                 .foregroundStyle(.primary)
+                            if mode == .timer, settings.selectedMode == .timer,
+                               coordinator.isActive, let end = coordinator.timerEndDate {
+                                Spacer(minLength: 8)
+                                Text(timerInterval: Date()...max(end, Date()), countsDown: true)
+                                    .font(.system(size: 10))
+                                    .monospacedDigit()
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         .contentShape(Rectangle())
                     }
@@ -39,13 +47,6 @@ struct ModeSelectorView: View {
                         timerPresetsGrid
                             .padding(.leading, 22)
                             .padding(.top, 2)
-                        if coordinator.isActive, let endTime = coordinator.formattedTimerEndTime {
-                            Text(L10n.format("Ends at %@", endTime))
-                                .font(.system(size: 9))
-                                .monospacedDigit()
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 22)
-                        }
                     }
                 }
             }
@@ -53,10 +54,10 @@ struct ModeSelectorView: View {
     }
 
     private let modeOrder: [KeepAwakeModeType] = [
-        .indefinitely,
+        .whileAgentRunning,
         .timer,
         .whileDownloading,
-        .whileAgentRunning
+        .indefinitely
     ]
 
     private var timerPresetsGrid: some View {
@@ -71,7 +72,7 @@ struct ModeSelectorView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
-                        .tint(settings.selectedTimerDuration == preset.duration ? .accentColor : nil)
+                        .tint(settings.selectedTimerDuration == preset.duration ? .orange : nil)
                     }
                 }
             }

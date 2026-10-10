@@ -226,19 +226,19 @@ public final class SleepManager: ObservableObject {
         var failures: [String] = []
 
         if assertionID == 0 {
-            failures.append(L10n.string("Idle sleep assertion could not be created."))
+            failures.append(L10n.string("Couldn't prevent idle sleep."))
         }
 
         if expectsClosedLidAssertion && closedLidAssertionID == 0 {
-            failures.append(L10n.string("Closed-lid sleep assertion could not be created."))
+            failures.append(L10n.string("Couldn't prevent sleep with the lid closed."))
         }
 
         if expectsCaffeinate && caffeinateProcess?.isRunning != true {
-            failures.append(L10n.string("The caffeinate fallback is not running."))
+            failures.append(L10n.string("The caffeinate fallback isn't running."))
         }
 
         if expectsBatteryHelper && batteryAssertionProcess?.isRunning != true {
-            failures.append(L10n.string("The battery closed-lid helper is not running."))
+            failures.append(L10n.string("The helper for closed-lid operation on battery isn't running."))
         }
 
         let isEffective: Bool

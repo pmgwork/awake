@@ -18,7 +18,7 @@ struct awakeApp: App {
         }
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button(L10n.string("Settings...", language: settings.language)) {
+                Button(L10n.string("Settings…", language: settings.language)) {
                     SettingsWindowController.shared.show()
                 }
                 .keyboardShortcut(",", modifiers: .command)
@@ -34,6 +34,10 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private var cancellables = Set<AnyCancellable>()
     private var popoverContentSizeObservation: NSKeyValueObservation?
+    private var popoverAnchorWindow: NSWindow?
+    private var iconOnlyButtonWidth: CGFloat?
+    private var isShowingTimerInStatusItem = false
+    private static let statusIconSize = NSSize(width: 21, height: 16.8)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureStatusItem()
@@ -44,6 +48,14 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         // Touch the shared updater so Sparkle starts scheduled checks. The
         // schedule (and the user's preference) lives in AppUpdater.
         _ = AppUpdater.shared
+
+        #if DEBUG
+        // Opens a settings tab on launch so each pane can be captured.
+        if let raw = UserDefaults.standard.string(forKey: "AwakeDebugSettingsTab"),
+           let tab = SettingsTab(rawValue: raw) {
+            DispatchQueue.main.async { SettingsWindowController.shared.show(tab: tab) }
+        }
+        #endif
 
         if !coordinator.settings.hasCompletedOnboarding {
             DispatchQueue.main.async { [weak self] in
@@ -84,7 +96,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         // SwiftUI only tracks its ideal size in `preferredContentSize` when
         // this option is set, and NSPopover does not follow that property on
         // its own. Observe it so rows that appear or disappear while the menu
-        // is open (grace period, agent sessions, downloads) resize the popover
+        // is open (agent sessions, downloads) resize the popover
         // instead of clipping the controls below them.
         hostingController.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hostingController
@@ -117,6 +129,13 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSPopover.didCloseNotification, object: popover)
+            .sink { [weak self] _ in
+                self?.popoverAnchorWindow?.orderOut(nil)
+                self?.statusItem.button?.highlight(false)
+            }
+            .store(in: &cancellables)
     }
 
     @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
@@ -131,9 +150,56 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         } else {
             NSApp.activate(ignoringOtherApps: true)
             resizePopoverToFitContent()
-            popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            showPopover(from: sender)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    /// Shows the popover from a fixed, invisible window laid exactly over the
+    /// icon. Anchoring to the status button itself makes AppKit misplace the
+    /// popover when the item widens for the remaining time (it applies the
+    /// button's new offset but not the window's new origin). The icon is drawn
+    /// at the trailing edge (see `timerStatusImage`) and status items grow
+    /// leftward, so this window keeps matching the icon.
+    private func showPopover(from button: NSStatusBarButton) {
+        guard let buttonWindow = button.window else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            return
+        }
+        if !isShowingTimerInStatusItem {
+            iconOnlyButtonWidth = button.bounds.width
+        }
+        // Opened while the remaining time is already showing (e.g. right after
+        // launch): estimate the icon-only width from the image plus padding.
+        let estimatedIconWidth = Self.statusIconSize.width + 16
+        let width = min(iconOnlyButtonWidth ?? estimatedIconWidth, button.bounds.width)
+        let iconRect = NSRect(
+            x: button.bounds.maxX - width,
+            y: button.bounds.minY,
+            width: width,
+            height: button.bounds.height
+        )
+        let screenRect = buttonWindow.convertToScreen(button.convert(iconRect, to: nil))
+
+        let anchorWindow = popoverAnchorWindow ?? {
+            let window = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.hasShadow = false
+            window.ignoresMouseEvents = true
+            window.level = .statusBar
+            window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+            window.isReleasedWhenClosed = false
+            window.contentView = NSView()
+            popoverAnchorWindow = window
+            return window
+        }()
+        anchorWindow.setFrame(screenRect, display: false)
+        anchorWindow.orderFrontRegardless()
+
+        guard let anchorView = anchorWindow.contentView else { return }
+        popover.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
+        button.highlight(true)
     }
 
     private func resizePopoverToFitContent() {
@@ -148,19 +214,52 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
 
-        button.image = statusIcon()
-        button.toolTip = settingsToolTip
-
         let shouldShowTimer = coordinator.isActive &&
             coordinator.settings.selectedMode == .timer &&
             coordinator.settings.showTimerInMenuBar
-        button.font = .monospacedDigitSystemFont(
-            ofSize: NSFont.systemFontSize,
-            weight: .regular
+        isShowingTimerInStatusItem = shouldShowTimer
+
+        let icon = statusIcon()
+        button.image = shouldShowTimer
+            ? icon.map { timerStatusImage(icon: $0, text: coordinator.formattedRemainingTime) }
+            : icon
+        button.title = ""
+        button.imagePosition = .imageOnly
+        button.toolTip = settingsToolTip
+        button.setAccessibilityValue(shouldShowTimer
+            ? "\(accessibilityStatus), \(coordinator.formattedRemainingTime)"
+            : accessibilityStatus)
+    }
+
+    /// Draws the remaining time and the icon into one template image. Keeping
+    /// the button image-only gives the icon the same trailing padding as when
+    /// no time is shown, so it does not shift when the time appears.
+    private func timerStatusImage(icon: NSImage, text: String) -> NSImage {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
+            .foregroundColor: NSColor.black
+        ]
+        let textSize = (text as NSString).size(withAttributes: attributes)
+        let spacing: CGFloat = 4
+        let size = NSSize(
+            width: ceil(textSize.width) + spacing + icon.size.width,
+            height: max(icon.size.height, ceil(textSize.height))
         )
-        button.title = shouldShowTimer ? coordinator.formattedRemainingTime : ""
-        button.imagePosition = shouldShowTimer ? .imageLeading : .imageOnly
-        button.setAccessibilityValue(accessibilityStatus)
+        let image = NSImage(size: size, flipped: false) { rect in
+            (text as NSString).draw(
+                at: NSPoint(x: 0, y: (rect.height - textSize.height) / 2),
+                withAttributes: attributes
+            )
+            icon.draw(in: NSRect(
+                x: rect.maxX - icon.size.width,
+                y: (rect.height - icon.size.height) / 2,
+                width: icon.size.width,
+                height: icon.size.height
+            ))
+            return true
+        }
+        image.isTemplate = icon.isTemplate
+        return image
     }
 
     private func statusIcon() -> NSImage? {
@@ -168,7 +267,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         guard let image = NSImage(named: NSImage.Name(iconName))?.copy() as? NSImage else {
             return nil
         }
-        image.size = NSSize(width: 21, height: 16.8)
+        image.size = Self.statusIconSize
         image.isTemplate = true
 
         // Leave the status button's tint untouched so AppKit can adapt the
@@ -203,15 +302,15 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private var settingsToolTip: String {
         if coordinator.settings.selectedMode == .whileAgentRunning {
             return coordinator.settings.agentMonitoringEnabled
-                ? L10n.string("Left-click for menu, right-click to pause agent monitoring")
-                : L10n.string("Left-click for menu, right-click to resume agent monitoring")
+                ? L10n.string("Click to open the menu. Right-click to pause agent monitoring.")
+                : L10n.string("Click to open the menu. Right-click to resume agent monitoring.")
         }
         if coordinator.settings.selectedMode == .whileDownloading {
             return coordinator.settings.downloadMonitoringEnabled
-                ? L10n.string("Left-click for menu, right-click to pause download monitoring")
-                : L10n.string("Left-click for menu, right-click to resume download monitoring")
+                ? L10n.string("Click to open the menu. Right-click to pause download monitoring.")
+                : L10n.string("Click to open the menu. Right-click to resume download monitoring.")
         }
-        return L10n.string("Left-click for menu, right-click to toggle Awake")
+        return L10n.string("Click to open the menu. Right-click to start or stop Keep Awake.")
     }
 
     private var accessibilityStatus: String {
