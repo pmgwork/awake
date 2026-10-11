@@ -37,6 +37,7 @@ public final class SettingsStore: ObservableObject {
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
         static let closedDisplayModeEnabled = "pmgwork.awake.closedDisplayModeEnabled"
+        static let lowPowerModeWhenLidClosed = "pmgwork.awake.lowPowerModeWhenLidClosed"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
         static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
     }
@@ -183,6 +184,13 @@ public final class SettingsStore: ObservableObject {
     @Published public var closedDisplayModeEnabled: Bool {
         didSet {
             UserDefaults.standard.set(closedDisplayModeEnabled, forKey: Keys.closedDisplayModeEnabled)
+        }
+    }
+
+    /// Turns on Low Power Mode while the lid is closed during a session.
+    @Published public var lowPowerModeWhenLidClosed: Bool {
+        didSet {
+            UserDefaults.standard.set(lowPowerModeWhenLidClosed, forKey: Keys.lowPowerModeWhenLidClosed)
         }
     }
 
@@ -334,6 +342,7 @@ public final class SettingsStore: ObservableObject {
 
         self.closedDisplayModeEnabled = UserDefaults.standard.object(forKey: Keys.closedDisplayModeEnabled) == nil
             ? true : UserDefaults.standard.bool(forKey: Keys.closedDisplayModeEnabled)
+        self.lowPowerModeWhenLidClosed = UserDefaults.standard.bool(forKey: Keys.lowPowerModeWhenLidClosed)
 
         if let data = UserDefaults.standard.data(forKey: Keys.providerLastTestedAt),
            let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {

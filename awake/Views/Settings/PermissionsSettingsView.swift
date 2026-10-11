@@ -20,6 +20,11 @@ struct PermissionsSettingsView: View {
                     Text(L10n.string(isHelperInstalled && settings.closedDisplayModeEnabled ? "On" : "Off"))
                         .foregroundStyle(.secondary)
                 }
+                LabeledContent(L10n.string("Low Power Mode with the Lid Closed")) {
+                    Text(L10n.string(isHelperInstalled && settings.closedDisplayModeEnabled
+                        && settings.lowPowerModeWhenLidClosed ? "On" : "Off"))
+                        .foregroundStyle(.secondary)
+                }
                 LabeledContent(L10n.string("Fan Control")) {
                     Text(L10n.string(isHelperInstalled ? "Available" : "Unavailable"))
                         .foregroundStyle(.secondary)

@@ -208,3 +208,9 @@
 "Fan Speed" = "ファン速度";
 "Fans" = "ファン";
 "Agents" = "エージェント";
+"Use Low Power Mode with the Lid Closed" = "蓋を閉じている間は低電力モードにする";
+"Install or update the helper in Permissions to use Low Power Mode with the lid closed." = "蓋を閉じている間に低電力モードを使うには、「権限」でヘルパーをインストールまたは更新してください。";
+"Low Power Mode isn't available on this Mac." = "このMacでは低電力モードを使用できません。";
+"Couldn't turn on Low Power Mode." = "低電力モードをオンにできませんでした。";
+"Couldn't restore the previous Low Power Mode setting." = "低電力モードを元の設定に戻せませんでした。";
+"Low Power Mode with the Lid Closed" = "蓋を閉じている間の低電力モード";
