@@ -1,0 +1,79 @@
+name: Publish update feeds
+
+on:
+  release:
+    types: [published, edited, deleted]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/update-feeds.yml
+      - scripts/**
+      - awakeTests/*Tests.py
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/update-feeds.yml
+      - scripts/generate-update-feeds.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-feeds-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'publish' }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test release scripts and feed generation
+        run: |
+          python3 -m unittest discover -s awakeTests -p '*Tests.py'
+          sh -n scripts/release.sh scripts/package.sh scripts/release-version.sh
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate signed stable and beta feeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/generate-update-feeds.py --repository "$RELEASE_REPOSITORY"
+      - name: Publish both feeds atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          feed_worktree="$RUNNER_TEMP/update-feeds"
+          if [ -n "$(git ls-remote --heads origin refs/heads/update-feeds)" ]; then
+            git fetch origin update-feeds
+            git worktree add -B update-feeds "$feed_worktree" FETCH_HEAD
+          else
+            git worktree add --detach "$feed_worktree" HEAD
+            git -C "$feed_worktree" checkout --orphan update-feeds
+            git -C "$feed_worktree" rm -rf .
+          fi
+          cp dist/update-feeds/stable.xml dist/update-feeds/beta.xml "$feed_worktree/"
+          git -C "$feed_worktree" config user.name github-actions[bot]
+          git -C "$feed_worktree" config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C "$feed_worktree" add stable.xml beta.xml
+          if git -C "$feed_worktree" diff --cached --quiet; then
+            echo "Feeds are unchanged."
+          else
+            git -C "$feed_worktree" commit -m "Update stable and beta appcasts"
+            git -C "$feed_worktree" push origin HEAD:refs/heads/update-feeds
+          fi

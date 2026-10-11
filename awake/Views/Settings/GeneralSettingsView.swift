@@ -31,6 +31,18 @@ struct GeneralSettingsView: View {
 
             Section {
                 Toggle(
+                    L10n.string("Receive Beta Updates"),
+                    isOn: Binding(
+                        get: { updater.receivesBetaUpdates },
+                        set: { updater.setReceivesBetaUpdates($0) }
+                    )
+                )
+                .disabled(updater.isUpdateInProgress)
+                Text(L10n.string("Include beta releases when checking for updates. Turn this off to receive only stable releases; your installed version will not be downgraded."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle(
                     L10n.string("Check for Updates Automatically"),
                     isOn: Binding(
                         get: { updater.automaticallyChecksForUpdates },

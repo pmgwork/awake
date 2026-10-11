@@ -2,10 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Sparkle in-app updates. The feed URL always resolves to the newest
-	     stable GitHub Release, which must carry an appcast.xml asset. -->
+	<!-- Stable by default. AppUpdater selects the beta feed only with opt-in. -->
 	<key>SUFeedURL</key>
-	<string>https://github.com/PMGWork/awake/releases/latest/download/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/PMGWork/awake/update-feeds/stable.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>0Fy0NadcsAe7hxe9+GEQEUmhEko8rhVDEQOOh+q/LU8=</string>
 	<!-- Awake manages the "check automatically" preference in its own settings. -->

@@ -34,6 +34,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
    - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - With the DMG, macOS asks for the same approval of the disk image when you open it (that dialog has no *Open* button; use **System Settings → Privacy & Security**), then for the app after copying it to `/Applications`.
 
+Beta releases are marked **Pre-release** on the [releases page](https://github.com/PMGWork/awake/releases) (for example, `v0.6.0-beta.1`). Enable **Settings → General → Receive Beta Updates** to include them in in-app update checks. This is off by default. The beta feed includes stable releases too, so you can update to the matching stable version when it is released. Turning the setting off stops future beta updates and does not downgrade your installed version. You can also install a beta manually using the steps above.
+
 Awake runs only in the menu bar (no Dock icon).
 
 ## Usage
@@ -89,7 +91,7 @@ Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then p
 
 - Agent activity is detected from local hook events under `~/Library/Application Support/Awake`. Awake does not poll running processes and does not inspect your project or document files.
 - Download detection only looks at file names (`.download`, `.crdownload`, `.part`, …, skipping hidden files) in the folder you choose.
-- No analytics, no telemetry, no account. Awake contacts GitHub only to read `releases/latest` for update checks and to download an update after you agree to install it. Anonymous system profiling is disabled.
+- No analytics, no telemetry, no account. Awake reads update feeds hosted on `raw.githubusercontent.com` and downloads updates from GitHub Releases after you agree to install them. Anonymous system profiling is disabled.
 
 ## Building from source
 

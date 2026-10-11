@@ -3,12 +3,12 @@
 # account. No notarization: end users Gatekeeper-bypass once (see docs).
 #
 # Also generates the Sparkle appcast (dist/appcast.xml) that the in-app updater
-# reads from GitHub Releases. The EdDSA private key lives in the login Keychain
+# consumes through the stable/beta feeds. The EdDSA private key lives in the login Keychain
 # (create it once with dist/sparkle-tools/bin/generate_keys).
 #
 # Usage:
 #   scripts/package.sh [version]
-#   e.g. scripts/package.sh 0.4.1
+#   e.g. scripts/package.sh 0.6.0 or scripts/package.sh 0.6.0-beta.1
 # Output: dist/Awake-<version>.zip (+ .dmg when hdiutil available),
 #         dist/Awake-<version>.sha256, dist/appcast.xml
 set -eu
@@ -16,6 +16,7 @@ set -eu
 VERSION="${1:-0.4.1}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$PROJECT_DIR/dist"
+. "$PROJECT_DIR/scripts/release-version.sh"
 APP_NAME="awake.app"
 DMG_NAME="Awake-${VERSION}.dmg"
 ZIP_NAME="Awake-${VERSION}.zip"
@@ -40,13 +41,13 @@ mkdir -p "$DIST_DIR"
 rm -f "$DIST_DIR/$DMG_NAME" "$DIST_DIR/$ZIP_NAME"
 
 echo "==> Toolchain: $(xcodebuild -version | tr '\n' ' ')"
-echo "==> Building Release (MARKETING_VERSION=$VERSION)..."
+echo "==> Building Release (MARKETING_VERSION=$MARKETING_VERSION, CURRENT_PROJECT_VERSION=$BUILD_VERSION)..."
 DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild \
   -project "$PROJECT_DIR/awake.xcodeproj" \
   -scheme awake \
   -configuration Release \
-  MARKETING_VERSION="$VERSION" \
-  CURRENT_PROJECT_VERSION="$VERSION" \
+  MARKETING_VERSION="$MARKETING_VERSION" \
+  CURRENT_PROJECT_VERSION="$BUILD_VERSION" \
   CLANG_COVERAGE_MAPPING=NO \
   CLANG_ENABLE_CODE_COVERAGE=NO \
   -destination 'generic/platform=macOS' \
@@ -168,8 +169,8 @@ echo "==> Checksums..."
 (cd "$DIST_DIR" && shasum -a 256 "$ZIP_NAME" ${DMG_NAME:+$DMG_NAME} 2>/dev/null | tee "Awake-${VERSION}.sha256")
 
 # --- Sparkle appcast ---------------------------------------------------------
-# The appcast is uploaded to the GitHub Release and must also be reachable at
-# releases/latest/download/appcast.xml, which SUFeedURL points at. The tools
+# The appcast is attached to each GitHub Release and aggregated by the update
+# feed workflow. Keep the asset for older clients using releases/latest. The tools
 # are cached in dist/ so subsequent runs work offline.
 SPARKLE_VERSION="2.10.0"
 SPARKLE_DIR="$DIST_DIR/sparkle-tools"
