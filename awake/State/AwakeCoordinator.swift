@@ -357,7 +357,7 @@ public final class AwakeCoordinator: ObservableObject {
                 prepareForClosedLid: !isAC,
                 appliesToBattery: !isAC
             )
-        } else if hasExternal && settings.excludeNormalClamshell {
+        } else if hasExternal {
             // Awake / Normal Clamshell (External Display Connected)
             sleepManager.enableSleepPrevention(closedLid: false)
         } else {
@@ -372,9 +372,14 @@ public final class AwakeCoordinator: ObservableObject {
     /// and hands them back to the system otherwise. A fan test owns the fans
     /// while it runs.
     private func applyFanPolicy() {
+        guard displayBehaviorPolicy.allowsCooling else {
+            fanController.restoreAuto()
+            return
+        }
         guard !fanController.isTestModeActive else { return }
         if isForcedCoolingActive {
-            fanController.setFanMode(settings.coolingFanMode)
+            fanController.setFanMode(settings.coolingMode == .whileAgentRunning
+                ? settings.automaticCoolingFanMode : settings.manualCoolingFanMode)
         } else {
             fanController.restoreAuto()
         }
@@ -405,18 +410,15 @@ public final class AwakeCoordinator: ObservableObject {
                 active = isAgentCoolingNeeded
             }
         }
-        setForcedCoolingActive(active)
+        setForcedCoolingActive(active && displayBehaviorPolicy.allowsCooling)
     }
 
-    /// A monitored agent is running, narrowed by the options: lid closed
-    /// (unless an external display is attached and left to the system) and
-    /// AC power.
+    /// Agent cooling runs only with the lid closed and no external display.
     private var isAgentCoolingNeeded: Bool {
         guard eventMonitor.hasActiveSession else { return false }
+        guard displayBehaviorPolicy.allowsAgentCooling else { return false }
         if settings.onlyOnACPower && !powerMonitor.isOnACPower { return false }
-        guard settings.agentCoolingRequiresLidClosed else { return true }
-        guard lidMonitor.isLidClosed else { return false }
-        return !(displayMonitor.hasExternalDisplay && settings.excludeNormalClamshell)
+        return true
     }
 
     private func setForcedCoolingActive(_ active: Bool) {
@@ -563,13 +565,16 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private func applyClosedDisplayModePolicy() {
-        let policy = DisplayBehaviorPolicy(
-            lidClosed: lidMonitor.isLidClosed,
-            hasExternalDisplay: displayMonitor.hasExternalDisplay
-        )
         closedDisplayModeManager.update(
             sessionActive: isActive && !isRemovingHardwareAuthorization,
-            enabled: settings.closedDisplayModeEnabled && policy.needsClosedDisplayOverride
+            enabled: settings.closedDisplayModeEnabled && displayBehaviorPolicy.needsClosedDisplayOverride
+        )
+    }
+
+    private var displayBehaviorPolicy: DisplayBehaviorPolicy {
+        DisplayBehaviorPolicy(
+            lidClosed: lidMonitor.isLidClosed,
+            hasExternalDisplay: displayMonitor.hasExternalDisplay
         )
     }
 

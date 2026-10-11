@@ -21,6 +21,33 @@ final class CoolingSettingsMigrationTests: XCTestCase {
         SettingsStore.storedCoolingState(in: defaults)
     }
 
+    func testSharedFanSpeedMigratesToBothCoolingSpeeds() {
+        defaults.set(FanMode.aggressive.rawValue, forKey: "pmgwork.awake.coolingFanMode")
+        let speeds = SettingsStore.storedCoolingFanModes(in: defaults, isExistingInstall: true)
+        XCTAssertEqual(speeds.automatic, .aggressive)
+        XCTAssertEqual(speeds.manual, .aggressive)
+    }
+
+    func testSeparateFanSpeedsPreserveChoicesOverLegacySpeed() {
+        defaults.set(FanMode.aggressive.rawValue, forKey: "pmgwork.awake.coolingFanMode")
+        defaults.set(FanMode.maximum.rawValue, forKey: "pmgwork.awake.automaticCoolingFanMode")
+        defaults.set(FanMode.moderate.rawValue, forKey: "pmgwork.awake.manualCoolingFanMode")
+        let speeds = SettingsStore.storedCoolingFanModes(in: defaults, isExistingInstall: true)
+        XCTAssertEqual(speeds.automatic, .maximum)
+        XCTAssertEqual(speeds.manual, .moderate)
+    }
+
+    func testCoolingSpeedDefaultsAndInvalidAutomaticSpeed() {
+        let fresh = SettingsStore.storedCoolingFanModes(in: defaults, isExistingInstall: false)
+        XCTAssertEqual(fresh.automatic, .maximum)
+        XCTAssertEqual(fresh.manual, .maximum)
+        defaults.set(FanMode.auto.rawValue, forKey: "pmgwork.awake.automaticCoolingFanMode")
+        defaults.set(FanMode.maximum.rawValue, forKey: "pmgwork.awake.manualCoolingFanMode")
+        let existing = SettingsStore.storedCoolingFanModes(in: defaults, isExistingInstall: true)
+        XCTAssertEqual(existing.automatic, .aggressive)
+        XCTAssertEqual(existing.manual, .maximum)
+    }
+
     func testNewInstallDefaultsToArmedAgentMode() {
         let state = storedState()
         XCTAssertEqual(state.mode, .whileAgentRunning)

@@ -165,7 +165,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
                 )
             case .permissions:
                 PermissionsSettingsView(
-                    settings: AwakeCoordinator.shared.settings,
                     closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
             }

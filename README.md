@@ -12,7 +12,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 - **Agent-driven keep awake** — follows Codex, Claude Code, OpenCode, and Antigravity through their own hook events. No process polling.
 - **Other keep-awake modes** — for a fixed duration (15m–3h), while a download is in progress, or indefinitely.
-- **Closed-lid cooling** — optional fan control while an agent is running, by default only with the lid closed (Apple Silicon).
+- **Cooling** — optional fan control while an agent is running with the lid closed (Apple Silicon). Native clamshell operation leaves fans to macOS.
 - **Battery protection** — turns everything off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
 - **Closed-lid Low Power Mode** — optionally turns on macOS Low Power Mode while the lid is closed during a session, and restores your previous setting afterwards.
@@ -48,7 +48,7 @@ Awake runs only in the menu bar (no Dock icon).
   - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
   - **Keep Awake** — display and screen saver, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
   - **Monitor** — link or unlink each agent provider, watch live sessions, and choose the download folder.
-  - **Cooling** — fan speed, and options for the agent mode.
+  - **Cooling** — separate automatic and manual fan speeds, and options for the agent mode.
   - **Permissions** — install, update, or remove the shared helper.
 
 ## Agent integrations
@@ -69,19 +69,20 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 
 ## Cooling
 
-Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**; every mode runs the fans at the speed set in Settings → Cooling (default 100%). While cooling is stopped or paused, macOS controls the fans.
+Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**. Settings → Cooling has separate fan speeds for **Automatic Cooling** (While Agent Is Running) and **Manual Cooling** (Indefinitely and For Duration), both defaulting to 100% on new installations. Existing fan-speed settings are carried over to both. While cooling is stopped or paused, macOS controls the fans.
 
 | Mode | Behavior |
 |---|---|
 | Indefinitely | Fans stay up until you stop cooling |
 | For Duration | 5 / 10 / 15 / 30 minutes, then fans go back to macOS |
-| While Agent Is Running | While a monitored agent is running (by default only with the lid closed). Starts when selected; pause or resume it from the menu (default) |
+| While Agent Is Running | While a monitored agent is running with the lid closed. Starts when selected; pause or resume it from the menu (default) |
 
 - Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
 - Cooling stops when the battery reaches the low-battery cutoff. Indefinite and timed cooling are not kept after a relaunch.
-- "While Agent Is Running" options: "Only While the Lid Is Closed" (on by default), "Leave Fans to macOS with an External Display" (when the lid is closed and an external display is connected), and "Only When Plugged In".
+- "While Agent Is Running" option: "Only When Plugged In". Agent cooling runs only with the lid closed.
+- With the lid closed and an external display connected, all cooling modes leave fan control to macOS. Awake does not override closed-lid sleep or enable Low Power Mode in this state. Cooling resumes when this state ends if the selected mode still applies.
 - Use Remove… in Settings → Permissions to remove the helper. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
 
 ## Privacy

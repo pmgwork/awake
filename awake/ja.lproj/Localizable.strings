@@ -32,7 +32,6 @@
 
 "Cancel" = "キャンセル";
 
-"Leave Fans to macOS with an External Display" = "外部ディスプレイ接続中はファンをmacOSに任せる";
 "Auto (System Control)" = "自動（システム制御）";
 "Update the helper to use it on this Mac, including closed-lid operation on battery." = "このMacで使うには、ヘルパーの更新が必要です（バッテリー駆動中に蓋を閉じて使う場合も含みます）。";
 "Updating…" = "更新中…";
@@ -176,10 +175,11 @@
 "Allow the helper in Permissions to stay awake with the lid closed." = "蓋を閉じたまま使うには、「権限」でヘルパーを許可してください。";
 "Allow the helper in Permissions to control the fans." = "ファンを制御するには、「権限」でヘルパーを許可してください。";
 "On battery, Keep Awake and Cooling stop when the charge falls to this level." = "バッテリー駆動中に残量がここまで下がると、スリープ防止と冷却を停止します。";
-"Only While the Lid Is Closed" = "蓋を閉じている間だけ";
 "Only When Plugged In" = "電源アダプタ接続時のみ";
-"Runs the fans while a monitored agent is working. It starts as soon as you select it in the menu, and you can pause it there." = "監視中のエージェントが作業している間、ファンを回します。メニューで選ぶとすぐに始まり、メニューから一時停止できます。";
-"Every cooling mode runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart." = "冷却モードはすべて、この速度でファンを回します。バッテリー残量が「停止するバッテリー残量」を下回っている間は使えません。Awakeを再起動しても続くのは「エージェント実行中」だけです。";
+"Runs only with the lid closed." = "蓋を閉じている間だけ動作します。";
+"Automatic Cooling" = "自動冷却";
+"Manual Cooling" = "手動冷却";
+"Automatic: While Agent Is Running. Manual: Indefinitely or For Duration." = "自動は「エージェント実行中」、手動は「無期限」「時間を指定」に適用します。";
 "Pause Agent Cooling" = "エージェント冷却を一時停止";
 "Resume Agent Cooling" = "エージェント冷却を再開";
 "The fans may still be under manual control. Restart your Mac to return them to automatic control." = "ファンが手動制御のままの可能性があります。Macを再起動すると自動制御に戻ります。";
