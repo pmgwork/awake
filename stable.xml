@@ -1,31 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Stable Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake stable update feed</description><item>
-            <title>0.6.0</title>
-            <pubDate>Mon, 12 Oct 2026 01:55:32 +0900</pubDate>
-            <link>https://github.com/PMGWork/awake</link>
-            <sparkle:version>0.6.0</sparkle:version>
-            <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown">## What's Changed
-
-- Added an option to enable macOS Low Power Mode while the lid is closed during a session and restore the previous setting afterwards.
-- Added separate fan speeds for **Automatic Cooling** and **Manual Cooling**. Existing fan-speed preferences are carried over to both settings.
-- Simplified cooling modes to **While Agent Is Running**, **Indefinitely**, and **For Duration**. Existing mode selections are migrated.
-- Automatic cooling now runs only with the lid closed. With the lid closed and an external display connected, Awake leaves fan control to macOS and does not override closed-lid sleep or enable Low Power Mode.
-- Improved hardware permission status and settings layout.
-- Added **Receive Beta Updates** in **Settings → General**, off by default, and separate signed update feeds for stable and beta releases. Turning beta updates off does not downgrade the installed app.
-- Simplified Software Updates by removing the extra beta-update explanation.
-- Added a packaging check to prevent coverage files from being included in distributed apps.
-
-## Installation
-
-Download `Awake-0.6.0.zip` or `Awake-0.6.0.dmg` and move `Awake.app` to `/Applications`. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
-
-[Full Changelog](https://github.com/PMGWork/awake/compare/v0.5.0...v0.6.0)
-</description>
-            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0/Awake-0.6.0.zip" length="4374252" type="application/octet-stream" sparkle:edSignature="SqJdqsMUWgPeaIr+sspN3VYOshZcHImyVq+Ghj1YTVJpm7+dBKVe8GmVEqW+5J8ngn1Rh5AMEIGUB2oEtXCHDQ==" />
-        </item>
-        <item>
             <title>0.5.0</title>
             <pubDate>Sat, 10 Oct 2026 20:44:16 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
