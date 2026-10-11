@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Stable Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake stable update feed</description><item>
+            <title>0.5.0</title>
+            <pubDate>Sat, 10 Oct 2026 20:44:16 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.5.0</sparkle:version>
+            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## 変更内容
+
+- 冷却モードを刷新しました。新しい「エージェント実行中」モードは選ぶだけで有効になり、エージェントの作業中だけファンを回します。「蓋を閉じている時だけ」「外部ディスプレイ接続時は macOS に任せる」「電源接続時のみ」を選べます。
+- 設定画面を「一般」「Keep Awake」「監視」「冷却」「権限」の5つのタブに整理しました。ヘルパーのインストール・削除は「権限」タブにまとめています。
+- ウェルカムガイドを作り直し、エージェントの連携、閉蓋・ファン用の権限、基本設定を順に設定できるようにしました。
+- メニューバーで残り時間を表示し始めたときに、ポップオーバーとアイコンが横にずれる問題を修正しました。
+- ポップオーバーの構成を見直し、実行中のエージェントとダウンロードの状況を Keep Awake の直下に表示するようにしました。
+- エージェントを連携すると、そのエージェントの監視を自動でオンにするようにしました。
+- エージェントのフックが作業中のフォルダに `default.profraw` を作ってしまう問題を修正しました。アプリの起動時にフック用ブリッジを自動で更新します。作成済みの `default.profraw` は削除して問題ありません。
+- 英語・日本語の表記を全体的に見直しました。
+- 新規インストール時の初期設定を「エージェント実行中」モードにしました。既存の設定はそのまま引き継がれます。
+- 設定画面のファンテストと、エージェント完了後の猶予時間の設定を削除しました。
+
+## インストール
+
+`Awake-0.5.0.zip` または `Awake-0.5.0.dmg` をダウンロードし、`Awake.app` を `/Applications` に移動してください。未公証のため、macOSに起動をブロックされた場合は「システム設定 → プライバシーとセキュリティ → このまま開く」を使用してください。
+
+[変更一覧](https://github.com/PMGWork/awake/compare/v0.4.1...v0.5.0)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.5.0/Awake-0.5.0.zip" length="4300292" type="application/octet-stream" sparkle:edSignature="vgEaUS8CANZBEvskwJqOh0zzONRlLXm9nyLsJlL0zLoJDi7NTT3fRywHropVbPNhvDSTVhWBbYYJ7CZHSqUsDw==" />
+        </item>
+        <item>
+            <title>0.4.1</title>
+            <pubDate>Fri, 02 Oct 2026 03:48:52 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.4.1</sparkle:version>
+            <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## 変更内容
+
+- 閉蓋動作とファン制御の管理者権限を共通ヘルパーで管理するよう修正しました。設定画面からインストール・更新・再インストール・権限削除ができます。
+- ヘルパーが未インストール・旧バージョンの場合、閉蓋動作と冷却をオンにできないようにしました。認証に成功すると、その画面に対応する設定を自動でオンにします。
+- 権限削除時はスリープ防止を終了し、閉蓋制御とファンの自動制御への復帰を確認してからヘルパーを削除します。
+- 外部ディスプレイを接続したクラムシェルモードで、画面のスリープ防止設定が適用されるよう修正しました。この状態では閉蓋スリープの上書きを行いません。
+- OpenCodeの接続切断時にスリープ防止を解除し、自動で再接続するよう修正しました。完了後に遅れて届いたイベントで古いセッションが再開する問題も修正しました。
+- アプリ内で表示言語を選べるようにし、日本語の表記と設定項目を整理しました。
+- 古い画面ロック猶予機能を削除しました。旧版が変更した設定を元に戻す処理は維持しています。
+
+## 更新時の注意
+
+閉蓋動作・ファン制御を使用する場合は、設定画面の「更新」からヘルパーを更新してください。管理者認証が必要です。
+
+## インストール
+
+`Awake-0.4.1.zip` または `Awake-0.4.1.dmg` をダウンロードし、`Awake.app` を `/Applications` に移動してください。未公証のため、macOSに起動をブロックされた場合は「システム設定 → プライバシーとセキュリティ → このまま開く」を使用してください。
+
+[変更一覧](https://github.com/PMGWork/awake/compare/v0.4.0...v0.4.1)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.4.1/Awake-0.4.1.zip" length="4686362" type="application/octet-stream" sparkle:edSignature="N5zKYH495Raipyi54taltlCESpojlejxo8OYvcEHrb1Kc2WQOZh2Dw72drRutjMrZhxebREPNGHcwPPZfY9PDw==" />
+        </item>
+        <item>
+            <title>0.4.0</title>
+            <pubDate>Thu, 24 Sep 2026 03:32:43 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.4.0</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## What's Changed
+
+Awake 0.4.0 adds a closed-display mode for keeping agent work running while the MacBook lid is closed and simplifies the display settings.
+
+### New
+
+- **Keep Mac Awake with Lid Closed** — an optional closed-display mode holds a clamshell-sleep override during active sessions and releases it when the session ends or Awake exits. The built-in display can still turn off and macOS may require a password when the lid opens; this feature keeps the Mac running, not unlocked.
+- **Display &amp; Lid During Sessions** — display sleep, screen saver/idle-lock prevention, and closed-display mode now appear together in Settings → Sessions. The screen saver control applies while the lid is open.
+- **Updated defaults** — new installations and Reset to Defaults now leave display-sleep prevention off and enable screen saver prevention and closed-display mode. Existing saved preferences remain unchanged.
+
+### Fixed
+
+- The previous password-delay override was ineffective for preventing a lock when closing the lid. Awake now restores any stale override and leaves macOS password settings alone.
+
+## Installation
+
+Download `Awake-0.4.0.zip` or `Awake-0.4.0.dmg` and move `Awake.app` to `/Applications`. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+**Full Changelog**: https://github.com/PMGWork/awake/compare/v0.3.0...v0.4.0
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.4.0/Awake-0.4.0.zip" length="4655662" type="application/octet-stream" sparkle:edSignature="K33CFVxAyiSa41GvIXcXaQ1+puEZx+ajOEkki0M1P24yuyKletjHkUGyvQT7C+ku34Lpp/grohN92CD9Odf/CA==" />
+        </item>
+        <item>
+            <title>0.3.0</title>
+            <pubDate>Fri, 18 Sep 2026 06:14:15 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.3.0</sparkle:version>
+            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## What's Changed
+
+Awake 0.3.0 adds a 50% closed-lid fan mode, revises the menu and settings UI, requires macOS 26 or later, and fixes several safety issues in agent tracking and fan control.
+
+### New
+
+- **50% closed-lid fan mode** — closed-lid cooling can now run the fans at 50%, in addition to 100% (Maximum) and 75% (Aggressive). Fan modes are labeled by speed in **Settings → Cooling**.
+- **Cleaner mode and timer controls** — the menu-bar mode list is easier to scan, the countdown timer uses monospaced digits, and the settings window is more compact.
+- **macOS 26/27 fit and finish** — the settings window follows the content of each tab, and legacy code paths for older macOS versions were removed.
+
+### Requirements
+
+- **macOS 26 (Tahoe) or later** (previously macOS 13). macOS 27 is supported; closed-lid fan control requires Apple silicon.
+- Because of the new minimum, macOS 13–25 installations cannot run 0.3.0, so the in-app updater will not offer it there.
+
+### Fixed
+
+- **Agent sessions could be dropped during cleanup** — a cleanup pass could delete a newer "active" event, so Awake sometimes stopped while an agent was still running.
+- **Fans could stay at a manual speed after a crash or force-quit** — the helper now returns the fans to system control if Awake exits while it is still starting up, and the app installs or updates the helper automatically the first time a manual fan mode is used (one administrator prompt).
+- **"Restore Auto" could stop responding after a single failure** — automatic restore now retries with a short backoff, so the battery fail-safe and the Restore Auto button keep working.
+- **A crash could leave `caffeinate` running forever** — the fallback process now exits as soon as Awake does.
+- **The menu-bar popover now resizes while it is open**, so the Start/Stop button and footer stay reachable when agent, download, or grace rows appear.
+- **Linking or testing agents no longer blocks the UI**, and a stuck hook can no longer freeze the app.
+- **Settings window** reopened with the wrong title and size when it was last closed on a tab other than General.
+- **OpenCode integration** — unlink cleans up both `opencode.json` and `opencode.jsonc`, the original `.awake-backup` file is preserved across repairs, and JSONC string values are no longer rewritten.
+
+## Installation
+
+1. Download `Awake-0.3.0.zip` (or `Awake-0.3.0.dmg`) and move `Awake.app` to `/Applications`. The DMG opens as a drag-and-drop window.
+2. The build is not notarized, so the first launch needs one Gatekeeper step:
+   - try to open the app once and dismiss the warning, then go to **System Settings → Privacy &amp; Security → Security** and click **Open Anyway**
+   - or clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
+
+**Full Changelog**: https://github.com/PMGWork/awake/compare/v0.2.1...v0.3.0
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.3.0/Awake-0.3.0.zip" length="4605961" type="application/octet-stream" sparkle:edSignature="qc132Wk4Dqdw6j2GS03oaVuEo5ZpyFv28zCrdyEkMgxuxYAlKo0o5IEg+STr2fdu51xBtWno9EZQ8nvd5W2sDA==" />
+        </item>
+        <item>
+            <title>0.2.1</title>
+            <pubDate>Thu, 17 Sep 2026 02:28:32 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.2.1</sparkle:version>
+            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.2.1/Awake-0.2.1.zip" length="4613428" type="application/octet-stream" sparkle:edSignature="rH7yYH+ebJxhbEkzbFxhpbJS00bZ4oTPnCI1Fttvsb1CA3wswjAFNeaDU+i+qqbWBYbmEmrQjoEF+ipYoGcwAg==" />
+        </item>
+        <item>
+            <title>0.2.0</title>
+            <pubDate>Wed, 16 Sep 2026 21:58:30 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.2.0</sparkle:version>
+            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.2.0/Awake-0.2.0.zip" length="4611368" type="application/octet-stream" sparkle:edSignature="yQL3GXHflt8C6+FBEp0rJ8d/PkRqt2Nwa28StmncGv2XHFP2exjLiaojbLex0Y4X09l4XussFTzMNLcryRXhAQ==" />
+            <description sparkle:format="markdown">## What's Changed
+
+Awake 0.2.0 adds in-app updates and rebuilds the settings window.
+
+- **In-app updates** — Awake now uses Sparkle 2: **Settings → Software Updates → Check Now** downloads, installs, and relaunches the app for you. Awake 0.2.0 is the first release with the updater, so existing installations need this version downloaded manually once; later versions will arrive in-app.
+- **Redesigned settings window** — a toolbar-style layout with four tabs (General, Sessions, Agents, Cooling) and Liquid Glass styling. The window now sizes to its content instead of using a fixed size.
+- **Global keyboard shortcuts removed** — this feature is gone; keep-awake modes are selected from the menu bar.
+- **DMG installer** — the disk image now opens as a drag-to-Applications window, so installing no longer requires unzipping.
+- **Default mode is now Indefinitely** (was "while an agent is running").
+- **Agent presets start disabled** — Codex, Claude Code, OpenCode, and Antigravity are no longer monitored out of the box; enable the ones you use under Settings → Agents.
+- **Adjusted defaults** — Timer mode starts at 30 minutes (was 2 hours), Keep Awake After Completion at 1 minute (was 3 minutes), and closed-lid cooling in Aggressive (~75%) instead of Maximum (100%).
+- **Cleaner update screen** — removed "View all releases" and the "No account required" footer; onboarding no longer shows a "Step n of m" counter.
+- **Homebrew support removed** — downloads come from [GitHub Releases](https://github.com/PMGWork/awake/releases).
+
+## Requirements
+
+- macOS 13 (Ventura) or later
+- macOS 27 requires Apple silicon; Intel Macs are supported on macOS 13–26
+
+## Installation
+
+1. Download `Awake-0.2.0.zip` (or `Awake-0.2.0.dmg`) and move `Awake.app` to `/Applications`. The DMG opens as a drag-and-drop window.
+2. The build is not notarized, so the first launch needs one Gatekeeper step:
+   - macOS 15 or later (including 26/27): try to open the app once and dismiss the warning, then go to **System Settings → Privacy &amp; Security → Security** and click **Open Anyway**
+   - or clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
+
+## SHA256
+
+```
+c7d56dba02eb676ed2721d2aa332acb911d92fb26c6096eaac0eb3bfe45e4ea0  Awake-0.2.0.zip
+138ff06c4854b246d7f494231ab2d31d73967a9ff1a333eac998edc928e7333a  Awake-0.2.0.dmg
+```
+
+**Full Changelog**: https://github.com/PMGWork/awake/compare/v0.1.2...v0.2.0
+</description>
+        </item>
+    </channel></rss>
