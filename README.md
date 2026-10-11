@@ -15,6 +15,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 - **Closed-lid cooling** — optional fan control while an agent is running, by default only with the lid closed (Apple Silicon).
 - **Battery protection** — turns everything off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
+- **Closed-lid Low Power Mode** — optionally turns on macOS Low Power Mode while the lid is closed during a session, and restores your previous setting afterwards.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
 - **In-app updates** — checks GitHub Releases and installs new versions inside the app (Sparkle, EdDSA-verified); no account required.
 
@@ -45,7 +46,7 @@ Awake runs only in the menu bar (no Dock icon).
   - *Indefinitely* — until you stop it.
 - Settings:
   - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
-  - **Keep Awake** — display and screen saver, closed-lid operation, and battery cutoff.
+  - **Keep Awake** — display and screen saver, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
   - **Monitor** — link or unlink each agent provider, watch live sessions, and choose the download folder.
   - **Cooling** — fan speed, and options for the agent mode.
   - **Permissions** — install, update, or remove the shared helper.

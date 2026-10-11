@@ -34,6 +34,7 @@ public final class AwakeCoordinator: ObservableObject {
     public let screenBehaviorManager = ScreenBehaviorManager.shared
     private let legacyScreenLockRecovery = LegacyScreenLockRecovery.shared
     public let closedDisplayModeManager = ClosedDisplayModeManager.shared
+    public let lowPowerModeManager = LowPowerModeManager.shared
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
@@ -53,6 +54,9 @@ public final class AwakeCoordinator: ObservableObject {
         setupSubscriptions()
         startHeartbeat()
         restorePersistedTimerIfNeeded()
+        // A Low Power Mode setting left over from a session that ended
+        // without restoring it (for example after a restart).
+        Task { await lowPowerModeManager.restoreSavedStateIfNeeded() }
     }
 
     deinit {
@@ -188,10 +192,12 @@ public final class AwakeCoordinator: ObservableObject {
         let sleepStopped = await sleepManager.prepareForHelperRemoval()
         stopKeepAwake()
         let lidStopped = await closedDisplayModeManager.prepareForHelperRemoval()
+        let lowPowerStopped = await lowPowerModeManager.prepareForHelperRemoval()
         let fansStopped = await fanController.prepareForHelperRemoval()
-        guard sleepStopped, lidStopped, fansStopped else { return false }
+        guard sleepStopped, lidStopped, lowPowerStopped, fansStopped else { return false }
         guard await SMCHelper.shared.removeHelperTool() else { return false }
         settings.closedDisplayModeEnabled = false
+        settings.lowPowerModeWhenLidClosed = false
         await closedDisplayModeManager.refreshHelperState()
         return true
     }
@@ -285,6 +291,7 @@ public final class AwakeCoordinator: ObservableObject {
             applyScreenBehaviorPolicy()
             legacyScreenLockRecovery.restoreIfNeeded()
             applyClosedDisplayModePolicy()
+            applyLowPowerModePolicy()
         }
         guard !isRemovingHardwareAuthorization else { return }
         if !isLowBatteryCutoffActive {
@@ -563,6 +570,19 @@ public final class AwakeCoordinator: ObservableObject {
         closedDisplayModeManager.update(
             sessionActive: isActive && !isRemovingHardwareAuthorization,
             enabled: settings.closedDisplayModeEnabled && policy.needsClosedDisplayOverride
+        )
+    }
+
+    /// Low Power Mode while the lid is closed during a session, unless an
+    /// external display is attached (the Mac is then in normal clamshell use).
+    private func applyLowPowerModePolicy() {
+        lowPowerModeManager.update(
+            requested: isActive
+                && !isRemovingHardwareAuthorization
+                && settings.closedDisplayModeEnabled
+                && settings.lowPowerModeWhenLidClosed
+                && lidMonitor.isLidClosed
+                && !displayMonitor.hasExternalDisplay
         )
     }
 

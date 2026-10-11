@@ -12,7 +12,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-11"
+    private let helperProtocolVersion = "awake-smc-12"
 
     var closedDisplayHelperURL: URL { URL(fileURLWithPath: helperToolPath) }
     private let fanLeaseLock = NSLock()
@@ -646,6 +646,9 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         #include <signal.h>
         #include <poll.h>
         #include <errno.h>
+        #include <fcntl.h>
+        #include <spawn.h>
+        #include <sys/wait.h>
         #include <string.h>
         #include <unistd.h>
         #include <IOKit/pwr_mgt/IOPMLib.h>
@@ -879,9 +882,72 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             return result == kIOReturnSuccess ? 0 : 9;
         }
 
+        static bool isLowPowerKey(const char *key) {
+            return strcmp(key, "lowpowermode") == 0 || strcmp(key, "powermode") == 0;
+        }
+
+        // "-" leaves that power source unchanged.
+        static bool isLowPowerValue(const char *value) {
+            return strcmp(value, "-") == 0 || strcmp(value, "0") == 0 ||
+                   strcmp(value, "1") == 0 || strcmp(value, "2") == 0;
+        }
+
+        static bool runPmset(const char *source, const char *key, const char *value) {
+            if (strcmp(value, "-") == 0) return true;
+            char *const arguments[] = { "/usr/bin/pmset", (char *)source, (char *)key, (char *)value, NULL };
+            char *const environment[] = { "PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL };
+            // Keep pmset off the stdin/stdout pipes shared with Awake.
+            posix_spawn_file_actions_t actions;
+            if (posix_spawn_file_actions_init(&actions) != 0) return false;
+            posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
+            posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+            posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+            pid_t pid = 0;
+            int spawnResult = posix_spawn(&pid, "/usr/bin/pmset", &actions, NULL, arguments, environment);
+            posix_spawn_file_actions_destroy(&actions);
+            if (spawnResult != 0) return false;
+            int status = 0;
+            while (waitpid(pid, &status, 0) < 0) {
+                if (errno != EINTR) return false;
+            }
+            return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        }
+
+        static bool setLowPowerMode(const char *key, const char *battery, const char *ac) {
+            bool batteryOK = runPmset("-b", key, battery);
+            bool acOK = runPmset("-c", key, ac);
+            return batteryOK && acOK;
+        }
+
+        static int holdLowPowerMode(const char *key, const char *battery, const char *ac) {
+            pid_t awakePID = getppid();
+            if (awakePID <= 1) return 3;
+            signal(SIGPIPE, SIG_IGN);
+            signal(SIGTERM, handleStopSignal);
+            signal(SIGINT, handleStopSignal);
+            // pmset changes settings only for a real root user.
+            if (setuid(0) != 0) return 2;
+
+            const char *batteryLow = strcmp(battery, "-") == 0 ? "-" : "1";
+            const char *acLow = strcmp(ac, "-") == 0 ? "-" : "1";
+            if (!setLowPowerMode(key, batteryLow, acLow)) {
+                (void)setLowPowerMode(key, battery, ac);
+                return 9;
+            }
+            puts("ready");
+            fflush(stdout);
+            // Stop on stdin closure, a signal, or parent death.
+            struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
+            while (!shouldStop && getppid() == awakePID) {
+                int ready = poll(&input, 1, 1000);
+                if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+            }
+            return setLowPowerMode(key, battery, ac) ? 0 : 9;
+        }
+
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-11");
+                puts("awake-smc-12");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
@@ -889,6 +955,15 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             }
             if (argc > 1 && strcmp(argv[1], "hold-sleep") == 0) {
                 return holdBatterySleepAssertion();
+            }
+            if (argc > 1 && (strcmp(argv[1], "hold-lowpower") == 0 || strcmp(argv[1], "set-lowpower") == 0)) {
+                if (argc != 5 || !isLowPowerKey(argv[2]) ||
+                    !isLowPowerValue(argv[3]) || !isLowPowerValue(argv[4])) return 64;
+                if (strcmp(argv[1], "hold-lowpower") == 0) {
+                    return holdLowPowerMode(argv[2], argv[3], argv[4]);
+                }
+                if (setuid(0) != 0) return 2;
+                return setLowPowerMode(argv[2], argv[3], argv[4]) ? 0 : 9;
             }
             const char *mode = argc > 1 ? argv[1] : "auto";
             if (strcmp(mode, "max") != 0 && strcmp(mode, "aggressive") != 0 && strcmp(mode, "moderate") != 0 && strcmp(mode, "auto") != 0) return 64;

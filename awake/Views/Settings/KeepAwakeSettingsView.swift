@@ -5,6 +5,7 @@ struct KeepAwakeSettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var screenBehaviorManager: ScreenBehaviorManager
     @ObservedObject var closedDisplayModeManager: ClosedDisplayModeManager
+    @ObservedObject var lowPowerModeManager: LowPowerModeManager
     @ObservedObject private var coordinator = AwakeCoordinator.shared
 
     var body: some View {
@@ -19,6 +20,15 @@ struct KeepAwakeSettingsView: View {
                     }
                 ))
                 .disabled(!canEnableClosedDisplayMode)
+                Toggle(L10n.string("Use Low Power Mode with the Lid Closed"), isOn: Binding(
+                    get: { settings.lowPowerModeWhenLidClosed && isClosedDisplayModeOn },
+                    set: { enabled in
+                        if !enabled || isClosedDisplayModeOn {
+                            settings.lowPowerModeWhenLidClosed = enabled
+                        }
+                    }
+                ))
+                .disabled(!isClosedDisplayModeOn)
                 Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
                 Toggle(
                     L10n.string("Prevent Screen Saver and Auto-Lock"),
@@ -31,6 +41,11 @@ struct KeepAwakeSettingsView: View {
                 }
 
                 if let error = closedDisplayModeManager.lastError {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+
+                if let error = lowPowerModeManager.lastError {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 }
@@ -62,6 +77,11 @@ struct KeepAwakeSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await closedDisplayModeManager.refreshHelperState() }
         }
+    }
+
+    /// Low Power Mode applies only while the Mac stays awake with the lid closed.
+    private var isClosedDisplayModeOn: Bool {
+        canEnableClosedDisplayMode && settings.closedDisplayModeEnabled
     }
 
     private var canEnableClosedDisplayMode: Bool {
