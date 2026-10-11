@@ -196,6 +196,30 @@ public final class SettingsStore: ObservableObject {
 
     private var isSynchronizingLaunchAtLogin = false
 
+    /// Reads the saved cooling mode and whether it is armed, migrating
+    /// settings from earlier versions.
+    static func storedCoolingState(in defaults: UserDefaults) -> (mode: CoolingMode, armed: Bool) {
+        // "whileLidClosed" became the agent mode, which keeps the lid
+        // condition as an option.
+        let savedCoolingRaw = defaults.string(forKey: Keys.coolingMode)
+            .map { $0 == "whileLidClosed" ? CoolingMode.whileAgentRunning.rawValue : $0 }
+        if let savedCoolingMode = savedCoolingRaw.flatMap(CoolingMode.init(rawValue:)) {
+            return (savedCoolingMode, savedCoolingMode.survivesRelaunch
+                && defaults.bool(forKey: Keys.coolingArmed))
+        }
+        if savedCoolingRaw != nil {
+            // A mode that no longer exists, such as "system" (fans left to
+            // macOS), which is now just a stopped mode.
+            return (.whileAgentRunning, false)
+        }
+        // Closed-lid cooling used to be a separate setting that was on by
+        // default; carry it over as the "While Agent Is Running" mode,
+        // which is also the default for new installs.
+        let legacyEnabled = defaults.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
+            ? true : defaults.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
+        return (.whileAgentRunning, legacyEnabled)
+    }
+
     private init() {
         language = AppLanguage.stored()
         // Load agents or default presets
@@ -269,28 +293,9 @@ public final class SettingsStore: ObservableObject {
         self.agentCoolingRequiresLidClosed = UserDefaults.standard.object(forKey: Keys.agentCoolingRequiresLidClosed) == nil
             ? true : UserDefaults.standard.bool(forKey: Keys.agentCoolingRequiresLidClosed)
 
-        // "whileLidClosed" became the agent mode, which keeps the lid
-        // condition as an option.
-        let savedCoolingRaw = UserDefaults.standard.string(forKey: Keys.coolingMode)
-            .map { $0 == "whileLidClosed" ? CoolingMode.whileAgentRunning.rawValue : $0 }
-        if let savedCoolingMode = savedCoolingRaw.flatMap(CoolingMode.init(rawValue:)) {
-            self.coolingMode = savedCoolingMode
-            self.coolingArmed = savedCoolingMode.survivesRelaunch
-                && UserDefaults.standard.bool(forKey: Keys.coolingArmed)
-        } else if UserDefaults.standard.string(forKey: Keys.coolingMode) != nil {
-            // A mode that no longer exists, such as "system" (fans left to
-            // macOS), which is now just a stopped mode.
-            self.coolingMode = .whileAgentRunning
-            self.coolingArmed = false
-        } else {
-            // Closed-lid cooling used to be a separate setting that was on by
-            // default; carry it over as the "While Agent Is Running" mode,
-            // which is also the default for new installs.
-            let legacyEnabled = UserDefaults.standard.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
-                ? true : UserDefaults.standard.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
-            self.coolingMode = .whileAgentRunning
-            self.coolingArmed = legacyEnabled
-        }
+        let cooling = Self.storedCoolingState(in: .standard)
+        self.coolingMode = cooling.mode
+        self.coolingArmed = cooling.armed
         let savedBoostDuration = UserDefaults.standard.double(forKey: Keys.forcedCoolingDuration)
         self.forcedCoolingDuration = Self.forcedCoolingDurations.contains(savedBoostDuration)
             ? savedBoostDuration : 10 * 60
