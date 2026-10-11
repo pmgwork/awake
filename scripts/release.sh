@@ -9,8 +9,8 @@
 #
 # The release stays a draft on purpose: SUFeedURL resolves through
 # releases/latest, so users see nothing until the draft is published with
-# --publish, which is also when the stable appcast goes live. Beta releases
-# remain outside releases/latest and are downloaded manually.
+# --publish, which also requests regeneration of the stable and beta feeds.
+# Beta releases remain outside releases/latest.
 #
 # Usage:
 #   scripts/release.sh <version>              build, tag, and draft a release
@@ -19,7 +19,7 @@
 #   scripts/release.sh --dry-run <version>    print the plan without changing anything
 #
 # Versions: X.Y.Z for stable releases, X.Y.Z-beta.N for prereleases (N: 1–255).
-# Beta releases are installed manually and never marked as latest.
+# Beta releases are never marked as latest; opt-in users get the beta feed.
 set -eu
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -124,6 +124,11 @@ if [ "$MODE" = "publish" ]; then
         run gh release edit "$TAG" --draft=false --prerelease=true --latest=false
     else
         run gh release edit "$TAG" --draft=false --prerelease=false --latest
+    fi
+    # Explicit dispatch also works when publishing with GITHUB_TOKEN, whose
+    # release events do not start another workflow.
+    if ! run gh workflow run update-feeds.yml --ref main --repo "$REPO"; then
+        die "$TAG was published, but feed regeneration could not be requested. Retry: gh workflow run update-feeds.yml --ref main --repo $REPO"
     fi
     if [ "$DRY_RUN" = 1 ]; then
         echo "Dry run finished; nothing was changed."

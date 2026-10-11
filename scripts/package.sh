@@ -3,7 +3,7 @@
 # account. No notarization: end users Gatekeeper-bypass once (see docs).
 #
 # Also generates the Sparkle appcast (dist/appcast.xml) that the in-app updater
-# reads from GitHub Releases. The EdDSA private key lives in the login Keychain
+# consumes through the stable/beta feeds. The EdDSA private key lives in the login Keychain
 # (create it once with dist/sparkle-tools/bin/generate_keys).
 #
 # Usage:
@@ -169,8 +169,8 @@ echo "==> Checksums..."
 (cd "$DIST_DIR" && shasum -a 256 "$ZIP_NAME" ${DMG_NAME:+$DMG_NAME} 2>/dev/null | tee "Awake-${VERSION}.sha256")
 
 # --- Sparkle appcast ---------------------------------------------------------
-# The appcast is uploaded to the GitHub Release and must also be reachable at
-# releases/latest/download/appcast.xml, which SUFeedURL points at. The tools
+# The appcast is attached to each GitHub Release and aggregated by the update
+# feed workflow. Keep the asset for older clients using releases/latest. The tools
 # are cached in dist/ so subsequent runs work offline.
 SPARKLE_VERSION="2.10.0"
 SPARKLE_DIR="$DIST_DIR/sparkle-tools"

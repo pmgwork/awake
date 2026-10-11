@@ -36,7 +36,7 @@
 
 Awake 只在菜单栏运行（不会显示在 Dock 中）。
 
-测试版会在[版本列表](https://github.com/PMGWork/awake/releases)中标记为 **Pre-release**（例如 `v0.6.0-beta.1`）。请按照上述步骤手动下载并安装。应用内更新仅检查稳定版；对应的稳定版发布后，测试版也可以更新到该稳定版。
+测试版会在[版本列表](https://github.com/PMGWork/awake/releases)中标记为 **Pre-release**（例如 `v0.6.0-beta.1`）。在 **Settings → General → Receive Beta Updates** 中启用测试版更新后，应用内更新检查会包含测试版（默认关闭）。测试版更新源也包含稳定版，因此对应的稳定版发布后可以更新到该稳定版。关闭此设置会停止接收后续测试版更新，不会降级已安装的版本。也可以按照上述步骤手动安装。
 
 ## 使用方法
 
@@ -90,7 +90,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 
 - 代理检测只使用 `~/Library/Application Support/Awake` 下的本地 Hook 事件，不轮询进程，也不扫描你的项目或文档文件。
 - 下载检测只查看所选文件夹中的文件名（`.download`、`.crdownload`、`.part` 等，跳过隐藏文件）。
-- 没有分析、遥测或账号。网络请求仅限于读取 GitHub 的 `releases/latest` 进行更新检查，以及在你同意更新后下载更新。不会发送匿名系统分析数据。
+- 没有分析、遥测或账号。网络请求仅限于读取 `raw.githubusercontent.com` 上的更新源，以及在你同意更新后从 GitHub Releases 下载更新。不会发送匿名系统分析数据。
 
 ## 从源码构建
 

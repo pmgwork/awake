@@ -132,6 +132,8 @@
 "Back" = "戻る";
 "Show Welcome Guide…" = "ウェルカムガイドを表示…";
 "Software Updates" = "ソフトウェアアップデート";
+"Receive Beta Updates" = "ベータ版を受け取る";
+"Include beta releases when checking for updates. Turn this off to receive only stable releases; your installed version will not be downgraded." = "アップデートの確認にベータ版を含めます。オフにすると安定版のみを受け取ります。インストール済みのバージョンはダウングレードされません。";
 "Check for Updates Automatically" = "アップデートを自動的に確認";
 "Check Now" = "今すぐ確認";
 "Check for Updates" = "アップデートを確認";

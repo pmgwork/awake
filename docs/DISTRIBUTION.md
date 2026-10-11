@@ -1,7 +1,7 @@
 # 配布手順 (有料アカウントなし)
 
 公証なし・GitHub Releases配布が前提。アプリ内アップデートは Sparkle 2
-（`awake/Services/AppUpdater.swift`、フィードは `releases/latest` の `appcast.xml`）
+（`awake/Services/AppUpdater.swift`、フィードは専用の `update-feeds` ブランチ）
 が担当する。
 
 ## 前提
@@ -33,7 +33,7 @@
   （手動ダウンロードへ戻す必要がある）。鍵のローテーションは
   Developer ID 署名の DMG が必要になるため、実質不可と考えてよい。
 - `awake/Info.plist` の Sparkle 設定:
-  - `SUFeedURL` = `https://github.com/PMGWork/awake/releases/latest/download/appcast.xml`
+  - `SUFeedURL` = `https://raw.githubusercontent.com/PMGWork/awake/update-feeds/stable.xml`
   - `SUEnableAutomaticChecks` = true（許可ダイアログを出さない。アプリ内の
     「アップデートを自動で確認」が `SPUUpdater.automaticallyChecksForUpdates` を操作する）
   - `SUVerifyUpdateBeforeExtraction` = true（署名検証を展開前に行う）
@@ -75,8 +75,8 @@
      `appcast.xml`（両方必須）、あれば `.dmg` と `.sha256` も添付。
      `dist/release-notes-v0.2.0.md` があれば SHA256 を追記して Notes に使う
    - `--publish` で `--draft=false --latest` を実行し、**stable** として公開
-     （`SUFeedURL` は `releases/latest` を指すため、draft/pre-release は
-     配信対象外。公開前に必須アセットの有無も確認する）
+     （draft は配信対象外、pre-release はベータ用フィードのみへ配信。
+     公開前に必須アセットの有無も確認し、公開後に更新フィードの生成を要求する）
 
    実行内容だけ確認したい場合は `--dry-run` を使う。
 
@@ -105,11 +105,44 @@ scripts/release.sh --publish 0.6.0-beta.1  # 確認済み draft をプレリリ�
 - ベータ版もクリーンな作業ツリーと `origin/main` に一致する HEAD から作成する。
 - 公開時は `--prerelease=true --latest=false` とし、安定版の `releases/latest`
   を置き換えない。既存の draft を再利用する場合も公開時にこの指定を適用する。
-- 利用者はリリース一覧から手動でインストールする。ベータ間の自動更新は行わず、
-  アプリ内アップデートは引き続き安定版を確認する。対応する安定版の公開後は
-  ベータ版からもその安定版へ更新できる。
+- 利用者は「設定 → 一般 → ベータ版を受け取る」（初期値オフ）でベータ版の
+  アプリ内更新を選択できる。ベータ用フィードにも安定版を含めるため、対応する
+  安定版の公開後はベータ版からも更新できる。オフにしてもダウングレードは行わない。
+  手動でのダウンロード・インストールも可能。
 - ベータのタグを安定版へ転用しない。安定版は `scripts/release.sh 0.6.0` で
   新しくビルド・作成・公開する。
+
+## 更新フィードの生成・配信
+
+`.github/workflows/update-feeds.yml` が公開済みリリースの `appcast.xml` を集約し、
+専用の `update-feeds` ブランチへ `stable.xml` と `beta.xml` を1つのコミットで配信する。
+GitHub Pages や追加の署名鍵は不要。既存の EdDSA 署名・ダウンロード先・macOS の
+動作要件・リリースノートを保持する。未公開の draft は含めず、不正な版数や署名の
+ない enclosure、必要な appcast の欠落があれば配信を中止する。
+
+- 安定版: `https://raw.githubusercontent.com/PMGWork/awake/update-feeds/stable.xml`
+- ベータ版と安定版: `https://raw.githubusercontent.com/PMGWork/awake/update-feeds/beta.xml`
+
+ワークフローはリリースの公開・編集・削除時に実行する。初回はこのワークフローの
+`main` へのマージでも実行し、既存の公開済みリリースからフィードを生成する。
+`release.sh --publish` も明示的にワークフローを起動するため、`GITHUB_TOKEN` で
+公開した場合にも対応する。実行には Actions の利用とワークフローの `contents: write`
+権限が必要。公開後は Actions の **Publish update feeds** の成功を確認する。
+GitHub のキャッシュにより、フィードの反映に少し時間がかかる場合がある。
+
+新しいアプリを配布する前に、上記の2つの URL が取得できることを確認する。
+既存のアプリは引き続き `releases/latest/download/appcast.xml` を使うため、
+各リリースへの `appcast.xml` 添付も維持する。
+
+生成失敗時や手動で再生成する場合:
+
+```sh
+gh workflow run update-feeds.yml --ref main --repo PMGWork/awake
+```
+
+ワークフローの生成処理は `scripts/generate-update-feeds.py`。ローカルで内容だけ
+確認する場合は `python3 scripts/generate-update-feeds.py --repository PMGWork/awake`
+を実行し、`dist/update-feeds/` の XML を確認する（ブランチへの配信は行わない）。
 
 ## 利用者向け (Gatekeeper回避)
 

@@ -86,6 +86,8 @@ esac
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(["release", "edit", "v0.6.0-beta.1", "--draft=false",
                        "--prerelease=true", "--latest=false"], self.calls())
+        self.assertIn(["workflow", "run", "update-feeds.yml", "--ref", "main",
+                       "--repo", "PMGWork/awake"], self.calls())
 
     def test_publish_stable_marks_latest(self):
         self.env["TEST_VERSION"] = "0.6.0"
