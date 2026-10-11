@@ -18,7 +18,7 @@
   有料Program必須のため対象外。ブラウザでダウンロードした DMG も
   未公証のため、初回マウント時に Gatekeeper の確認が出る
   （システム設定 → プライバシーとセキュリティ →「このまま開く」で許可できる）。
-- タグ形式: `vX.Y.Z` (例 `v0.2.0`)。Sparkle は `CFBundleVersion` で新旧を比較し、
+- タグ形式: 安定版は `vX.Y.Z`、ベータ版は `vX.Y.Z-beta.N`（N は 1〜255）。Sparkle は `CFBundleVersion` で新旧を比較し、
   `scripts/package.sh` が `CURRENT_PROJECT_VERSION` に版数を入れる。
 
 ## 署名鍵 (初回のみ)
@@ -87,6 +87,29 @@
    設定 > Software Updates > Check Now → 更新が見つかる → Install で
    置き換えと再起動が完了することを確認する。初回の Sparkle 導入版
    (0.2.0) から次版への更新が最初の実地テストになる。
+
+## ベータ版の配布
+
+安定版と同じ署名・パッケージ手順で、GitHub のプレリリースとして配布する。
+英語のノートを `dist/release-notes-v0.6.0-beta.1.md` に用意し、次を実行する。
+
+```sh
+scripts/release.sh 0.6.0-beta.1            # ビルド→タグ→draft prerelease 作成
+scripts/release.sh --publish 0.6.0-beta.1  # 確認済み draft をプレリリースとして公開
+```
+
+- ZIP・DMG・SHA256 のファイル名とタグには `0.6.0-beta.1` を使う。
+- `CFBundleShortVersionString` は `0.6.0`、`CFBundleVersion` は Apple の
+  ベータ表記 `0.6.0b1` とする。ベータ番号は 1〜255 で、同じ版の次のベータでは
+  番号を増やす。Sparkle は対応する安定版 `0.6.0` をベータより新しい版として扱う。
+- ベータ版もクリーンな作業ツリーと `origin/main` に一致する HEAD から作成する。
+- 公開時は `--prerelease=true --latest=false` とし、安定版の `releases/latest`
+  を置き換えない。既存の draft を再利用する場合も公開時にこの指定を適用する。
+- 利用者はリリース一覧から手動でインストールする。ベータ間の自動更新は行わず、
+  アプリ内アップデートは引き続き安定版を確認する。対応する安定版の公開後は
+  ベータ版からもその安定版へ更新できる。
+- ベータのタグを安定版へ転用しない。安定版は `scripts/release.sh 0.6.0` で
+  新しくビルド・作成・公開する。
 
 ## 利用者向け (Gatekeeper回避)
 

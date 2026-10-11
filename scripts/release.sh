@@ -9,7 +9,8 @@
 #
 # The release stays a draft on purpose: SUFeedURL resolves through
 # releases/latest, so users see nothing until the draft is published with
-# --publish, which is also when the new appcast goes live.
+# --publish, which is also when the stable appcast goes live. Beta releases
+# remain outside releases/latest and are downloaded manually.
 #
 # Usage:
 #   scripts/release.sh <version>              build, tag, and draft a release
@@ -17,7 +18,8 @@
 #   scripts/release.sh --skip-build <version> reuse dist/ artifacts as-is
 #   scripts/release.sh --dry-run <version>    print the plan without changing anything
 #
-# The version is the marketing version (e.g. 0.3.0); the tag becomes v0.3.0.
+# Versions: X.Y.Z for stable releases, X.Y.Z-beta.N for prereleases (N: 1–255).
+# Beta releases are installed manually and never marked as latest.
 set -eu
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -36,7 +38,10 @@ Usage:
   scripts/release.sh --skip-build <version> reuse dist/ artifacts as-is
   scripts/release.sh --dry-run <version>    print the plan without changing anything
 
-The version is the marketing version (e.g. 0.3.0); the tag becomes v0.3.0.
+Versions: X.Y.Z for stable releases, X.Y.Z-beta.N for prereleases (N: 1–255).
+Examples:
+  scripts/release.sh 0.6.0-beta.1
+  scripts/release.sh --publish 0.6.0-beta.1
 EOF
 }
 
@@ -66,8 +71,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$VERSION" ] || { usage >&2; exit 1; }
-printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
-    || die "version must look like \"0.3.0\" (got: $VERSION)"
+. "$PROJECT_DIR/scripts/release-version.sh"
 
 TAG="v$VERSION"
 NOTES="$DIST_DIR/release-notes-$TAG.md"
@@ -116,7 +120,11 @@ if [ "$MODE" = "publish" ]; then
             || die "draft $TAG has no $required asset; re-run scripts/release.sh $VERSION."
     done
 
-    run gh release edit "$TAG" --draft=false --latest
+    if [ "$IS_PRERELEASE" = true ]; then
+        run gh release edit "$TAG" --draft=false --prerelease=true --latest=false
+    else
+        run gh release edit "$TAG" --draft=false --prerelease=false --latest
+    fi
     if [ "$DRY_RUN" = 1 ]; then
         echo "Dry run finished; nothing was changed."
     else
@@ -160,7 +168,7 @@ done
 [ -f "$DMG" ] || echo "warning: $DMG not found; the release will have no drag-and-drop DMG." >&2
 [ -f "$SHA" ] || echo "warning: $SHA not found; the release will have no checksums." >&2
 
-if ! grep -qE "sparkle:(version|shortVersionString)(=\"|>)$VERSION(\"|<)" "$APPCAST"; then
+if ! grep -qE "sparkle:(version|shortVersionString)(=\"|>)$BUILD_VERSION(\"|<)" "$APPCAST"; then
     echo "warning: $APPCAST does not mention $VERSION; it may be stale." >&2
 fi
 
@@ -183,6 +191,7 @@ if release_exists; then
     run gh release upload "$@" --clobber
 else
     echo "==> Creating draft release $TAG..."
+    if [ "$IS_PRERELEASE" = true ]; then set -- "$@" --prerelease --latest=false; fi
     if [ -f "$NOTES" ]; then
         NOTES_FILE="$NOTES"
         if [ -f "$SHA" ]; then

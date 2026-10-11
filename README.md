@@ -34,6 +34,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
    - Clear the quarantine attribute: `xattr -r -d com.apple.quarantine /Applications/Awake.app`
    - With the DMG, macOS asks for the same approval of the disk image when you open it (that dialog has no *Open* button; use **System Settings → Privacy & Security**), then for the app after copying it to `/Applications`.
 
+Beta builds are available on the [releases page](https://github.com/PMGWork/awake/releases) and marked **Pre-release** (for example, `v0.6.0-beta.1`). Download and install them manually using the same steps above. In-app updates check stable releases only; a beta installation can update to the matching stable version once it is released.
+
 Awake runs only in the menu bar (no Dock icon).
 
 ## Usage
