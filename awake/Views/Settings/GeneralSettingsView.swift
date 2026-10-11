@@ -38,9 +38,6 @@ struct GeneralSettingsView: View {
                     )
                 )
                 .disabled(updater.isUpdateInProgress)
-                Text(L10n.string("Include beta releases when checking for updates. Turn this off to receive only stable releases; your installed version will not be downgraded."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
 
                 Toggle(
                     L10n.string("Check for Updates Automatically"),
