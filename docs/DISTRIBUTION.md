@@ -68,7 +68,7 @@
    ```
 
    `release.sh` は次を自動化する:
-   - クリーンな作業ツリーと `origin/main` との同期を確認（未pushのビルドを防ぐ）
+   - クリーンな作業ツリーと 配布元（正式版は `origin/main`、ベータ版は `origin/develop`）との同期を確認（未pushのビルドを防ぐ）
    - `scripts/package.sh <version>` の実行（`--skip-build` で省略可）
    - annotated タグ `v0.2.0` の作成と push
    - draft Release（名前 `Awake v0.2.0`）に `Awake-0.2.0.zip` と
@@ -88,6 +88,14 @@
    置き換えと再起動が完了することを確認する。初回の Sparkle 導入版
    (0.2.0) から次版への更新が最初の実地テストになる。
 
+## ブランチの運用
+
+- `main` は正式版として配布する内容を保持する。
+- `develop` は次の正式版に向けた開発とベータ版の配布に使う。
+- 正式版の修正は `develop` にも取り込み、開発中の機能を保持する。
+- `0.5.1` は `0.5.0` に更新フィードの分離とベータ受信設定を加えた移行用の正式版。
+  `0.6.0` の冷却・低電力モード変更は `develop` に保持する。
+
 ## ベータ版の配布
 
 安定版と同じ署名・パッケージ手順で、GitHub のプレリリースとして配布する。
@@ -102,7 +110,7 @@ scripts/release.sh --publish 0.6.0-beta.1  # 確認済み draft をプレリリ�
 - `CFBundleShortVersionString` は `0.6.0`、`CFBundleVersion` は Apple の
   ベータ表記 `0.6.0b1` とする。ベータ番号は 1〜255 で、同じ版の次のベータでは
   番号を増やす。Sparkle は対応する安定版 `0.6.0` をベータより新しい版として扱う。
-- ベータ版もクリーンな作業ツリーと `origin/main` に一致する HEAD から作成する。
+- ベータ版はクリーンな作業ツリーと `origin/develop` に一致する HEAD から作成する。
 - 公開時は `--prerelease=true --latest=false` とし、安定版の `releases/latest`
   を置き換えない。既存の draft を再利用する場合も公開時にこの指定を適用する。
 - 利用者は「設定 → 一般 → ベータ版を受け取る」（初期値オフ）でベータ版の

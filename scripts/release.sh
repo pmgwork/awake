@@ -2,7 +2,7 @@
 # One-command GitHub Release for Awake (wraps scripts/package.sh).
 #
 # Automates the manual steps in docs/DISTRIBUTION.md:
-#   1. verify the working tree is clean and HEAD matches origin/main
+#   1. verify the working tree is clean and HEAD matches the release branch (main for stable, develop for beta)
 #   2. build the ZIP/DMG and the Sparkle appcast via scripts/package.sh
 #   3. create and push the annotated tag v<version>
 #   4. create a draft GitHub Release with the artifacts attached
@@ -72,6 +72,9 @@ done
 
 [ -n "$VERSION" ] || { usage >&2; exit 1; }
 . "$PROJECT_DIR/scripts/release-version.sh"
+
+RELEASE_BRANCH="main"
+if [ "$IS_PRERELEASE" = true ]; then RELEASE_BRANCH="develop"; fi
 
 TAG="v$VERSION"
 NOTES="$DIST_DIR/release-notes-$TAG.md"
@@ -144,8 +147,8 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
 fi
 
 git fetch origin --quiet --tags
-if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-    die "HEAD is not origin/main; pull or merge first so the tag lands on the released commit."
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$RELEASE_BRANCH")" ]; then
+    die "HEAD is not origin/$RELEASE_BRANCH; pull or merge first so the tag lands on the released commit."
 fi
 
 TAG_TARGET="$(git rev-parse -q --verify "refs/tags/$TAG^{commit}" 2>/dev/null || true)"

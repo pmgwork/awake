@@ -203,8 +203,9 @@ fi
   --download-url-prefix "https://github.com/PMGWork/awake/releases/download/v$VERSION/" \
   --embed-release-notes \
   --link "https://github.com/PMGWork/awake" \
-  -o "$DIST_DIR/appcast.xml" \
+  -o "$UPDATES_DIR/appcast.xml" \
   "$UPDATES_DIR"
+cp "$UPDATES_DIR/appcast.xml" "$DIST_DIR/appcast.xml"
 rm -rf "$UPDATES_DIR"
 
 # An unsigned feed would be rejected by every Sparkle-enabled install.
