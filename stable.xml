@@ -1,5 +1,27 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Stable Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake stable update feed</description><item>
+            <title>0.5.1</title>
+            <pubDate>Wed, 14 Oct 2026 07:31:07 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.5.1</sparkle:version>
+            <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## What's Changed
+
+- Added **Receive Beta Updates** in **Settings → General**, off by default. Enable it to receive beta releases through in-app updates.
+- Moved in-app update checks to separate signed stable and beta feeds. Existing installations can update to this release through the previous update feed.
+- The beta feed also includes stable releases. Turning off beta updates stops future beta updates without downgrading the installed app.
+- Kept the Keep Awake and cooling behavior from 0.5.0.
+
+## Installation
+
+Download `Awake-0.5.1.zip` or `Awake-0.5.1.dmg` and move `Awake.app` to `/Applications`. Existing users can also use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.5.0...v0.5.1)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.5.1/Awake-0.5.1.zip" length="4308872" type="application/octet-stream" sparkle:edSignature="Ju7hCKU1VFAKbZP3kpQLi7r3ZxuD2cuS6T3mnzVxLMQEdVchNnv9HGaHNN+Q0GKOn7OBD0281f+KIV2czfrsAw==" />
+        </item>
+    <item>
             <title>0.5.0</title>
             <pubDate>Sat, 10 Oct 2026 20:44:16 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
