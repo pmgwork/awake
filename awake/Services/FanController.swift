@@ -24,10 +24,18 @@ public final class FanController: ObservableObject {
     private var failedMode: FanMode?
     private var failedAt: Date?
     private var testResetTimer: Timer?
+    private var watchdogTimer: Timer?
+    private var isWatchdogCheckInFlight = false
     private let testDuration: TimeInterval = 60
     /// A failed automatic restore is retried after this delay so the fail-safe
     /// recovers on its own without hammering the SMC on every heartbeat.
     private let autoRetryDelay: TimeInterval = 15
+    /// macOS can take the fans back (for example thermalmonitord, or a sleep
+    /// and wake). The watchdog notices and engages manual control again.
+    private let watchdogInterval: TimeInterval = 10
+    /// A failed manual engage is retried after this delay instead of leaving
+    /// cooling off until the mode changes.
+    private let manualRetryDelay: TimeInterval = 30
 
     private init() {
         NotificationCenter.default.addObserver(
@@ -37,10 +45,12 @@ public final class FanController: ObservableObject {
             object: nil
         )
         recoverAutomaticControlIfNeeded()
+        startWatchdog()
     }
 
     deinit {
         testResetTimer?.invalidate()
+        watchdogTimer?.invalidate()
     }
 
     @objc private func handleAppWillTerminate() {
@@ -249,6 +259,50 @@ public final class FanController: ObservableObject {
                 } else {
                     FanController.shared.controlError = L10n.string("The fans may still be under manual control. Restart your Mac to return them to automatic control.")
                 }
+            }
+        }
+    }
+
+    // MARK: - Watchdog
+
+    private func startWatchdog() {
+        watchdogTimer = Timer.scheduledTimer(withTimeInterval: watchdogInterval, repeats: true) { _ in
+            Task { @MainActor in
+                FanController.shared.verifyManualControl()
+            }
+        }
+    }
+
+    /// Re-applies a manual mode whose override was lost or whose engage failed.
+    private func verifyManualControl() {
+        let mode = requestedMode
+        // Only the installed helper can engage without an authorization prompt.
+        guard mode != .auto, modeInFlight == nil, SMCHelper.shared.checkHelperInstalled() else { return }
+
+        if failedMode == mode {
+            guard let failedAt, Date().timeIntervalSince(failedAt) >= manualRetryDelay else { return }
+            NSLog("[FanController] Retrying fan mode %@ after a failure", mode.rawValue)
+            failedMode = nil
+            self.failedAt = nil
+            applyRequestedModeIfNeeded()
+            return
+        }
+
+        guard activeMode == mode, !isWatchdogCheckInFlight else { return }
+        isWatchdogCheckInFlight = true
+        queue.async {
+            let held = SMCHelper.shared.isFanControlLeaseRunning && SMCClient.shared.areAllFansInManualMode()
+            Task { @MainActor in
+                let controller = FanController.shared
+                controller.isWatchdogCheckInFlight = false
+                guard !held,
+                      controller.modeInFlight == nil,
+                      controller.activeMode == mode,
+                      controller.requestedMode == mode else { return }
+                NSLog("[FanController] Manual fan control was lost. Re-applying %@", mode.rawValue)
+                // The fans are no longer in this mode; let the request apply again.
+                controller.activeMode = .auto
+                controller.applyRequestedModeIfNeeded()
             }
         }
     }

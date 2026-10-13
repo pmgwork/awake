@@ -323,6 +323,18 @@ public nonisolated final class SMCClient: @unchecked Sendable {
         return (0..<count).contains { (readInt(key: "F\($0)Md") ?? 0) != 0 }
     }
 
+    /// Whether every fan still reports manual mode (1). M3/M4 report 3 while
+    /// thermalmonitord owns the fans. Keys that can't be read count as manual
+    /// so a failed read never interrupts running cooling.
+    public func areAllFansInManualMode() -> Bool {
+        let count = getFanCount()
+        guard count > 0 else { return true }
+        return (0..<count).allSatisfy { fan in
+            guard let mode = readInt(key: "F\(fan)Md") ?? readInt(key: "F\(fan)md") else { return true }
+            return mode == 1
+        }
+    }
+
     private func setAllFans(targetFraction: Float) -> Bool {
         let count = getFanCount()
         var ok = true

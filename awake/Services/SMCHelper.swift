@@ -385,6 +385,13 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         return true
     }
 
+    /// Whether the helper that holds the manual fan override is still running.
+    public var isFanControlLeaseRunning: Bool {
+        fanLeaseLock.lock()
+        defer { fanLeaseLock.unlock() }
+        return fanLeaseProcess?.isRunning == true
+    }
+
     /// Waits for the helper's READY handshake. The wait is bounded and checks
     /// the termination flag so quitting Awake cannot hang behind a slow SMC
     /// engage.
