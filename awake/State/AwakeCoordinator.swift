@@ -34,7 +34,6 @@ public final class AwakeCoordinator: ObservableObject {
     public let screenBehaviorManager = ScreenBehaviorManager.shared
     private let legacyScreenLockRecovery = LegacyScreenLockRecovery.shared
     public let closedDisplayModeManager = ClosedDisplayModeManager.shared
-    public let lowPowerModeManager = LowPowerModeManager.shared
 
     private var cancellables = Set<AnyCancellable>()
     private var heartbeatTimer: Timer?
@@ -54,9 +53,6 @@ public final class AwakeCoordinator: ObservableObject {
         setupSubscriptions()
         startHeartbeat()
         restorePersistedTimerIfNeeded()
-        // A Low Power Mode setting left over from a session that ended
-        // without restoring it (for example after a restart).
-        Task { await lowPowerModeManager.restoreSavedStateIfNeeded() }
     }
 
     deinit {
@@ -140,10 +136,10 @@ public final class AwakeCoordinator: ObservableObject {
         }
     }
 
-    /// Starts the selected cooling mode. Refused when the helper is missing or
-    /// the battery fail-safe applies.
+    /// Starts the selected cooling mode. Refused for System, or when the helper
+    /// is missing or the battery fail-safe applies.
     public func startCooling() {
-        guard canUseForcedCooling else { return }
+        guard settings.coolingMode != .system, canUseForcedCooling else { return }
         resetCoolingState()
         if settings.coolingMode == .timed {
             forcedCoolingEndDate = Date().addingTimeInterval(settings.forcedCoolingDuration)
@@ -192,12 +188,10 @@ public final class AwakeCoordinator: ObservableObject {
         let sleepStopped = await sleepManager.prepareForHelperRemoval()
         stopKeepAwake()
         let lidStopped = await closedDisplayModeManager.prepareForHelperRemoval()
-        let lowPowerStopped = await lowPowerModeManager.prepareForHelperRemoval()
         let fansStopped = await fanController.prepareForHelperRemoval()
-        guard sleepStopped, lidStopped, lowPowerStopped, fansStopped else { return false }
+        guard sleepStopped, lidStopped, fansStopped else { return false }
         guard await SMCHelper.shared.removeHelperTool() else { return false }
         settings.closedDisplayModeEnabled = false
-        settings.lowPowerModeWhenLidClosed = false
         await closedDisplayModeManager.refreshHelperState()
         return true
     }
@@ -291,7 +285,6 @@ public final class AwakeCoordinator: ObservableObject {
             applyScreenBehaviorPolicy()
             legacyScreenLockRecovery.restoreIfNeeded()
             applyClosedDisplayModePolicy()
-            applyLowPowerModePolicy()
         }
         guard !isRemovingHardwareAuthorization else { return }
         if !isLowBatteryCutoffActive {
@@ -357,7 +350,7 @@ public final class AwakeCoordinator: ObservableObject {
                 prepareForClosedLid: !isAC,
                 appliesToBattery: !isAC
             )
-        } else if hasExternal {
+        } else if hasExternal && settings.excludeNormalClamshell {
             // Awake / Normal Clamshell (External Display Connected)
             sleepManager.enableSleepPrevention(closedLid: false)
         } else {
@@ -372,14 +365,9 @@ public final class AwakeCoordinator: ObservableObject {
     /// and hands them back to the system otherwise. A fan test owns the fans
     /// while it runs.
     private func applyFanPolicy() {
-        guard displayBehaviorPolicy.allowsCooling else {
-            fanController.restoreAuto()
-            return
-        }
         guard !fanController.isTestModeActive else { return }
         if isForcedCoolingActive {
-            fanController.setFanMode(settings.coolingMode == .whileAgentRunning
-                ? settings.automaticCoolingFanMode : settings.manualCoolingFanMode)
+            fanController.setFanMode(settings.coolingFanMode)
         } else {
             fanController.restoreAuto()
         }
@@ -396,6 +384,8 @@ public final class AwakeCoordinator: ObservableObject {
         var active = false
         if settings.coolingArmed && SMCHelper.shared.checkHelperInstalled() {
             switch settings.coolingMode {
+            case .system:
+                break
             case .forced:
                 active = true
             case .timed:
@@ -410,15 +400,18 @@ public final class AwakeCoordinator: ObservableObject {
                 active = isAgentCoolingNeeded
             }
         }
-        setForcedCoolingActive(active && displayBehaviorPolicy.allowsCooling)
+        setForcedCoolingActive(active)
     }
 
-    /// Agent cooling runs only with the lid closed and no external display.
+    /// A monitored agent is running, narrowed by the options: lid closed
+    /// (unless an external display is attached and left to the system) and
+    /// AC power.
     private var isAgentCoolingNeeded: Bool {
         guard eventMonitor.hasActiveSession else { return false }
-        guard displayBehaviorPolicy.allowsAgentCooling else { return false }
         if settings.onlyOnACPower && !powerMonitor.isOnACPower { return false }
-        return true
+        guard settings.agentCoolingRequiresLidClosed else { return true }
+        guard lidMonitor.isLidClosed else { return false }
+        return !(displayMonitor.hasExternalDisplay && settings.excludeNormalClamshell)
     }
 
     private func setForcedCoolingActive(_ active: Bool) {
@@ -565,29 +558,13 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private func applyClosedDisplayModePolicy() {
-        closedDisplayModeManager.update(
-            sessionActive: isActive && !isRemovingHardwareAuthorization,
-            enabled: settings.closedDisplayModeEnabled && displayBehaviorPolicy.needsClosedDisplayOverride
-        )
-    }
-
-    private var displayBehaviorPolicy: DisplayBehaviorPolicy {
-        DisplayBehaviorPolicy(
+        let policy = DisplayBehaviorPolicy(
             lidClosed: lidMonitor.isLidClosed,
             hasExternalDisplay: displayMonitor.hasExternalDisplay
         )
-    }
-
-    /// Low Power Mode while the lid is closed during a session, unless an
-    /// external display is attached (the Mac is then in normal clamshell use).
-    private func applyLowPowerModePolicy() {
-        lowPowerModeManager.update(
-            requested: isActive
-                && !isRemovingHardwareAuthorization
-                && settings.closedDisplayModeEnabled
-                && settings.lowPowerModeWhenLidClosed
-                && lidMonitor.isLidClosed
-                && !displayMonitor.hasExternalDisplay
+        closedDisplayModeManager.update(
+            sessionActive: isActive && !isRemovingHardwareAuthorization,
+            enabled: settings.closedDisplayModeEnabled && policy.needsClosedDisplayOverride
         )
     }
 

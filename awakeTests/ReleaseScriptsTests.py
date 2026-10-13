@@ -23,7 +23,7 @@ class ReleaseScriptsTests(unittest.TestCase):
         self.log = self.root / "commands.jsonl"
         self.env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}",
                         COMMAND_LOG=str(self.log), TEST_VERSION="0.6.0-beta.1",
-                        TEST_RELEASE_EXISTS="1", DEVELOPER_DIR="/test/Xcode")
+                        TEST_RELEASE_EXISTS="1", TEST_EXPECTED_BRANCH="develop", TEST_BRANCH_MISMATCH="0", DEVELOPER_DIR="/test/Xcode")
         self.stub("gh", '''#!/usr/bin/env python3
 import json, os, sys
 a = sys.argv[1:]
@@ -42,7 +42,13 @@ elif a[0] == 'api':
 case "$1" in
   remote) echo https://github.com/PMGWork/awake.git ;;
   rev-parse)
-    case "$*" in *refs/tags*) exit 1 ;; *) echo abc123 ;; esac ;;
+    case "$*" in
+      *refs/tags*) exit 1 ;;
+      *origin/*)
+        [ "$2" = "origin/$TEST_EXPECTED_BRANCH" ] || exit 1
+        if [ "$TEST_BRANCH_MISMATCH" = 1 ]; then echo other456; else echo abc123; fi ;;
+      *) echo abc123 ;;
+    esac ;;
 esac
 ''')
 
@@ -95,6 +101,36 @@ esac
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(["release", "edit", "v0.6.0", "--draft=false",
                        "--prerelease=false", "--latest"], self.calls())
+
+    def test_beta_creation_requires_develop_head(self):
+        self.prepare_artifacts()
+        self.env["TEST_BRANCH_MISMATCH"] = "1"
+        result = self.run_script("release.sh", "--skip-build", "0.6.0-beta.1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("HEAD is not origin/develop", result.stderr)
+        self.assertFalse(any(c[:2] in [["release", "create"], ["release", "upload"]]
+                             for c in self.calls()))
+
+    def test_stable_creation_requires_main_head(self):
+        self.env["TEST_EXPECTED_BRANCH"] = "main"
+        self.env["TEST_BRANCH_MISMATCH"] = "1"
+        result = self.run_script("release.sh", "--skip-build", "0.5.1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("HEAD is not origin/main", result.stderr)
+        self.assertFalse(any(c[:2] in [["release", "create"], ["release", "upload"]]
+                             for c in self.calls()))
+
+    def test_stable_draft_from_main(self):
+        self.prepare_artifacts()
+        dist = self.root / "dist"
+        (dist / "Awake-0.5.1.zip").touch()
+        (dist / "appcast.xml").write_text('<sparkle:version>0.5.1</sparkle:version>')
+        self.env.update(TEST_EXPECTED_BRANCH="main", TEST_RELEASE_EXISTS="0")
+        result = self.run_script("release.sh", "--skip-build", "0.5.1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        creation = next(c for c in self.calls() if c[:2] == ["release", "create"])
+        self.assertNotIn("--prerelease", creation)
+        self.assertIn("--draft", creation)
 
     def prepare_artifacts(self):
         dist = self.root / "dist"

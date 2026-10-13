@@ -148,8 +148,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
                 KeepAwakeSettingsView(
                     settings: AwakeCoordinator.shared.settings,
                     screenBehaviorManager: AwakeCoordinator.shared.screenBehaviorManager,
-                    closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager,
-                    lowPowerModeManager: AwakeCoordinator.shared.lowPowerModeManager
+                    closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
             case .monitoring:
                 MonitoringSettingsView(
@@ -165,6 +164,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
                 )
             case .permissions:
                 PermissionsSettingsView(
+                    settings: AwakeCoordinator.shared.settings,
                     closedDisplayModeManager: AwakeCoordinator.shared.closedDisplayModeManager
                 )
             }

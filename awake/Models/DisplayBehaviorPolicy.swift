@@ -4,14 +4,6 @@ struct DisplayBehaviorPolicy {
     let lidClosed: Bool
     let hasExternalDisplay: Bool
 
-    var isNativeClamshell: Bool { lidClosed && hasExternalDisplay }
-
-    /// Native clamshell operation leaves hardware control to macOS in every mode.
-    var allowsCooling: Bool { !isNativeClamshell }
-
-    /// Agent cooling is limited to headless closed-lid operation.
-    var allowsAgentCooling: Bool { lidClosed && !hasExternalDisplay }
-
     var allowsScreenPrevention: Bool { !lidClosed || hasExternalDisplay }
 
     // Native clamshell mode already handles external displays. Changing its

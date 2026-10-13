@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The privileged helper shared by closed-lid operation and fan control.
 struct PermissionsSettingsView: View {
+    @ObservedObject var settings: SettingsStore
     @ObservedObject var closedDisplayModeManager: ClosedDisplayModeManager
 
     var body: some View {
@@ -16,11 +17,7 @@ struct PermissionsSettingsView: View {
 
             Section {
                 LabeledContent(L10n.string("Stay Awake with the Lid Closed")) {
-                    Text(L10n.string(isHelperInstalled ? "Available" : "Unavailable"))
-                        .foregroundStyle(.secondary)
-                }
-                LabeledContent(L10n.string("Low Power Mode with the Lid Closed")) {
-                    Text(L10n.string(isHelperInstalled ? "Available" : "Unavailable"))
+                    Text(L10n.string(isHelperInstalled && settings.closedDisplayModeEnabled ? "On" : "Off"))
                         .foregroundStyle(.secondary)
                 }
                 LabeledContent(L10n.string("Fan Control")) {

@@ -6,16 +6,12 @@ final class SMCHelperTests: XCTestCase {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
         XCTAssertTrue(policy.allowsScreenPrevention)
         XCTAssertFalse(policy.needsClosedDisplayOverride)
-        XCTAssertFalse(policy.allowsCooling)
-        XCTAssertFalse(policy.allowsAgentCooling)
     }
 
     func testHeadlessClosedLidSuppressesScreenPreventionAndUsesOverride() {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
         XCTAssertFalse(policy.allowsScreenPrevention)
         XCTAssertTrue(policy.needsClosedDisplayOverride)
-        XCTAssertTrue(policy.allowsCooling)
-        XCTAssertTrue(policy.allowsAgentCooling)
     }
 
     func testOpenLidAllowsScreenPreventionAndArmsOverrideOnlyWithoutExternalDisplay() {
@@ -23,8 +19,6 @@ final class SMCHelperTests: XCTestCase {
             let policy = DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: hasExternal)
             XCTAssertTrue(policy.allowsScreenPrevention)
             XCTAssertEqual(policy.needsClosedDisplayOverride, !hasExternal)
-            XCTAssertTrue(policy.allowsCooling)
-            XCTAssertFalse(policy.allowsAgentCooling)
         }
     }
 

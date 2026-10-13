@@ -20,12 +20,12 @@ public final class SettingsStore: ObservableObject {
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
         /// Replaced by the "While Agent Is Running" cooling mode; read once to migrate.
         static let legacyClosedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
+        static let excludeNormalClamshell = "pmgwork.awake.excludeNormalClamshell"
         static let coolingFanMode = "pmgwork.awake.coolingFanMode"
-        static let automaticCoolingFanMode = "pmgwork.awake.automaticCoolingFanMode"
-        static let manualCoolingFanMode = "pmgwork.awake.manualCoolingFanMode"
         /// Renamed to coolingFanMode; read once to migrate.
         static let legacyClosedLidFanMode = "pmgwork.awake.closedLidFanMode"
         static let onlyOnACPower = "pmgwork.awake.onlyOnACPower"
+        static let agentCoolingRequiresLidClosed = "pmgwork.awake.agentCoolingRequiresLidClosed"
         static let forcedCoolingDuration = "pmgwork.awake.forcedCoolingDuration"
         static let coolingMode = "pmgwork.awake.coolingMode"
         static let coolingArmed = "pmgwork.awake.coolingArmed"
@@ -37,7 +37,6 @@ public final class SettingsStore: ObservableObject {
         static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
         static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
         static let closedDisplayModeEnabled = "pmgwork.awake.closedDisplayModeEnabled"
-        static let lowPowerModeWhenLidClosed = "pmgwork.awake.lowPowerModeWhenLidClosed"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
         static let hasCompletedOnboarding = "pmgwork.awake.hasCompletedOnboarding"
     }
@@ -86,21 +85,29 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published public var automaticCoolingFanMode: FanMode {
+    @Published public var excludeNormalClamshell: Bool {
         didSet {
-            UserDefaults.standard.set(automaticCoolingFanMode.rawValue, forKey: Keys.automaticCoolingFanMode)
+            UserDefaults.standard.set(excludeNormalClamshell, forKey: Keys.excludeNormalClamshell)
         }
     }
 
-    @Published public var manualCoolingFanMode: FanMode {
+    /// Fan speed used by every cooling mode except System.
+    @Published public var coolingFanMode: FanMode {
         didSet {
-            UserDefaults.standard.set(manualCoolingFanMode.rawValue, forKey: Keys.manualCoolingFanMode)
+            UserDefaults.standard.set(coolingFanMode.rawValue, forKey: Keys.coolingFanMode)
         }
     }
 
     @Published public var onlyOnACPower: Bool {
         didSet {
             UserDefaults.standard.set(onlyOnACPower, forKey: Keys.onlyOnACPower)
+        }
+    }
+
+    /// Agent cooling runs only while the lid is closed.
+    @Published public var agentCoolingRequiresLidClosed: Bool {
+        didSet {
+            UserDefaults.standard.set(agentCoolingRequiresLidClosed, forKey: Keys.agentCoolingRequiresLidClosed)
         }
     }
 
@@ -179,13 +186,6 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Turns on Low Power Mode while the lid is closed during a session.
-    @Published public var lowPowerModeWhenLidClosed: Bool {
-        didSet {
-            UserDefaults.standard.set(lowPowerModeWhenLidClosed, forKey: Keys.lowPowerModeWhenLidClosed)
-        }
-    }
-
     @Published public var hasCompletedOnboarding: Bool {
         didSet {
             UserDefaults.standard.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding)
@@ -195,45 +195,6 @@ public final class SettingsStore: ObservableObject {
     public static let forcedCoolingDurations: [TimeInterval] = [5 * 60, 10 * 60, 15 * 60, 30 * 60]
 
     private var isSynchronizingLaunchAtLogin = false
-
-    static func storedCoolingFanModes(in defaults: UserDefaults, isExistingInstall: Bool) -> (automatic: FanMode, manual: FanMode) {
-        func speed(for key: String) -> FanMode? {
-            guard let raw = defaults.string(forKey: key),
-                  let mode = FanMode(rawValue: raw), mode != .auto else { return nil }
-            return mode
-        }
-        let previous = speed(for: Keys.coolingFanMode)
-            ?? speed(for: Keys.legacyClosedLidFanMode)
-            ?? (isExistingInstall ? .aggressive : .maximum)
-        return (
-            speed(for: Keys.automaticCoolingFanMode) ?? previous,
-            speed(for: Keys.manualCoolingFanMode) ?? previous
-        )
-    }
-
-    /// Reads the saved cooling mode and whether it is armed, migrating
-    /// settings from earlier versions.
-    static func storedCoolingState(in defaults: UserDefaults) -> (mode: CoolingMode, armed: Bool) {
-        // "whileLidClosed" became the agent mode, which keeps the lid
-        // condition as fixed behavior.
-        let savedCoolingRaw = defaults.string(forKey: Keys.coolingMode)
-            .map { $0 == "whileLidClosed" ? CoolingMode.whileAgentRunning.rawValue : $0 }
-        if let savedCoolingMode = savedCoolingRaw.flatMap(CoolingMode.init(rawValue:)) {
-            return (savedCoolingMode, savedCoolingMode.survivesRelaunch
-                && defaults.bool(forKey: Keys.coolingArmed))
-        }
-        if savedCoolingRaw != nil {
-            // A mode that no longer exists, such as "system" (fans left to
-            // macOS), which is now just a stopped mode.
-            return (.whileAgentRunning, false)
-        }
-        // Closed-lid cooling used to be a separate setting that was on by
-        // default; carry it over as the "While Agent Is Running" mode,
-        // which is also the default for new installs.
-        let legacyEnabled = defaults.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
-            ? true : defaults.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
-        return (.whileAgentRunning, legacyEnabled)
-    }
 
     private init() {
         language = AppLanguage.stored()
@@ -289,22 +250,46 @@ public final class SettingsStore: ObservableObject {
         self.selectedTimerDuration = savedDuration > 0 ? savedDuration : 30 * 60
 
         // Cooling settings
-        // Native clamshell now always leaves hardware control to macOS.
-        // Retain the old excludeNormalClamshell preference on disk for older builds.
+        if UserDefaults.standard.object(forKey: Keys.excludeNormalClamshell) != nil {
+            self.excludeNormalClamshell = UserDefaults.standard.bool(forKey: Keys.excludeNormalClamshell)
+        } else {
+            self.excludeNormalClamshell = true
+        }
 
-        let fanModes = Self.storedCoolingFanModes(in: .standard, isExistingInstall: isExistingInstall)
-        self.automaticCoolingFanMode = fanModes.automatic
-        self.manualCoolingFanMode = fanModes.manual
-        UserDefaults.standard.set(fanModes.automatic.rawValue, forKey: Keys.automaticCoolingFanMode)
-        UserDefaults.standard.set(fanModes.manual.rawValue, forKey: Keys.manualCoolingFanMode)
+        let fanRaw = UserDefaults.standard.string(forKey: Keys.coolingFanMode)
+            ?? UserDefaults.standard.string(forKey: Keys.legacyClosedLidFanMode)
+        if let fan = fanRaw.flatMap(FanMode.init(rawValue:)), fan != .auto {
+            self.coolingFanMode = fan
+        } else {
+            // Existing installs keep the old closed-lid default.
+            self.coolingFanMode = isExistingInstall ? .aggressive : .maximum
+        }
 
         self.onlyOnACPower = UserDefaults.standard.bool(forKey: Keys.onlyOnACPower)
-        // Agent cooling is now always limited to closed-lid operation. Preserve the former
-        // agentCoolingRequiresLidClosed preference on disk for older builds.
+        self.agentCoolingRequiresLidClosed = UserDefaults.standard.object(forKey: Keys.agentCoolingRequiresLidClosed) == nil
+            ? true : UserDefaults.standard.bool(forKey: Keys.agentCoolingRequiresLidClosed)
 
-        let cooling = Self.storedCoolingState(in: .standard)
-        self.coolingMode = cooling.mode
-        self.coolingArmed = cooling.armed
+        // "whileLidClosed" became the agent mode, which keeps the lid
+        // condition as an option.
+        let savedCoolingRaw = UserDefaults.standard.string(forKey: Keys.coolingMode)
+            .map { $0 == "whileLidClosed" ? CoolingMode.whileAgentRunning.rawValue : $0 }
+        if let savedCoolingMode = savedCoolingRaw.flatMap(CoolingMode.init(rawValue:)) {
+            self.coolingMode = savedCoolingMode
+            self.coolingArmed = savedCoolingMode.survivesRelaunch
+                && UserDefaults.standard.bool(forKey: Keys.coolingArmed)
+        } else if UserDefaults.standard.string(forKey: Keys.coolingMode) != nil {
+            // A mode that no longer exists.
+            self.coolingMode = .system
+            self.coolingArmed = false
+        } else {
+            // Closed-lid cooling used to be a separate setting that was on by
+            // default; carry it over as the "While Agent Is Running" mode,
+            // which is also the default for new installs.
+            let legacyEnabled = UserDefaults.standard.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
+                ? true : UserDefaults.standard.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
+            self.coolingMode = legacyEnabled ? .whileAgentRunning : .system
+            self.coolingArmed = legacyEnabled
+        }
         let savedBoostDuration = UserDefaults.standard.double(forKey: Keys.forcedCoolingDuration)
         self.forcedCoolingDuration = Self.forcedCoolingDurations.contains(savedBoostDuration)
             ? savedBoostDuration : 10 * 60
@@ -343,7 +328,6 @@ public final class SettingsStore: ObservableObject {
 
         self.closedDisplayModeEnabled = UserDefaults.standard.object(forKey: Keys.closedDisplayModeEnabled) == nil
             ? true : UserDefaults.standard.bool(forKey: Keys.closedDisplayModeEnabled)
-        self.lowPowerModeWhenLidClosed = UserDefaults.standard.bool(forKey: Keys.lowPowerModeWhenLidClosed)
 
         if let data = UserDefaults.standard.data(forKey: Keys.providerLastTestedAt),
            let decoded = try? JSONDecoder().decode([AgentProvider: Date].self, from: data) {

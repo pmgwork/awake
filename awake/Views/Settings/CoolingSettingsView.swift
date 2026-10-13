@@ -9,12 +9,7 @@ struct CoolingSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(L10n.string("Automatic Cooling"), selection: $settings.automaticCoolingFanMode) {
-                    ForEach(FanMode.allCases.filter { $0 != .auto }) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-                Picker(L10n.string("Manual Cooling"), selection: $settings.manualCoolingFanMode) {
+                Picker(L10n.string("Fan Speed"), selection: $settings.coolingFanMode) {
                     ForEach(FanMode.allCases.filter { $0 != .auto }) { mode in
                         Text(mode.displayName).tag(mode)
                     }
@@ -26,7 +21,7 @@ struct CoolingSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else if canUseHelper {
-                    Text(L10n.string("Automatic: While Agent Is Running. Manual: Indefinitely or For Duration."))
+                    Text(L10n.string("Every cooling mode except System runs the fans at this speed. Cooling is unavailable below the battery stop level. Only While Agent Is Running stays on after a restart."))
                 } else {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to control the fans."))
                 }
@@ -35,13 +30,22 @@ struct CoolingSettingsView: View {
 
             Section {
                 Toggle(
+                    L10n.string("Only While the Lid Is Closed"),
+                    isOn: $settings.agentCoolingRequiresLidClosed
+                )
+                Toggle(
+                    L10n.string("Leave Fans to macOS with an External Display"),
+                    isOn: $settings.excludeNormalClamshell
+                )
+                .disabled(!settings.agentCoolingRequiresLidClosed)
+                Toggle(
                     L10n.string("Only When Plugged In"),
                     isOn: $settings.onlyOnACPower
                 )
             } header: {
                 Text(L10n.string("While Agent Is Running"))
             } footer: {
-                Text(L10n.string("Runs only with the lid closed."))
+                Text(L10n.string("Runs the fans while a monitored agent is working. It starts as soon as you select it in the menu, and you can pause it there."))
             }
             .disabled(!canUseHelper)
         }

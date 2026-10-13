@@ -44,6 +44,12 @@ class UpdateFeedsTests(unittest.TestCase):
         self.assertEqual(versions(data["stable"]), ["0.5.0"])
         self.assertCountEqual(versions(data["beta"]), ["0.5.0", "0.6.0b1"])
 
+    def test_migration_release_keeps_060_beta_opt_in(self):
+        data = self.build([release("v0.5.1"), release("v0.6.0-beta.1", True),
+                           release("v0.5.0"), release("v0.6.0", draft=True)])
+        self.assertCountEqual(versions(data["stable"]), ["0.5.1", "0.5.0"])
+        self.assertCountEqual(versions(data["beta"]), ["0.5.1", "0.5.0", "0.6.0b1"])
+
     def test_formal_release_is_available_to_beta_users(self):
         data = self.build([release("v0.6.0-beta.1", True), release("v0.6.0")])
         self.assertEqual(versions(data["stable"]), ["0.6.0"])
