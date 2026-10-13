@@ -69,7 +69,7 @@ struct KeepAwakeSettingsView: View {
             } header: {
                 Text(L10n.string("Battery"))
             } footer: {
-                Text(L10n.string("On battery, Keep Awake and Cooling stop when the charge falls to this level."))
+                Text(L10n.string("On battery, Keep Awake and agent cooling stop when the charge falls to this level."))
             }
         }
         .formStyle(.grouped)

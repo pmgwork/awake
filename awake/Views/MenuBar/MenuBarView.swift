@@ -49,7 +49,7 @@ struct MenuBarView: View {
                 )
             }
 
-            if coordinator.canUseForcedCooling {
+            if coordinator.isFanHelperInstalled && !coordinator.isRemovingHardwareAuthorization {
                 Divider()
 
                 CoolingModeSelectorView(
@@ -58,6 +58,13 @@ struct MenuBarView: View {
                 )
 
                 coolingActionButton
+
+                if coordinator.isCoolingBlockedByLowBattery {
+                    Text(L10n.string("Agent cooling is unavailable while the battery is low."))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Divider()
@@ -114,6 +121,7 @@ struct MenuBarView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .tint(.blue)
+        .disabled(coordinator.isCoolingBlockedByLowBattery)
     }
 
     private var coolingActionTitle: String {

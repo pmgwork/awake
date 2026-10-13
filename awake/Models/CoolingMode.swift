@@ -39,4 +39,10 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
     public var startsOnSelect: Bool {
         self == .whileAgentRunning
     }
+
+    /// Automatic cooling runs unattended, so the low-battery cutoff stops it.
+    /// Manual cooling was started by the user and keeps running.
+    public var stopsAtLowBattery: Bool {
+        self == .whileAgentRunning
+    }
 }

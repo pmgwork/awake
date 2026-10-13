@@ -109,12 +109,16 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             return cached
         }
 
-        let installed = readInstalledHelperVersion()
+        // A version check that times out under load says nothing about the
+        // helper. Keep the last known state instead of hiding fan control and
+        // dropping a running cooling mode.
+        let installed = readInstalledHelperVersion() ?? cachedInstallState ?? false
         storeInstallState(installed)
         return installed
     }
 
-    private func readInstalledHelperVersion() -> Bool {
+    /// Returns `nil` when the helper did not answer in time.
+    private func readInstalledHelperVersion() -> Bool? {
         guard FileManager.default.isExecutableFile(atPath: helperToolPath),
               let attributes = try? FileManager.default.attributesOfItem(atPath: helperToolPath),
               (attributes[.ownerAccountID] as? NSNumber)?.intValue == 0,
@@ -133,7 +137,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         proc.standardError = FileHandle.nullDevice
         do {
             try proc.run()
-            guard waitForExit(proc, timeout: 2) else { return false }
+            guard waitForExit(proc, timeout: 2) else { return nil }
             let output = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             return proc.terminationStatus == 0 && output == helperProtocolVersion

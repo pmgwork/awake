@@ -19,6 +19,11 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var forcedCoolingEndDate: Date?
     /// Whether the cooling mode currently wants the fans at 100%.
     @Published public private(set) var isForcedCoolingActive = false
+    /// Whether the fan helper is installed. Published so the menu shows the
+    /// cooling controls as soon as the asynchronous helper check finishes.
+    @Published public private(set) var isFanHelperInstalled = false
+    /// Whether the low-battery cutoff currently blocks the selected cooling mode.
+    @Published public private(set) var isCoolingBlockedByLowBattery = false
 
     // Sub-services
     public let settings = SettingsStore.shared
@@ -121,11 +126,15 @@ public final class AwakeCoordinator: ObservableObject {
     // MARK: - Forced Cooling
 
     /// Whether the fan helper is installed and no battery fail-safe blocks
-    /// manual fan control.
+    /// the selected cooling mode.
     public var canUseForcedCooling: Bool {
         !isRemovingHardwareAuthorization &&
-            !isLowBatteryCutoffEnforced &&
-            SMCHelper.shared.checkHelperInstalled()
+            !isCoolingCutOffByLowBattery &&
+            isFanHelperInstalled
+    }
+
+    private var isCoolingCutOffByLowBattery: Bool {
+        isLowBatteryCutoffEnforced && settings.coolingMode.stopsAtLowBattery
     }
 
     /// Selects a cooling mode. Switching modes while cooling is running stops
@@ -294,15 +303,17 @@ public final class AwakeCoordinator: ObservableObject {
             applyLowPowerModePolicy()
         }
         guard !isRemovingHardwareAuthorization else { return }
-        if !isLowBatteryCutoffActive {
+        // Plugging in does not end the override: unplugging again at the same
+        // charge would otherwise stop a session the user started on purpose.
+        if !isBatteryAtCutoffLevel {
             lowBatteryManualOverride = false
         }
-        // Global battery fail-safe: turn off Awake in every mode and restore
-        // automatic fan control when the battery reaches the configured level.
-        // A manual start below the threshold suspends the fail-safe until the
-        // session ends or power recovers.
+        // Global battery fail-safe: turn off Keep Awake in every mode and stop
+        // automatic cooling when the battery reaches the configured level.
+        // Manual cooling keeps running. A manual start below the threshold
+        // suspends the fail-safe until the session ends or the charge recovers.
         if isLowBatteryCutoffEnforced {
-            if fanController.activeMode != .auto || fanController.isTestModeActive {
+            if fanController.isTestModeActive {
                 fanController.restoreAuto()
             }
             if isActive, let batteryLevel = powerMonitor.batteryLevel {
@@ -386,15 +397,29 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private func updateForcedCooling(now: Date = Date()) {
-        if settings.coolingArmed && (isLowBatteryCutoffEnforced || isRemovingHardwareAuthorization) {
+        updateCoolingAvailability()
+
+        if settings.coolingArmed && isRemovingHardwareAuthorization {
             settings.coolingArmed = false
             resetCoolingState()
+        }
+        if settings.coolingArmed && isCoolingCutOffByLowBattery {
+            settings.coolingArmed = false
+            resetCoolingState()
+            if let batteryLevel = powerMonitor.batteryLevel {
+                NSLog("[AwakeCoordinator] Battery reached %d%%. Stopping agent cooling.", batteryLevel)
+                sendNotification(
+                    title: L10n.string("Agent Cooling Stopped"),
+                    body: L10n.format("Battery is at %d%%, so agent cooling stopped.", batteryLevel),
+                    identifier: "awake-cooling-stopped-\(UUID().uuidString)"
+                )
+            }
         }
 
         // While the helper is missing (or its state is still being read at
         // launch) a started mode stays started but cannot act yet.
         var active = false
-        if settings.coolingArmed && SMCHelper.shared.checkHelperInstalled() {
+        if settings.coolingArmed && isFanHelperInstalled {
             switch settings.coolingMode {
             case .forced:
                 active = true
@@ -419,6 +444,18 @@ public final class AwakeCoordinator: ObservableObject {
         guard displayBehaviorPolicy.allowsAgentCooling else { return false }
         if settings.onlyOnACPower && !powerMonitor.isOnACPower { return false }
         return true
+    }
+
+    private func updateCoolingAvailability() {
+        // @Published fires on every assignment, and this runs on the 1 Hz heartbeat.
+        let installed = SMCHelper.shared.checkHelperInstalled()
+        if isFanHelperInstalled != installed {
+            isFanHelperInstalled = installed
+        }
+        let blocked = isCoolingCutOffByLowBattery
+        if isCoolingBlockedByLowBattery != blocked {
+            isCoolingBlockedByLowBattery = blocked
+        }
     }
 
     private func setForcedCoolingActive(_ active: Bool) {
@@ -543,10 +580,13 @@ public final class AwakeCoordinator: ObservableObject {
         }
     }
 
-    private var isLowBatteryCutoffActive: Bool {
+    private var isBatteryAtCutoffLevel: Bool {
         settings.lowBatteryThreshold > 0 &&
-            !powerMonitor.isOnACPower &&
             (powerMonitor.batteryLevel ?? 100) <= settings.lowBatteryThreshold
+    }
+
+    private var isLowBatteryCutoffActive: Bool {
+        isBatteryAtCutoffLevel && !powerMonitor.isOnACPower
     }
 
     /// Whether the cutoff should still stop Awake or block automatic starts.
