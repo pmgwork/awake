@@ -67,6 +67,7 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 - Only entries owned by Awake (marked with `--owner pmgwork.awake`) are added or removed.
 - Before the first change, the original file is backed up next to it as `<file>.awake-backup`.
 - **Unlink** in Settings → Agents removes only Awake's entries.
+- Monitoring uses filesystem change notifications and cached session snapshots to keep idle CPU usage low. Disabled monitors stop watching; agent monitoring remains active when needed for automatic cooling.
 - Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700). The latest event per session is retained after completion to reject delayed older events, and is replaced when a new turn starts.
 
 ## Cooling

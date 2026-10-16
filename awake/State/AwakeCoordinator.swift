@@ -466,6 +466,28 @@ public final class AwakeCoordinator: ObservableObject {
 
     // MARK: - Subscriptions & Heartbeat
     private func setupSubscriptions() {
+        // Agent cooling needs session events even when Keep Awake monitoring is off.
+        Publishers.CombineLatest3(settings.$agentMonitoringEnabled, settings.$coolingArmed, settings.$coolingMode)
+            .map { enabled, armed, mode in enabled || (armed && mode == .whileAgentRunning) }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] needed in
+                guard let self else { return }
+                if needed { self.eventMonitor.startMonitoring() }
+                else { self.eventMonitor.stopMonitoring() }
+            }
+            .store(in: &cancellables)
+
+        settings.$downloadMonitoringEnabled
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                guard let self else { return }
+                if enabled { self.downloadMonitor.startMonitoring() }
+                else { self.downloadMonitor.stopMonitoring() }
+            }
+            .store(in: &cancellables)
+
         // Observe Settings agents change
         settings.$monitoredAgents
             .receive(on: DispatchQueue.main)

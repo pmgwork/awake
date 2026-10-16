@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000000002 /* DownloadMonitorTests.swift */; };
 		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* main.swift */; };
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
@@ -53,6 +54,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C70000000000000000000002 /* DownloadMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadMonitorTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
@@ -126,6 +128,7 @@
 		A10000000000000000000014 /* awakeTests */ = {
 			isa = PBXGroup;
 			children = (
+				C70000000000000000000002 /* DownloadMonitorTests.swift */,
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				C50000000000000000000002 /* CoolingSettingsMigrationTests.swift */,
 				C40000000000000000000002 /* LocalizationTests.swift */,
@@ -294,6 +297,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
+				C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */,
 				C50000000000000000000001 /* CoolingSettingsMigrationTests.swift in Sources */,
 				C40000000000000000000001 /* LocalizationTests.swift in Sources */,
 				C50000000000000000000003 /* LowPowerModeTests.swift in Sources */,

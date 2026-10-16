@@ -67,6 +67,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 - 只添加或删除 Awake 自己的条目（带有 `--owner pmgwork.awake`）。
 - 首次修改前，会在原文件旁生成 `<文件名>.awake-backup` 备份。
 - 在「设置 → 代理」中**解除链接**，只会删除 Awake 的条目。
+- 监视使用文件系统变更通知和会话缓存，降低空闲时的 CPU 占用。关闭监视后会停止监听，但自动散热所需的代理监视仍会继续。
 - 会话事件以 JSON 形式保存在 `~/Library/Application Support/Awake/agent-sessions/v1`（权限 0700）。会话结束后保留每个会话的最新事件，以阻止延迟的旧事件使会话重新变为活动状态，并在新一轮开始时覆盖。
 
 ## 散热

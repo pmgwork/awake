@@ -19,6 +19,12 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
 
     public let directoryURL: URL
     private let fileManager: FileManager
+    private let cacheLock = NSLock()
+    private struct CachedEvent {
+        let data: Data
+        let event: AgentHookEvent
+    }
+    private var cachedEvents: [URL: CachedEvent] = [:]
 
     public init(directoryURL: URL? = nil, fileManager: FileManager = .default) {
         self.fileManager = fileManager
@@ -34,12 +40,18 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
     }
 
     public func prepareDirectory() throws {
-        try fileManager.createDirectory(
-            at: directoryURL,
-            withIntermediateDirectories: true,
-            attributes: [.posixPermissions: 0o700]
-        )
-        try? fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directoryURL.path)
+        if !fileManager.fileExists(atPath: directoryURL.path) {
+            try fileManager.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        }
+        // Avoid emitting a filesystem change on every poll of our own directory.
+        let permissions = try? fileManager.attributesOfItem(atPath: directoryURL.path)[.posixPermissions] as? NSNumber
+        if permissions?.intValue != 0o700 {
+            try? fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directoryURL.path)
+        }
     }
 
     @discardableResult
@@ -65,18 +77,30 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         return url
     }
 
-    public func loadValidEvents(cleaningInvalidFiles: Bool = true, now: Date = Date()) -> [AgentHookEvent] {
-        guard (try? prepareDirectory()) != nil else { return [] }
-        let urls = (try? fileManager.contentsOfDirectory(
+    public func loadValidEvents(
+        cleaningInvalidFiles: Bool = true,
+        now: Date = Date(),
+        reloadingFiles: Bool = true
+    ) -> [AgentHookEvent] {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        if reloadingFiles {
+            guard (try? prepareDirectory()) != nil else { return [] }
+        }
+        let urls = reloadingFiles ? ((try? fileManager.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
-        )) ?? []
+        )) ?? []) : Array(cachedEvents.keys)
+        let existingURLs = Set(urls)
+        cachedEvents = cachedEvents.filter { existingURLs.contains($0.key) }
         var newestBySession: [String: AgentHookEvent] = [:]
         for url in urls where url.pathExtension == "json" {
-            guard let event = try? read(url),
+            let snapshot = reloadingFiles ? (try? readCached(url)) : cachedEvents[url]?.event
+            guard let event = snapshot,
                   event.schemaVersion == AgentHookEvent.currentSchemaVersion,
                   !event.sessionID.isEmpty else {
+                cachedEvents.removeValue(forKey: url)
                 if cleaningInvalidFiles { try? fileManager.removeItem(at: url) }
                 continue
             }
@@ -97,6 +121,17 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
             newestBySession[event.sessionKey] = event
         }
         return newestBySession.values.sorted { $0.occurredAt < $1.occurredAt }
+    }
+
+    /// Compare the bytes, rather than timestamps: atomic replacements can have
+    /// equal sizes and timestamps. Unchanged snapshots never reparse JSON/dates.
+    private func readCached(_ url: URL) throws -> AgentHookEvent {
+        let data = try Data(contentsOf: url)
+        guard data.count <= 64 * 1024 else { throw StoreError.invalidEvent }
+        if let cached = cachedEvents[url], cached.data == data { return cached.event }
+        let event = try decode(data)
+        cachedEvents[url] = CachedEvent(data: data, event: event)
+        return event
     }
 
     public func remove(provider: AgentProvider, sessionID: String) {
@@ -131,6 +166,10 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
     private func read(_ url: URL) throws -> AgentHookEvent {
         let data = try Data(contentsOf: url, options: [.mappedIfSafe])
         guard data.count <= 64 * 1024 else { throw StoreError.invalidEvent }
+        return try decode(data)
+    }
+
+    private func decode(_ data: Data) throws -> AgentHookEvent {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
@@ -142,16 +181,24 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
     }
 
     private static func iso8601String(from date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
+        dateFormatterLock.lock()
+        defer { dateFormatterLock.unlock() }
+        return fractionalFormatter.string(from: date)
     }
 
     private static func iso8601Date(from value: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+        dateFormatterLock.lock()
+        defer { dateFormatterLock.unlock() }
+        return fractionalFormatter.date(from: value) ?? wholeSecondsFormatter.date(from: value)
     }
+
+    private static let dateFormatterLock = NSLock()
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let wholeSecondsFormatter = ISO8601DateFormatter()
 
     private static func processIsSame(pid: Int32, expectedStartTime: TimeInterval?) -> Bool {
         guard pid > 1, kill(pid, 0) == 0 || errno == EPERM else { return false }

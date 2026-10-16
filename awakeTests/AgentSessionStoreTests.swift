@@ -186,4 +186,66 @@ final class AgentSessionStoreTests: XCTestCase {
         store.remove(provider: .claude, sessionID: "to-remove")
         XCTAssertTrue(store.loadValidEvents().isEmpty)
     }
+
+    func testCachedSnapshotDetectsSameSizeInPlaceRewriteWithUnchangedTimestamp() throws {
+        let event = AgentHookEvent(provider: .codex, sessionID: "cached", state: .active, reason: "first")
+        let url = try store.save(event)
+        XCTAssertEqual(store.loadValidEvents().first?.reason, "first")
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let original = try String(contentsOf: url, encoding: .utf8)
+        let rewritten = original.replacingOccurrences(of: "first", with: "other")
+        try Data(rewritten.utf8).write(to: url)
+        try FileManager.default.setAttributes([.modificationDate: attributes[.modificationDate]!], ofItemAtPath: url.path)
+        XCTAssertEqual(store.loadValidEvents().first?.reason, "other")
+
+        try FileManager.default.removeItem(at: url)
+        XCTAssertTrue(store.loadValidEvents().isEmpty)
+    }
+
+    func testCachedActiveSnapshotStillExpiresWithoutFileChanges() throws {
+        let now = Date()
+        try store.save(AgentHookEvent(provider: .codex, sessionID: "cached-expiry", state: .active, reason: "start", occurredAt: now))
+        XCTAssertEqual(store.loadValidEvents(now: now).count, 1)
+        XCTAssertTrue(store.loadValidEvents(now: now.addingTimeInterval(AgentSessionStore.orphanSessionTTL + 1), reloadingFiles: false).isEmpty)
+    }
+
+    @MainActor
+    func testFilesystemNotificationsRefreshSessionsAndStopDiscardsPendingResults() async throws {
+        let monitor = AgentEventMonitor(store: store, startsAutomatically: false)
+        monitor.startMonitoring()
+        defer { monitor.stopMonitoring() }
+        try await Task.sleep(for: .milliseconds(300))
+        let otherProcessStore = AgentSessionStore(directoryURL: directoryURL)
+        try otherProcessStore.save(AgentHookEvent(provider: .codex, sessionID: "notification", state: .active, reason: "start"))
+        let deadline = Date().addingTimeInterval(3)
+        while !monitor.hasActiveSession, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertTrue(monitor.hasActiveSession)
+        monitor.reloadNow()
+        monitor.stopMonitoring()
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertFalse(monitor.hasActiveSession)
+        XCTAssertEqual(monitor.activeSessionCount, 0)
+    }
+
+    func testInvalidReplacementDoesNotResurrectCachedActivity() throws {
+        let url = try store.save(AgentHookEvent(provider: .codex, sessionID: "invalidated", state: .active, reason: "start"))
+        XCTAssertEqual(store.loadValidEvents().count, 1)
+        try Data("invalid json".utf8).write(to: url, options: .atomic)
+        XCTAssertTrue(store.loadValidEvents().isEmpty)
+        XCTAssertTrue(store.loadValidEvents(reloadingFiles: false).isEmpty)
+    }
+
+    func testRepeatedPollsOfAccumulatedTerminalSessions() throws {
+        for index in 0..<777 {
+            try store.save(AgentHookEvent(provider: .codex, sessionID: "history-\(index)", state: .idle, reason: "stop"))
+        }
+        XCTAssertEqual(store.loadValidEvents().count, 777)
+        let started = Date()
+        for _ in 0..<20 {
+            XCTAssertEqual(store.loadValidEvents(reloadingFiles: false).count, 777)
+        }
+        print("Awake cached poll, 777 sessions: \(Date().timeIntervalSince(started) / 20) seconds/poll")
+    }
 }
