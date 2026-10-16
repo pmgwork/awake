@@ -1,6 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Fri, 16 Oct 2026 19:05:41 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b3</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 2
+
+- Fixed high background CPU usage when many completed agent sessions have accumulated. Awake now caches session snapshots and uses filesystem change notifications instead of repeatedly reading and parsing every session file.
+- Replaced frequent recursive download-folder scans with filesystem change notifications, with periodic recovery scans for missed events.
+- Stop disabled monitors to avoid unnecessary background work. Agent monitoring continues when needed for **While Agent Is Running** cooling.
+- Prevented an in-progress scan from restoring stale activity after monitoring is stopped or the download folder is changed.
+
+This release also includes the Low Power Mode and cooling improvements from [Beta 1](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.1) and [Beta 2](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.2).
+
+## Installation
+
+Download `Awake-0.6.0-beta.3.zip` or `Awake-0.6.0-beta.3.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.2...v0.6.0-beta.3)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.3/Awake-0.6.0-beta.3.zip" length="4425120" type="application/octet-stream" sparkle:edSignature="UY/gUSQVFziRR2u09CpSafc1QYNE3CDTySVirujFI+69VvCmV7rpgpWIDplNLSrw3b2VlFH/pkYtTbJ5bBVoDA==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Wed, 14 Oct 2026 07:40:50 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b2</sparkle:version>
