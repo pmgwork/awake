@@ -1,6 +1,40 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Sun, 18 Oct 2026 01:39:58 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b4</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 3
+
+- Added a bundled `awake` command-line tool to start, stop, and inspect Keep Awake and cooling from the terminal. The command launches Awake in the background when needed and controls the same session as the menu bar.
+- Select Keep Awake modes (`indefinitely`, `timer`, `agent`, or `download`), set timers, and configure automatic or manual cooling speeds. Cooling supports `indefinitely`, `timer`, and `agent`, with the same timer presets as the app.
+- Added JSON status output for scripts, concise one-line action results and input errors, and full command help through `awake --help`. Cooling controls follow the app's existing permissions and protection rules.
+
+To make the command available on your PATH:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
+```
+
+Ensure `~/.local/bin` is on your PATH. If `awake` already exists there, choose another location. Run `awake --help` for usage, or see the [CLI documentation](https://github.com/PMGWork/awake/blob/v0.6.0-beta.4/README.md#command-line).
+
+This release also includes the Low Power Mode, cooling, and background CPU improvements from [Beta 1](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.1), [Beta 2](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.2), and [Beta 3](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.3).
+
+## Installation
+
+Download `Awake-0.6.0-beta.4.zip` or `Awake-0.6.0-beta.4.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.3...v0.6.0-beta.4)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.4/Awake-0.6.0-beta.4.zip" length="4582492" type="application/octet-stream" sparkle:edSignature="/rbxeSU63v5sGBJD0L9Rlg5IPFgBYjfELkvPrVxaNCK1Y2ESouw7vixMN0TTNiXCQcrmTkH0xvvc1nXdxgbaDg==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Fri, 16 Oct 2026 19:05:41 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b3</sparkle:version>
