@@ -20,6 +20,10 @@
 		D15A557230530E7E00B14CCB /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = D15A557130530E7D00B14CCB /* AppIcon.icon */; };
 		E10000000000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E10000000000000000000002 /* Sparkle */; };
 		C60000000000000000000001 /* UpdateChannelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60000000000000000000002 /* UpdateChannelTests.swift */; };
+		F80000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000002 /* main.swift */; };
+		F80000000000000000000003 /* AwakeCLI in Embed CLI */ = {isa = PBXBuildFile; fileRef = F80000000000000000000004 /* AwakeCLI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		F80000000000000000000021 /* CLIProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000020 /* CLIProtocol.swift */; };
+		F80000000000000000000031 /* CLITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000030 /* CLITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +41,13 @@
 			remoteGlobalIDString = D198EB48303EB1D10004E0F5;
 			remoteInfo = awake;
 		};
+		F80000000000000000000005 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D198EB41303EB1D10004E0F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F80000000000000000000006;
+			remoteInfo = AwakeCLI;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,6 +60,17 @@
 				A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */,
 			);
 			name = "Embed Hook Bridge";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F80000000000000000000008 /* Embed CLI */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				F80000000000000000000003 /* AwakeCLI in Embed CLI */,
+			);
+			name = "Embed CLI";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -68,6 +90,10 @@
 		D15A557130530E7D00B14CCB /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		D198EB49303EB1D10004E0F5 /* awake.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = awake.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C60000000000000000000002 /* UpdateChannelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChannelTests.swift; sourceTree = "<group>"; };
+		F80000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		F80000000000000000000004 /* AwakeCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = awake; sourceTree = BUILT_PRODUCTS_DIR; };
+		F80000000000000000000020 /* CLIProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = awake/Models/CLIProtocol.swift; sourceTree = SOURCE_ROOT; };
+		F80000000000000000000030 /* CLITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -114,6 +140,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F80000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -129,6 +162,7 @@
 			isa = PBXGroup;
 			children = (
 				C70000000000000000000002 /* DownloadMonitorTests.swift */,
+				F80000000000000000000030 /* CLITests.swift */,
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				C50000000000000000000002 /* CoolingSettingsMigrationTests.swift */,
 				C40000000000000000000002 /* LocalizationTests.swift */,
@@ -145,6 +179,7 @@
 			children = (
 				D198EB4B303EB1D10004E0F5 /* awake */,
 				A10000000000000000000009 /* AwakeHookBridge */,
+				F80000000000000000000009 /* AwakeCLI */,
 				A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */,
 				A10000000000000000000014 /* awakeTests */,
 				D198EB4A303EB1D10004E0F5 /* Products */,
@@ -157,9 +192,19 @@
 			children = (
 				D198EB49303EB1D10004E0F5 /* awake.app */,
 				A10000000000000000000004 /* AwakeHookBridge */,
+				F80000000000000000000004 /* AwakeCLI */,
 				A10000000000000000000013 /* awakeTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F80000000000000000000009 /* AwakeCLI */ = {
+			isa = PBXGroup;
+			children = (
+				F80000000000000000000002 /* main.swift */,
+				F80000000000000000000020 /* CLIProtocol.swift */,
+			);
+			path = AwakeCLI;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -210,11 +255,13 @@
 				D198EB46303EB1D10004E0F5 /* Frameworks */,
 				D198EB47303EB1D10004E0F5 /* Resources */,
 				A10000000000000000000008 /* Embed Hook Bridge */,
+				F80000000000000000000008 /* Embed CLI */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				A1000000000000000000000A /* PBXTargetDependency */,
+				F8000000000000000000000A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D198EB4B303EB1D10004E0F5 /* awake */,
@@ -226,6 +273,24 @@
 			productName = awake;
 			productReference = D198EB49303EB1D10004E0F5 /* awake.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F80000000000000000000006 /* AwakeCLI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8000000000000000000000B /* Build configuration list for PBXNativeTarget "AwakeCLI" */;
+			buildPhases = (
+				F8000000000000000000000C /* Sources */,
+				F80000000000000000000007 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AwakeCLI;
+			packageProductDependencies = (
+			);
+			productName = AwakeCLI;
+			productReference = F80000000000000000000004 /* AwakeCLI */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -266,6 +331,7 @@
 			targets = (
 				D198EB48303EB1D10004E0F5 /* awake */,
 				A10000000000000000000006 /* AwakeHookBridge */,
+				F80000000000000000000006 /* AwakeCLI */,
 				A10000000000000000000017 /* awakeTests */,
 			);
 		};
@@ -298,6 +364,7 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */,
+				F80000000000000000000031 /* CLITests.swift in Sources */,
 				C50000000000000000000001 /* CoolingSettingsMigrationTests.swift in Sources */,
 				C40000000000000000000001 /* LocalizationTests.swift in Sources */,
 				C50000000000000000000003 /* LowPowerModeTests.swift in Sources */,
@@ -314,6 +381,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8000000000000000000000C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F80000000000000000000001 /* main.swift in Sources */,
+				F80000000000000000000021 /* CLIProtocol.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -326,6 +402,11 @@
 			isa = PBXTargetDependency;
 			target = D198EB48303EB1D10004E0F5 /* awake */;
 			targetProxy = A1000000000000000000001C /* PBXContainerItemProxy */;
+		};
+		F8000000000000000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F80000000000000000000006 /* AwakeCLI */;
+			targetProxy = F80000000000000000000005 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -574,6 +655,32 @@
 			};
 			name = Release;
 		};
+		F8000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeCLI;
+				PRODUCT_MODULE_NAME = AwakeCLI;
+				PRODUCT_NAME = awake;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F8000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MMQS9J58YW;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pmgwork.AwakeCLI;
+				PRODUCT_MODULE_NAME = AwakeCLI;
+				PRODUCT_NAME = awake;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -609,6 +716,15 @@
 			buildConfigurations = (
 				D198EB55303EB1D20004E0F5 /* Debug */,
 				D198EB56303EB1D20004E0F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8000000000000000000000B /* Build configuration list for PBXNativeTarget "AwakeCLI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8000000000000000000000D /* Debug */,
+				F8000000000000000000000E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

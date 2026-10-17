@@ -63,7 +63,7 @@ fi
 # Coverage-instrumented binaries write default.profraw into the current
 # directory; the hook bridge runs inside users' projects, so never ship one.
 echo "==> Checking for coverage instrumentation..."
-for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/AwakeHookBridge"; do
+for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/AwakeHookBridge" "$BUILT_APP/Contents/Helpers/awake"; do
   [ -f "$binary" ] || { echo "Binary not found: $binary" >&2; exit 1; }
   if DEVELOPER_DIR="$DEVELOPER_DIR" xcrun nm "$binary" | grep -q __llvm_profile; then
     echo "Coverage instrumentation found in $binary" >&2

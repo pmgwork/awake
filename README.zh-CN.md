@@ -53,6 +53,50 @@ Awake 只在菜单栏运行（不会显示在 Dock 中）。
   - **散热** — 自动与手动散热各自的风扇速度、代理散热选项
   - **权限** — 安装、更新或删除共享辅助工具
 
+## 命令行
+
+应用内置 `awake` 命令。将 Awake.app 移至 `/Applications` 后，一次性添加到 PATH：
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
+```
+
+请确保 `~/.local/bin` 位于 PATH 中。如果已存在同名命令，请选择其他位置，不要覆盖。同一位置的应用更新后，链接仍然有效。删除该符号链接即可卸载命令。
+
+```sh
+awake start                 # 无限期启动
+awake start --duration 30m  # 启动30分钟
+awake stop                  # 停止防止睡眠
+awake status                # 显示状态、模式、剩余秒数及睡眠保护运行状态
+awake status --json         # JSON 状态（定时结束时间使用 ISO 8601）
+awake --help
+```
+
+命令会在需要时于后台启动其所属应用，并控制菜单栏中的同一会话。`start` 选择无限期模式；`start --duration` 选择定时模式并保存时长。再次启动会替换当前会话并重置定时器。时长支持正整数加 `s`、`m` 或 `h`，最多7天。`stop` 停止防止睡眠；散热仍独立运行。CLI 启动遵循与手动启动相同的规则，包括低电量时的手动覆盖。硬件操作仍需现有授权。状态包含实际睡眠保护运行状态；即使会话处于活动状态，保护仍可能降级或失败。成功时退出码为0；输入无效、连接失败或操作被拒绝时为非0。需要应用本体及已登录的 macOS GUI 会话。
+
+操作命令仅显示一行结果。输入错误也保持简短；使用 `awake --help` 查看完整帮助。使用 `status` 查看详情，或使用 `status --json` 获取脚本用输出。
+
+也支持模式选择和散热控制：
+
+```sh
+awake mode agent
+awake start --mode download
+awake mode timer --duration 1h
+awake start --mode timer
+awake cooling start --mode indefinitely
+awake cooling start --duration 10m
+awake cooling mode agent
+awake cooling speed automatic 75
+awake cooling speed manual 50
+awake cooling stop
+awake cooling status --json
+```
+
+防止睡眠模式包括 `indefinitely`（无限期）、`timer`（定时）、`agent`（代理运行时）和 `download`（下载时）。散热支持 `indefinitely`、`timer` 和 `agent`。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。模式选择与菜单一致：更改模式会停止之前的会话；手动模式等待启动，代理散热在可用时会自动进入已启动状态。`awake start --mode timer` 使用已保存的时长；以 `agent` 或 `download` 启动需要启用对应监视，无活动时等待。`awake cooling start` 使用当前散热模式。指定时长意味着 `timer`，与其他模式同时使用会被拒绝。
+
+散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示已启动，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示已启用监视的条件防止睡眠模式正在等待活动。散热与防止睡眠保持独立。
+
 ## 代理集成
 
 Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Application Support/Awake/bin`）写入各代理自身的配置文件。

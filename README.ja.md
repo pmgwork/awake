@@ -53,6 +53,50 @@ Awake はメニューバー専用アプリです（Dock にアイコンは表示
   - **冷却** — 自動・手動それぞれのファン速度、エージェント冷却のオプション
   - **権限** — 共通ヘルパーのインストール・更新・削除
 
+## コマンドライン
+
+アプリには `awake` コマンドが同梱されています。Awake.app を `/Applications` に移動してから、一度だけ PATH に追加します。
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
+```
+
+`~/.local/bin` を PATH に含めてください。同名のコマンドがある場合は上書きせず、別の場所を選んでください。同じ場所でアプリを更新すればリンクも引き続き使えます。コマンドを削除するには、このシンボリックリンクを削除します。
+
+```sh
+awake start                 # 無期限で開始
+awake start --duration 30m  # 30分間だけ開始
+awake stop                  # スリープ防止を停止
+awake status                # 状態・モード・残り秒数・スリープ防止の稼働状態を表示
+awake status --json         # JSON で表示（タイマー終了日時は ISO 8601）
+awake --help
+```
+
+必要に応じてコマンド自身を含むアプリをバックグラウンドで起動し、メニューバーに表示されるセッションを操作します。`start` は無期限モード、`start --duration` は時間指定モードを選択し、指定時間を保存します。再度開始すると現在のセッションを置き換え、タイマーを設定し直します。時間は正の整数と `s`・`m`・`h` で指定でき、上限は7日です。`stop` はスリープ防止を停止し、冷却は独立して動作します。CLI からの開始には低バッテリー時の手動開始を含む、アプリと同じルールが適用されます。ハードウェア操作には既存の権限が必要です。状態には実際のスリープ防止処理の稼働状態も含まれ、セッションが有効でも保護が低下・失敗している場合があります。成功時の終了コードは0、入力不正・接続失敗・操作拒否時は0以外です。アプリ本体と、ログイン済みの macOS GUI セッションが必要です。
+
+操作コマンドは結果を1行だけ表示します。入力エラーも短く表示し、全ヘルプは `awake --help` で確認できます。詳しい状態は `status`、スクリプト用の出力は `status --json` で取得できます。
+
+モード選択と冷却も操作できます。
+
+```sh
+awake mode agent
+awake start --mode download
+awake mode timer --duration 1h
+awake start --mode timer
+awake cooling start --mode indefinitely
+awake cooling start --duration 10m
+awake cooling mode agent
+awake cooling speed automatic 75
+awake cooling speed manual 50
+awake cooling stop
+awake cooling status --json
+```
+
+スリープ防止のモードは `indefinitely`（無期限）、`timer`（時間指定）、`agent`（エージェント実行中）、`download`（ダウンロード中）です。冷却は `indefinitely`・`timer`・`agent` に対応します。`awake mode` と `awake cooling mode` は、値を省略すると現在の状態を表示します。モード選択はメニューと同じ動作で、変更すると前のセッションを停止し、手動モードでは開始を待ちます。エージェント冷却は利用可能なら選択時に開始します。`awake start --mode timer` は保存済みの時間を使います。`agent`・`download` での開始には対応する監視の有効化が必要で、活動がない場合は待機します。`awake cooling start` は選択中の冷却モードを使います。時間指定は `timer` を意味し、別のモードとの併用は拒否します。
+
+冷却時間はアプリと同じ `5m`・`10m`・`15m`・`30m`、自動／手動の冷却速度は `50`・`75`・`100` パーセントから選べます。冷却の開始・速度変更にはヘルパーが必要です。CLI はヘルパーのインストールや権限要求を行いません。バッテリー保護、蓋の状態、外部ディスプレイのルールはアプリと共通です。開始が拒否された場合、選択中のモードとタイマーを保持します。`status` の `cooling` には、開始済みを示す `armed`、現在のポリシーが冷却を要求していることを示す `active`、コントローラーに適用済みの `fanControl`（`auto` またはパーセント。実測回転数ではありません）が含まれます。ファン制御は非同期なので、結果やエラーは再度 `status` で確認してください。`waitingForActivity` は、監視が有効な条件付きスリープ防止モードでの待機を示します。冷却とスリープ防止は独立して操作できます。
+
 ## エージェント連携
 
 同梱の `AwakeHookBridge` コマンド（`~/Library/Application Support/Awake/bin` に配置）を、各エージェント自身の設定ファイルへ追加します。

@@ -40,6 +40,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private static let statusIconSize = NSSize(width: 21, height: 16.8)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        CLIService.shared.start()
         configureStatusItem()
         configurePopover()
         observeStatusChanges()

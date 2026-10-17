@@ -53,6 +53,50 @@ Awake runs only in the menu bar (no Dock icon).
   - **Cooling** — separate automatic and manual fan speeds, and options for the agent mode.
   - **Permissions** — install, update, or remove the shared helper.
 
+## Command line
+
+The app bundles an `awake` command. After moving Awake.app to `/Applications`, add it to your PATH once:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
+```
+
+Ensure `~/.local/bin` is on your PATH. If that command name already exists, choose another location instead of replacing it. The symlink continues to work after app updates at the same location. Remove the symlink to uninstall the command.
+
+```sh
+awake start                 # Start indefinitely
+awake start --duration 30m  # Start for 30 minutes
+awake stop                  # Stop Keep Awake
+awake status                # Show state, mode, remaining seconds, and sleep-prevention health
+awake status --json         # Machine-readable status (ISO 8601 timer end date)
+awake --help
+```
+
+The command launches its containing app in the background if needed and controls the same session shown in the menu bar. `start` selects Indefinitely; `start --duration` selects For Duration and saves the duration. Repeating `start` replaces the current session and resets its timer. Durations accept positive whole numbers followed by `s`, `m`, or `h`, up to 7 days. `stop` stops Keep Awake; cooling remains independent. CLI starts follow the same rules as manual starts, including the low-battery override. Existing hardware permissions still apply. Status includes the actual sleep-prevention health; an active session can report degraded or failed protection. Commands return 0 on success and nonzero on invalid input, connection failure, or a rejected command. The CLI requires the app and a logged-in macOS GUI session.
+
+Actions print a one-line result. Input errors stay brief; `awake --help` shows the full help. Use `status` for details or `status --json` for scripts.
+
+Mode selection and cooling are also available:
+
+```sh
+awake mode agent
+awake start --mode download
+awake mode timer --duration 1h
+awake start --mode timer
+awake cooling start --mode indefinitely
+awake cooling start --duration 10m
+awake cooling mode agent
+awake cooling speed automatic 75
+awake cooling speed manual 50
+awake cooling stop
+awake cooling status --json
+```
+
+Keep Awake modes are `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `agent`. `awake mode` and `awake cooling mode` without a value show the current state. Selecting a mode follows the menu: changing it stops the previous session; manual modes wait for Start, and selecting agent cooling arms it when available. `awake start --mode timer` uses the saved duration; `awake start --mode agent` or `download` requires that monitor to be enabled and waits for activity when idle. `awake cooling start` uses the selected cooling mode. A duration implies `timer`; combining a duration with a different mode is rejected.
+
+Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling or changing its speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means started, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates a selected conditional mode with monitoring enabled. Cooling commands leave Keep Awake independent.
+
 ## Agent integrations
 
 Awake links a provider by adding the bundled `AwakeHookBridge` command (installed at `~/Library/Application Support/Awake/bin`) to that provider's own configuration:

@@ -128,8 +128,13 @@ public final class AwakeCoordinator: ObservableObject {
     /// Whether the fan helper is installed and no battery fail-safe blocks
     /// the selected cooling mode.
     public var canUseForcedCooling: Bool {
+        canStartCooling(settings.coolingMode)
+    }
+
+    /// Checks the requested mode before a CLI action changes the current selection.
+    public func canStartCooling(_ mode: CoolingMode) -> Bool {
         !isRemovingHardwareAuthorization &&
-            !isCoolingCutOffByLowBattery &&
+            !(isLowBatteryCutoffEnforced && mode.stopsAtLowBattery) &&
             isFanHelperInstalled
     }
 
