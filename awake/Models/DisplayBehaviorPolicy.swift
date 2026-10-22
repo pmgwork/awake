@@ -4,10 +4,17 @@ struct DisplayBehaviorPolicy {
     let lidClosed: Bool
     let hasExternalDisplay: Bool
 
-    var isNativeClamshell: Bool { lidClosed && hasExternalDisplay }
-
-    /// Native clamshell operation leaves hardware control to macOS in every mode.
-    var allowsCooling: Bool { !isNativeClamshell }
+    /// Manual cooling is user initiated, so it runs in every display
+    /// configuration, including native clamshell. Automatic agent cooling is
+    /// limited to headless closed-lid operation.
+    func allowsCooling(for mode: CoolingMode) -> Bool {
+        switch mode {
+        case .forced, .timed:
+            return true
+        case .whileAgentRunning:
+            return allowsAgentCooling
+        }
+    }
 
     /// Agent cooling is limited to headless closed-lid operation.
     var allowsAgentCooling: Bool { lidClosed && !hasExternalDisplay }

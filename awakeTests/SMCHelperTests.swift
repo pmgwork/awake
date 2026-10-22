@@ -6,7 +6,9 @@ final class SMCHelperTests: XCTestCase {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
         XCTAssertTrue(policy.allowsScreenPrevention)
         XCTAssertFalse(policy.needsClosedDisplayOverride)
-        XCTAssertFalse(policy.allowsCooling)
+        XCTAssertTrue(policy.allowsCooling(for: .forced))
+        XCTAssertTrue(policy.allowsCooling(for: .timed))
+        XCTAssertFalse(policy.allowsCooling(for: .whileAgentRunning))
         XCTAssertFalse(policy.allowsAgentCooling)
     }
 
@@ -14,7 +16,9 @@ final class SMCHelperTests: XCTestCase {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
         XCTAssertFalse(policy.allowsScreenPrevention)
         XCTAssertTrue(policy.needsClosedDisplayOverride)
-        XCTAssertTrue(policy.allowsCooling)
+        for mode in CoolingMode.allCases {
+            XCTAssertTrue(policy.allowsCooling(for: mode))
+        }
         XCTAssertTrue(policy.allowsAgentCooling)
     }
 
@@ -23,7 +27,9 @@ final class SMCHelperTests: XCTestCase {
             let policy = DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: hasExternal)
             XCTAssertTrue(policy.allowsScreenPrevention)
             XCTAssertEqual(policy.needsClosedDisplayOverride, !hasExternal)
-            XCTAssertTrue(policy.allowsCooling)
+            XCTAssertTrue(policy.allowsCooling(for: .forced))
+            XCTAssertTrue(policy.allowsCooling(for: .timed))
+            XCTAssertFalse(policy.allowsCooling(for: .whileAgentRunning))
             XCTAssertFalse(policy.allowsAgentCooling)
         }
     }

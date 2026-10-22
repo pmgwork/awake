@@ -388,7 +388,7 @@ public final class AwakeCoordinator: ObservableObject {
     /// and hands them back to the system otherwise. A fan test owns the fans
     /// while it runs.
     private func applyFanPolicy() {
-        guard displayBehaviorPolicy.allowsCooling else {
+        guard displayBehaviorPolicy.allowsCooling(for: settings.coolingMode) else {
             fanController.restoreAuto()
             return
         }
@@ -440,7 +440,7 @@ public final class AwakeCoordinator: ObservableObject {
                 active = isAgentCoolingNeeded
             }
         }
-        setForcedCoolingActive(active && displayBehaviorPolicy.allowsCooling)
+        setForcedCoolingActive(active && displayBehaviorPolicy.allowsCooling(for: settings.coolingMode))
     }
 
     /// Agent cooling runs only with the lid closed and no external display.
