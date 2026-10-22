@@ -1,6 +1,29 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Fri, 23 Oct 2026 01:41:18 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b5</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 4
+
+- Fixed **Indefinitely** and **For Duration** manual cooling not running while the lid is closed and an external display is connected. Manual cooling now works in every display setup; automatic agent cooling still leaves fan control to macOS in this clamshell state.
+
+This release also includes the command-line tool and other changes from [Beta 4](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.4).
+
+## Installation
+
+Download `Awake-0.6.0-beta.5.zip` or `Awake-0.6.0-beta.5.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.4...v0.6.0-beta.5)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.5/Awake-0.6.0-beta.5.zip" length="4582707" type="application/octet-stream" sparkle:edSignature="urQkgGHIWv2yI37BSdIgLaW5z2NUu1a3twhB2n+kWd0pCfnzrTK+GggHhtIGHNd0CUVVxs3s1mW/dNLoWD3NCg==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Sun, 18 Oct 2026 01:39:58 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b4</sparkle:version>
