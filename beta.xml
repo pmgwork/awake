@@ -1,6 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Mon, 26 Oct 2026 14:56:57 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b7</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 6
+
+- Fixed cooling briefly dropping out while it runs. When macOS takes the fans back, for example on M3 and M4 Macs under load or after waking from sleep, the helper now restores manual control and the selected speed within seconds instead of first handing the fans back to the system. Previously, cooling could drop for up to about 40 seconds.
+- A failed attempt to take manual control of the fans is now retried after about 5 seconds instead of 30.
+
+**This release updates the hardware helper.** After updating, open **Settings → Permissions** and click **Update…** under **Hardware Helper**. macOS asks for an administrator password. Cooling and closed-lid operation stay unavailable until the helper is updated.
+
+This release also includes the fixes from [Beta 6](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.6) and earlier betas.
+
+## Installation
+
+Download `Awake-0.6.0-beta.7.zip` or `Awake-0.6.0-beta.7.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.6...v0.6.0-beta.7)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.7/Awake-0.6.0-beta.7.zip" length="4601965" type="application/octet-stream" sparkle:edSignature="va09623zdFcNVbrN8HajiC06jgltbdugGErcxhGKbHFQD3Cp/slx/LnHXYsz/JgkJDmLR+wiJ2kytwgnEi0CBA==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Mon, 26 Oct 2026 14:32:57 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b6</sparkle:version>
