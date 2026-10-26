@@ -73,7 +73,7 @@ final class CLIService {
             if request.command == "cooling.start" && !coordinator.canStartCooling(mode) {
                 return snapshot(error: coolingUnavailableReason())
             }
-            // A mode change can automatically arm agent cooling, just like the menu.
+            // A mode change can arm automatic cooling, just like the menu.
             coordinator.selectCoolingMode(mode)
             if let duration = request.durationSeconds { coordinator.setCoolingDuration(duration) }
             if request.command == "cooling.start" {
@@ -107,7 +107,7 @@ final class CLIService {
 
     private func coolingMode(_ name: String) -> CoolingMode {
         switch name {
-        case "agent": return .whileAgentRunning
+        case "awake", "agent": return .whileKeepAwakeIsOn
         case "timer": return .timed
         default: return .forced
         }
@@ -134,7 +134,7 @@ final class CLIService {
         let coordinator = AwakeCoordinator.shared
         let settings = coordinator.settings
         let remaining = coordinator.timerEndDate.map { max(0, Int(ceil($0.timeIntervalSinceNow))) } ?? 0
-        let coolingMode = settings.coolingMode == .forced ? "indefinitely" : settings.coolingMode == .timed ? "timer" : "agent"
+        let coolingMode = settings.coolingMode == .forced ? "indefinitely" : settings.coolingMode == .timed ? "timer" : "awake"
         return CLIResponse(
             success: error == nil, error: error, active: coordinator.isActive,
             mode: settings.selectedMode.rawValue,

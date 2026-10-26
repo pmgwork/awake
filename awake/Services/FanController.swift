@@ -12,8 +12,6 @@ public final class FanController: ObservableObject {
     public static let shared = FanController()
 
     @Published public private(set) var activeMode: FanMode = .auto
-    @Published public private(set) var isTestModeActive: Bool = false
-    private var testModeEndDate: Date?
     @Published public private(set) var controlError: String?
 
     // SMC helper processes run at Default QoS. Matching their caller avoids a
@@ -23,13 +21,11 @@ public final class FanController: ObservableObject {
     private var modeInFlight: FanMode?
     private var failedMode: FanMode?
     private var failedAt: Date?
-    private var testResetTimer: Timer?
     private var watchdogTimer: Timer?
     private var isWatchdogCheckInFlight = false
     /// Only an explicit user action may ask for an administrator password to
     /// restore the fans. Automatic retries from the heartbeat never prompt.
     private var restorePromptAllowed = false
-    private let testDuration: TimeInterval = 60
     /// A failed automatic restore is retried after this delay so the fail-safe
     /// recovers on its own without hammering the SMC on every heartbeat.
     private let autoRetryDelay: TimeInterval = 15
@@ -54,14 +50,11 @@ public final class FanController: ObservableObject {
     }
 
     deinit {
-        testResetTimer?.invalidate()
         watchdogTimer?.invalidate()
     }
 
     @objc private func handleAppWillTerminate() {
-        cancelTestResetTimer()
         requestedMode = .auto
-        isTestModeActive = false
         // Let a helper that is still starting up give up instead of blocking
         // termination behind the SMC engage.
         SMCHelper.shared.requestTermination()
@@ -85,7 +78,6 @@ public final class FanController: ObservableObject {
     /// A failed restore is retried after `autoRetryDelay` instead of being
     /// blocked forever; `force` is used by explicit user actions.
     public func restoreAuto(force: Bool = false) {
-        cancelTestResetTimer()
         if force { restorePromptAllowed = true }
         if requestedMode != .auto {
             failedMode = nil
@@ -101,7 +93,6 @@ public final class FanController: ObservableObject {
             failedAt = nil
         }
         requestedMode = .auto
-        isTestModeActive = false
         applyRequestedModeIfNeeded()
     }
 
@@ -134,7 +125,6 @@ public final class FanController: ObservableObject {
 
         Task { @MainActor in
             let controller = FanController.shared
-            controller.isTestModeActive = false
             controller.finishApplying(
                 mode: .auto,
                 success: success,
@@ -195,8 +185,6 @@ public final class FanController: ObservableObject {
         } else {
             failedMode = mode
             failedAt = Date()
-            isTestModeActive = false
-            cancelTestResetTimer()
             controlError = errorMessage
         }
 
@@ -206,19 +194,6 @@ public final class FanController: ObservableObject {
         if requestedMode != mode {
             applyRequestedModeIfNeeded()
         }
-    }
-
-    public func testFanSpeed(mode: FanMode) {
-        if mode == .auto {
-            restoreAuto(force: true)
-            return
-        }
-        failedMode = nil
-        failedAt = nil
-        requestedMode = mode
-        isTestModeActive = true
-        scheduleTestReset()
-        applyRequestedModeIfNeeded()
     }
 
     public func allowPolicyRetry() {
@@ -315,24 +290,5 @@ public final class FanController: ObservableObject {
                 controller.applyRequestedModeIfNeeded()
             }
         }
-    }
-
-    private func scheduleTestReset() {
-        testResetTimer?.invalidate()
-        let endDate = Date().addingTimeInterval(testDuration)
-        testModeEndDate = endDate
-        testResetTimer = Timer.scheduledTimer(withTimeInterval: testDuration, repeats: false) { _ in
-            Task { @MainActor in
-                guard FanController.shared.testModeEndDate == endDate else { return }
-                NSLog("[FanController] Fan test lease expired. Restoring Auto mode.")
-                FanController.shared.restoreAuto()
-            }
-        }
-    }
-
-    private func cancelTestResetTimer() {
-        testResetTimer?.invalidate()
-        testResetTimer = nil
-        testModeEndDate = nil
     }
 }

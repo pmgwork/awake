@@ -19,7 +19,7 @@ public final class SettingsStore: ObservableObject {
         static let downloadFolderPath = "pmgwork.awake.downloadFolderPath"
         static let completionGraceDuration = "pmgwork.awake.completionGraceDuration"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
-        /// Replaced by the "While Agent Is Running" cooling mode; read once to migrate.
+        /// Replaced by the "While Keep Awake Is On" cooling mode; read once to migrate.
         static let legacyClosedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
         static let coolingFanMode = "pmgwork.awake.coolingFanMode"
         static let automaticCoolingFanMode = "pmgwork.awake.automaticCoolingFanMode"
@@ -228,10 +228,9 @@ public final class SettingsStore: ObservableObject {
     /// Reads the saved cooling mode and whether it is armed, migrating
     /// settings from earlier versions.
     static func storedCoolingState(in defaults: UserDefaults) -> (mode: CoolingMode, armed: Bool) {
-        // "whileLidClosed" became the agent mode, which keeps the lid
-        // condition as fixed behavior.
+        // Earlier automatic modes now follow Keep Awake; preserve their armed state.
         let savedCoolingRaw = defaults.string(forKey: Keys.coolingMode)
-            .map { $0 == "whileLidClosed" ? CoolingMode.whileAgentRunning.rawValue : $0 }
+            .map { ["whileLidClosed", "whileAgentRunning"].contains($0) ? CoolingMode.whileKeepAwakeIsOn.rawValue : $0 }
         if let savedCoolingMode = savedCoolingRaw.flatMap(CoolingMode.init(rawValue:)) {
             return (savedCoolingMode, savedCoolingMode.survivesRelaunch
                 && defaults.bool(forKey: Keys.coolingArmed))
@@ -239,14 +238,14 @@ public final class SettingsStore: ObservableObject {
         if savedCoolingRaw != nil {
             // A mode that no longer exists, such as "system" (fans left to
             // macOS), which is now just a stopped mode.
-            return (.whileAgentRunning, false)
+            return (.whileKeepAwakeIsOn, false)
         }
         // Closed-lid cooling used to be a separate setting that was on by
-        // default; carry it over as the "While Agent Is Running" mode,
+        // default; carry it over as the "While Keep Awake Is On" mode,
         // which is also the default for new installs.
         let legacyEnabled = defaults.object(forKey: Keys.legacyClosedLidCoolingEnabled) == nil
             ? true : defaults.bool(forKey: Keys.legacyClosedLidCoolingEnabled)
-        return (.whileAgentRunning, legacyEnabled)
+        return (.whileKeepAwakeIsOn, legacyEnabled)
     }
 
     private init() {
@@ -315,12 +314,14 @@ public final class SettingsStore: ObservableObject {
         UserDefaults.standard.set(fanModes.manual.rawValue, forKey: Keys.manualCoolingFanMode)
 
         self.onlyOnACPower = UserDefaults.standard.bool(forKey: Keys.onlyOnACPower)
-        // Agent cooling is now always limited to closed-lid operation. Preserve the former
+        // Automatic cooling is limited to closed-lid operation. Preserve the former
         // agentCoolingRequiresLidClosed preference on disk for older builds.
 
         let cooling = Self.storedCoolingState(in: .standard)
         self.coolingMode = cooling.mode
         self.coolingArmed = cooling.armed
+        UserDefaults.standard.set(cooling.mode.rawValue, forKey: Keys.coolingMode)
+        UserDefaults.standard.set(cooling.armed, forKey: Keys.coolingArmed)
         let savedBoostDuration = UserDefaults.standard.double(forKey: Keys.forcedCoolingDuration)
         self.forcedCoolingDuration = Self.forcedCoolingDurations.contains(savedBoostDuration)
             ? savedBoostDuration : 10 * 60

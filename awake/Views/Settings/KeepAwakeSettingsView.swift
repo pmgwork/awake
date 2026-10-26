@@ -80,7 +80,7 @@ struct KeepAwakeSettingsView: View {
             } header: {
                 Text(L10n.string("Battery"))
             } footer: {
-                Text(L10n.string("On battery, Keep Awake and agent cooling stop when the charge falls to this level."))
+                Text(L10n.string("On battery, Keep Awake and automatic cooling stop when the charge falls to this level."))
             }
         }
         .formStyle(.grouped)
@@ -91,7 +91,7 @@ struct KeepAwakeSettingsView: View {
     }
 
     private var graceDurations: [TimeInterval] {
-        var durations: Set<TimeInterval> = [60, 120, 180, 300, 600, 900, 1800]
+        var durations: Set<TimeInterval> = [60, 120, 180, 300, 600]
         // Keep custom durations saved by earlier releases selectable.
         if settings.completionGraceDuration > 0 { durations.insert(settings.completionGraceDuration) }
         return durations.sorted()

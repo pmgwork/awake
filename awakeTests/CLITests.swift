@@ -31,6 +31,7 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "start"]).command, "cooling.start")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "start", "--duration", "10m"]).mode, "timer")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "mode", "agent"]).mode, "agent")
+        XCTAssertEqual(try CLIProtocol.parse(["cooling", "mode", "awake"]).mode, "awake")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "mode"]).command, "cooling.status")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "stop"]).command, "cooling.stop")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "status", "--json"]).command, "cooling.status")

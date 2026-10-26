@@ -2,14 +2,26 @@ import XCTest
 @testable import awake
 
 final class SMCHelperTests: XCTestCase {
+    func testAutomaticCoolingFollowsKeepAwakeRatherThanAgentActivity() {
+        let closed = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
+        // Timer, indefinite, download and agent sessions all use the same active state.
+        XCTAssertTrue(closed.requestsAutomaticCooling(keepAwakeActive: true, onlyOnACPower: false, isOnACPower: false))
+        XCTAssertFalse(closed.requestsAutomaticCooling(keepAwakeActive: false, onlyOnACPower: false, isOnACPower: true))
+        XCTAssertFalse(closed.requestsAutomaticCooling(keepAwakeActive: true, onlyOnACPower: true, isOnACPower: false))
+        XCTAssertTrue(closed.requestsAutomaticCooling(keepAwakeActive: true, onlyOnACPower: true, isOnACPower: true))
+        for policy in [DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: false),
+                       DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)] {
+            XCTAssertFalse(policy.requestsAutomaticCooling(keepAwakeActive: true, onlyOnACPower: false, isOnACPower: true))
+        }
+    }
+
     func testNativeClamshellKeepsScreenPreventionWithoutOverridingLidSleep() {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
         XCTAssertTrue(policy.allowsScreenPrevention)
         XCTAssertFalse(policy.needsClosedDisplayOverride)
         XCTAssertTrue(policy.allowsCooling(for: .forced))
         XCTAssertTrue(policy.allowsCooling(for: .timed))
-        XCTAssertFalse(policy.allowsCooling(for: .whileAgentRunning))
-        XCTAssertFalse(policy.allowsAgentCooling)
+        XCTAssertFalse(policy.allowsCooling(for: .whileKeepAwakeIsOn))
     }
 
     func testHeadlessClosedLidSuppressesScreenPreventionAndUsesOverride() {
@@ -19,7 +31,6 @@ final class SMCHelperTests: XCTestCase {
         for mode in CoolingMode.allCases {
             XCTAssertTrue(policy.allowsCooling(for: mode))
         }
-        XCTAssertTrue(policy.allowsAgentCooling)
     }
 
     func testOpenLidAllowsScreenPreventionAndArmsOverrideOnlyWithoutExternalDisplay() {
@@ -29,8 +40,7 @@ final class SMCHelperTests: XCTestCase {
             XCTAssertEqual(policy.needsClosedDisplayOverride, !hasExternal)
             XCTAssertTrue(policy.allowsCooling(for: .forced))
             XCTAssertTrue(policy.allowsCooling(for: .timed))
-            XCTAssertFalse(policy.allowsCooling(for: .whileAgentRunning))
-            XCTAssertFalse(policy.allowsAgentCooling)
+            XCTAssertFalse(policy.allowsCooling(for: .whileKeepAwakeIsOn))
         }
     }
 

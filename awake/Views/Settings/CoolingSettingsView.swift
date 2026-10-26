@@ -26,7 +26,7 @@ struct CoolingSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else if canUseHelper {
-                    Text(L10n.string("Automatic: While Agent Is Running. Manual: Indefinitely or For Duration."))
+                    Text(L10n.string("Automatic: While Keep Awake Is On. Manual: Indefinitely or For Duration."))
                 } else {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to control the fans."))
                 }
@@ -39,9 +39,9 @@ struct CoolingSettingsView: View {
                     isOn: $settings.onlyOnACPower
                 )
             } header: {
-                Text(L10n.string("While Agent Is Running"))
+                Text(L10n.string("While Keep Awake Is On"))
             } footer: {
-                Text(L10n.string("Runs only with the lid closed."))
+                Text(L10n.string("Follows Keep Awake in every mode. Runs only with the lid closed."))
             }
             .disabled(!canUseHelper)
         }

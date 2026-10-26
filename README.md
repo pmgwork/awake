@@ -12,8 +12,8 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 - **Agent-driven keep awake** — follows Codex, Claude Code, OpenCode, and Antigravity through their own hook events. No process polling.
 - **Other keep-awake modes** — for a fixed duration (15m–3h), while a download is in progress, or indefinitely.
-- **Cooling** — optional fan control while an agent is running with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS.
-- **Battery protection** — turns Keep Awake and agent cooling off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
+- **Cooling** — optional fan control while Keep Awake is on with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS.
+- **Battery protection** — turns Keep Awake and automatic cooling off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
 - **Closed-lid Low Power Mode** — optionally turns on macOS Low Power Mode while the lid is closed during a session, and restores your previous setting afterwards.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
@@ -42,7 +42,7 @@ Awake runs only in the menu bar (no Dock icon).
 
 - **Left-click** the menu bar cup to open the menu. **Right-click** to toggle the current mode's primary action.
 - Modes:
-  - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session. Settings → Keep Awake → **Keep Awake After Agents Finish** extends this after the last agent finishes (default: 3 minutes; Off, 1, 2, 3, 5, 10, 15, or 30 minutes). New activity resets the countdown; pausing monitoring or reaching the battery cutoff stops Keep Awake immediately. Earlier saved durations are preserved.
+  - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session. Settings → Keep Awake → **Keep Awake After Agents Finish** extends this after the last agent finishes (default: 3 minutes; Off, 1, 2, 3, 5, or 10 minutes). New activity resets the countdown; pausing monitoring or reaching the battery cutoff stops Keep Awake immediately. Earlier saved durations are preserved.
   - *For Duration* — countdown timer (15m / 30m / 1h / 2h / 3h), remembered across launches.
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.
   - *Indefinitely* — until you stop it.
@@ -93,7 +93,7 @@ awake cooling stop
 awake cooling status --json
 ```
 
-Keep Awake modes are `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `agent`. `awake mode` and `awake cooling mode` without a value show the current state. Selecting a mode follows the menu: changing it stops the previous session; manual modes wait for Start, and selecting agent cooling arms it when available. `awake start --mode timer` uses the saved duration; `awake start --mode agent` or `download` requires that monitor to be enabled and waits for activity when idle. `awake cooling start` uses the selected cooling mode. A duration implies `timer`; combining a duration with a different mode is rejected.
+Keep Awake modes are `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `awake` (`agent` remains a legacy alias). `awake mode` and `awake cooling mode` without a value show the current state. Selecting a mode follows the menu: changing it stops the previous session; manual modes wait for Start, and selecting automatic cooling arms it when available. `awake start --mode timer` uses the saved duration; `awake start --mode agent` or `download` requires that monitor to be enabled and waits for activity when idle. `awake cooling start` uses the selected cooling mode. A duration implies `timer`; combining a duration with a different mode is rejected.
 
 Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling or changing its speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means started, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates a selected conditional mode with monitoring enabled. Cooling commands leave Keep Awake independent.
 
@@ -116,20 +116,20 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 
 ## Cooling
 
-Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then press **Start Cooling**. Settings → Cooling has separate fan speeds for **Automatic Cooling** (While Agent Is Running) and **Manual Cooling** (Indefinitely and For Duration), both defaulting to 100% on new installations. Existing fan-speed settings are carried over to both. While cooling is stopped or paused, macOS controls the fans.
+Automatic cooling follows Keep Awake; manual cooling runs independently. Pick a **Cooling Mode** in the menu, then press **Start Cooling**. Settings → Cooling has separate fan speeds for **Automatic Cooling** (While Keep Awake Is On) and **Manual Cooling** (Indefinitely and For Duration), both defaulting to 100% on new installations. Existing fan-speed settings are carried over to both. While cooling is stopped or paused, macOS controls the fans.
 
 | Mode | Behavior |
 |---|---|
 | Indefinitely | Fans stay up until you stop cooling |
 | For Duration | 5 / 10 / 15 / 30 minutes, then fans go back to macOS |
-| While Agent Is Running | While a monitored agent is running with the lid closed. Starts when selected; pause or resume it from the menu (default) |
+| While Keep Awake Is On | Follows Keep Awake in every mode, with the lid closed. A 30-minute Keep Awake timer also gives 30 minutes of cooling. Starts when selected; pause or resume it from the menu (default) |
 
 - Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
-- Agent cooling stops when the battery reaches the low-battery cutoff, with a notification, and can't be resumed until the battery recovers or the Mac is plugged in. Indefinite and timed cooling keep running because you started them yourself. Indefinite and timed cooling are not kept after a relaunch.
-- "While Agent Is Running" option: "Only When Plugged In". Agent cooling runs only with the lid closed.
-- With the lid closed and an external display connected, automatic agent cooling leaves fan control to macOS; manual cooling keeps running. Awake does not override closed-lid sleep or enable Low Power Mode in this state. Automatic cooling resumes when this state ends if an agent is still running.
+- Automatic cooling stops when the battery reaches the low-battery cutoff, with a notification, and can't be resumed until the battery recovers or the Mac is plugged in. Indefinite and timed cooling keep running because you started them yourself. Indefinite and timed cooling are not kept after a relaunch.
+- "While Keep Awake Is On" option: "Only When Plugged In". Automatic cooling runs only with the lid closed. It includes **Keep Awake After Agents Finish** and stops whenever Keep Awake stops. Saved automatic cooling modes and their paused state are preserved.
+- With the lid closed and an external display connected, automatic cooling leaves fan control to macOS; manual cooling keeps running. Awake does not override closed-lid sleep or enable Low Power Mode in this state. Automatic cooling resumes when this state ends if Keep Awake is still on.
 - Use Remove… in Settings → Permissions to remove the helper. Awake stops the current session, restores automatic fan control, removes the shared helper, and turns off closed-lid operation and cooling.
 
 ## Privacy

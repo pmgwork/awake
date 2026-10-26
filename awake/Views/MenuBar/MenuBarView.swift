@@ -71,7 +71,7 @@ struct MenuBarView: View {
                 coolingActionButton
 
                 if coordinator.isCoolingBlockedByLowBattery {
-                    Text(L10n.string("Agent cooling is unavailable while the battery is low."))
+                    Text(L10n.string("Automatic cooling is unavailable while the battery is low."))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -137,7 +137,7 @@ struct MenuBarView: View {
 
     private var coolingActionTitle: String {
         if settings.coolingMode.startsOnSelect {
-            return settings.coolingArmed ? L10n.string("Pause Agent Cooling") : L10n.string("Resume Agent Cooling")
+            return settings.coolingArmed ? L10n.string("Pause Automatic Cooling") : L10n.string("Resume Automatic Cooling")
         }
         return settings.coolingArmed ? L10n.string("Stop Cooling") : L10n.string("Start Cooling")
     }

@@ -4,7 +4,7 @@ import Foundation
 nonisolated enum CLIProtocol {
     static var portName: String { "pmgwork.awake.cli.v1.\(getuid())" }
     static let modes = ["indefinitely", "timer", "agent", "download"]
-    static let coolingModes = ["indefinitely", "timer", "agent"]
+    static let coolingModes = ["indefinitely", "timer", "awake", "agent"]
     static let coolingDurations: [TimeInterval] = [300, 600, 900, 1800]
     static let invalidArguments = "Invalid arguments. See 'awake --help'."
     static let usage = """
@@ -20,7 +20,7 @@ nonisolated enum CLIProtocol {
            awake --help
 
     Keep Awake modes: indefinitely, timer, agent, download.
-    Cooling modes: indefinitely, timer, agent.
+    Cooling modes: indefinitely, timer, awake (agent is a legacy alias).
     --duration implies timer mode. start without options keeps its original
     behavior (indefinitely); cooling start uses the selected cooling mode.
     mode selects without starting manual modes; conditional modes follow the app.

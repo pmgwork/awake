@@ -8,7 +8,7 @@ import Foundation
 /// When the fans run at the cooling fan speed once cooling is started.
 /// Stopping (or pausing) any mode leaves the fans to the system.
 public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
-    case whileAgentRunning
+    case whileKeepAwakeIsOn
     case timed
     case forced
 
@@ -20,8 +20,8 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
             return L10n.string("Indefinitely")
         case .timed:
             return L10n.string("For Duration")
-        case .whileAgentRunning:
-            return L10n.string("While Agent Is Running")
+        case .whileKeepAwakeIsOn:
+            return L10n.string("While Keep Awake Is On")
         }
     }
 
@@ -29,7 +29,7 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
     /// must never leave the fans at 100% unattended.
     public var survivesRelaunch: Bool {
         switch self {
-        case .whileAgentRunning: return true
+        case .whileKeepAwakeIsOn: return true
         case .forced, .timed: return false
         }
     }
@@ -37,12 +37,12 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
     /// Conditional modes start as soon as they are selected and are paused
     /// or resumed from the menu instead of being started.
     public var startsOnSelect: Bool {
-        self == .whileAgentRunning
+        self == .whileKeepAwakeIsOn
     }
 
     /// Automatic cooling runs unattended, so the low-battery cutoff stops it.
     /// Manual cooling was started by the user and keeps running.
     public var stopsAtLowBattery: Bool {
-        self == .whileAgentRunning
+        self == .whileKeepAwakeIsOn
     }
 }

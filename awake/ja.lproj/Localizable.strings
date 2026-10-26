@@ -17,12 +17,6 @@
 "Aggressive" = "強";
 "Moderate" = "中";
 "Auto" = "自動";
-"AC Power" = "AC電源";
-"Battery (%d%%)" = "バッテリー（%d%%）";
-"Normal" = "正常";
-"Warm" = "やや高温";
-"Hot" = "高温";
-"Critical" = "危険";
 "Idle" = "待機中";
 
 "General Preferences" = "一般設定";
@@ -98,7 +92,6 @@
 "Reinstall" = "再インストール";
 "Unlink" = "連携解除";
 "%d active" = "%d件実行中";
-"%d sessions" = "%dセッション";
 "Not linked" = "未連携";
 "Linked" = "連携済み";
 "Needs repair" = "修復が必要";
@@ -175,17 +168,17 @@
 "Closed-lid operation and fan control use this helper. macOS asks for an administrator password the first time." = "蓋を閉じた動作とファン制御は、このヘルパーを使います。初回だけ管理者パスワードが必要です。";
 "Allow the helper in Permissions to stay awake with the lid closed." = "蓋を閉じたまま使うには、「権限」でヘルパーを許可してください。";
 "Allow the helper in Permissions to control the fans." = "ファンを制御するには、「権限」でヘルパーを許可してください。";
-"On battery, Keep Awake and agent cooling stop when the charge falls to this level." = "バッテリー駆動中に残量がここまで下がると、スリープ防止とエージェント冷却を停止します。";
+"On battery, Keep Awake and automatic cooling stop when the charge falls to this level." = "バッテリー駆動中に残量がここまで下がると、スリープ防止と自動冷却を停止します。";
 "Only When Plugged In" = "電源アダプタ接続時のみ";
-"Runs only with the lid closed." = "蓋を閉じている間だけ動作します。";
+"Follows Keep Awake in every mode. Runs only with the lid closed." = "すべてのモードでスリープ防止に連動し、蓋を閉じている間だけ動作します。";
 "Automatic Cooling" = "自動冷却";
 "Manual Cooling" = "手動冷却";
-"Automatic: While Agent Is Running. Manual: Indefinitely or For Duration." = "自動は「エージェント実行中」、手動は「無期限」「時間を指定」に適用します。";
-"Pause Agent Cooling" = "エージェント冷却を一時停止";
-"Resume Agent Cooling" = "エージェント冷却を再開";
-"Agent Cooling Stopped" = "エージェント冷却を停止しました";
-"Battery is at %d%%, so agent cooling stopped." = "バッテリー残量が%d%%になったため、エージェント冷却を停止しました。";
-"Agent cooling is unavailable while the battery is low." = "バッテリー残量が少ないため、エージェント冷却は使えません。";
+"Automatic: While Keep Awake Is On. Manual: Indefinitely or For Duration." = "自動は「スリープ防止中」、手動は「無期限」「時間を指定」に適用します。";
+"Pause Automatic Cooling" = "自動冷却を一時停止";
+"Resume Automatic Cooling" = "自動冷却を再開";
+"Automatic Cooling Stopped" = "自動冷却を停止しました";
+"Battery is at %d%%, so automatic cooling stopped." = "バッテリー残量が%d%%になったため、自動冷却を停止しました。";
+"Automatic cooling is unavailable while the battery is low." = "バッテリー残量が少ないため、自動冷却は使えません。";
 "The fans may still be under manual control. Restart your Mac to return them to automatic control." = "ファンが手動制御のままの可能性があります。Macを再起動すると自動制御に戻ります。";
 "Link Your Agents" = "エージェントを連携";
 "Closed Lid & Fans" = "蓋を閉じた動作とファン";
@@ -209,7 +202,6 @@
 "Unavailable" = "利用不可";
 "Features That Use the Helper" = "ヘルパーを使う機能";
 "Stop at Battery Level" = "停止するバッテリー残量";
-"Fan Speed" = "ファン速度";
 "Fans" = "ファン";
 "Agents" = "エージェント";
 "Use Low Power Mode with the Lid Closed" = "蓋を閉じている間は低電力モードにする";

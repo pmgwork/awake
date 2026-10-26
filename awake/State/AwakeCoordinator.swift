@@ -37,7 +37,6 @@ public final class AwakeCoordinator: ObservableObject {
     public let eventMonitor = AgentEventMonitor.shared
     public let downloadMonitor = DownloadMonitor.shared
     public let hookIntegrationManager = HookIntegrationManager.shared
-    public let thermalMonitor = ThermalMonitor.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
     private let legacyScreenLockRecovery = LegacyScreenLockRecovery.shared
@@ -323,9 +322,6 @@ public final class AwakeCoordinator: ObservableObject {
         // Manual cooling keeps running. A manual start below the threshold
         // suspends the fail-safe until the session ends or the charge recovers.
         if isLowBatteryCutoffEnforced {
-            if fanController.isTestModeActive {
-                fanController.restoreAuto()
-            }
             if isActive, let batteryLevel = powerMonitor.batteryLevel {
                 NSLog("[AwakeCoordinator] Battery reached %d%%. Turning Awake off.", batteryLevel)
                 stopKeepAwake(reason: L10n.format("Battery is at %d%%, so Keep Awake stopped.", batteryLevel), notify: true)
@@ -400,16 +396,14 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     /// Runs the fans at the cooling fan speed while a cooling mode wants it,
-    /// and hands them back to the system otherwise. A fan test owns the fans
-    /// while it runs.
+    /// and hands them back to the system otherwise.
     private func applyFanPolicy() {
         guard displayBehaviorPolicy.allowsCooling(for: settings.coolingMode) else {
             fanController.restoreAuto()
             return
         }
-        guard !fanController.isTestModeActive else { return }
         if isForcedCoolingActive {
-            fanController.setFanMode(settings.coolingMode == .whileAgentRunning
+            fanController.setFanMode(settings.coolingMode == .whileKeepAwakeIsOn
                 ? settings.automaticCoolingFanMode : settings.manualCoolingFanMode)
         } else {
             fanController.restoreAuto()
@@ -427,10 +421,10 @@ public final class AwakeCoordinator: ObservableObject {
             settings.coolingArmed = false
             resetCoolingState()
             if let batteryLevel = powerMonitor.batteryLevel {
-                NSLog("[AwakeCoordinator] Battery reached %d%%. Stopping agent cooling.", batteryLevel)
+                NSLog("[AwakeCoordinator] Battery reached %d%%. Stopping automatic cooling.", batteryLevel)
                 sendNotification(
-                    title: L10n.string("Agent Cooling Stopped"),
-                    body: L10n.format("Battery is at %d%%, so agent cooling stopped.", batteryLevel),
+                    title: L10n.string("Automatic Cooling Stopped"),
+                    body: L10n.format("Battery is at %d%%, so automatic cooling stopped.", batteryLevel),
                     identifier: "awake-cooling-stopped-\(UUID().uuidString)"
                 )
             }
@@ -451,19 +445,15 @@ public final class AwakeCoordinator: ObservableObject {
                     settings.coolingArmed = false
                     resetCoolingState()
                 }
-            case .whileAgentRunning:
-                active = isAgentCoolingNeeded
+            case .whileKeepAwakeIsOn:
+                active = displayBehaviorPolicy.requestsAutomaticCooling(
+                    keepAwakeActive: isActive,
+                    onlyOnACPower: settings.onlyOnACPower,
+                    isOnACPower: powerMonitor.isOnACPower
+                )
             }
         }
-        setForcedCoolingActive(active && displayBehaviorPolicy.allowsCooling(for: settings.coolingMode))
-    }
-
-    /// Agent cooling runs only with the lid closed and no external display.
-    private var isAgentCoolingNeeded: Bool {
-        guard eventMonitor.hasActiveSession else { return false }
-        guard displayBehaviorPolicy.allowsAgentCooling else { return false }
-        if settings.onlyOnACPower && !powerMonitor.isOnACPower { return false }
-        return true
+        setForcedCoolingActive(active)
     }
 
     private func updateCoolingAvailability() {
@@ -486,9 +476,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     // MARK: - Subscriptions & Heartbeat
     private func setupSubscriptions() {
-        // Agent cooling needs session events even when Keep Awake monitoring is off.
-        Publishers.CombineLatest3(settings.$agentMonitoringEnabled, settings.$coolingArmed, settings.$coolingMode)
-            .map { enabled, armed, mode in enabled || (armed && mode == .whileAgentRunning) }
+        settings.$agentMonitoringEnabled
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] needed in

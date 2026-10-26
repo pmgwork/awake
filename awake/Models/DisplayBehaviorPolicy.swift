@@ -5,19 +5,23 @@ struct DisplayBehaviorPolicy {
     let hasExternalDisplay: Bool
 
     /// Manual cooling is user initiated, so it runs in every display
-    /// configuration, including native clamshell. Automatic agent cooling is
+    /// configuration, including native clamshell. Automatic cooling is
     /// limited to headless closed-lid operation.
     func allowsCooling(for mode: CoolingMode) -> Bool {
         switch mode {
         case .forced, .timed:
             return true
-        case .whileAgentRunning:
-            return allowsAgentCooling
+        case .whileKeepAwakeIsOn:
+            return allowsAutomaticCooling
         }
     }
 
-    /// Agent cooling is limited to headless closed-lid operation.
-    var allowsAgentCooling: Bool { lidClosed && !hasExternalDisplay }
+    /// Automatic cooling is limited to headless closed-lid operation.
+    func requestsAutomaticCooling(keepAwakeActive: Bool, onlyOnACPower: Bool, isOnACPower: Bool) -> Bool {
+        keepAwakeActive && allowsAutomaticCooling && (!onlyOnACPower || isOnACPower)
+    }
+
+    var allowsAutomaticCooling: Bool { lidClosed && !hasExternalDisplay }
 
     var allowsScreenPrevention: Bool { !lidClosed || hasExternalDisplay }
 

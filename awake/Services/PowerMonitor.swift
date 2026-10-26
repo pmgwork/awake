@@ -13,7 +13,6 @@ public final class PowerMonitor: ObservableObject {
 
     @Published public private(set) var isOnACPower: Bool = true
     @Published public private(set) var batteryLevel: Int? = nil
-    @Published public private(set) var powerSourceState: PowerSourceState = .acPower
 
     private var runLoopSource: CFRunLoopSource?
     private var pollingTimer: Timer?
@@ -35,7 +34,7 @@ public final class PowerMonitor: ObservableObject {
         guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let list = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [CFTypeRef] else {
             // Desktops without battery default to AC
-            apply(isOnACPower: true, batteryLevel: nil, powerSourceState: .acPower)
+            apply(isOnACPower: true, batteryLevel: nil)
             return
         }
 
@@ -55,22 +54,13 @@ public final class PowerMonitor: ObservableObject {
             }
         }
 
-        let state: PowerSourceState
-        if isAC {
-            state = .acPower
-        } else if let pct = batteryPct {
-            state = .battery(percentage: pct)
-        } else {
-            state = .battery(percentage: 100)
-        }
-        apply(isOnACPower: isAC, batteryLevel: batteryPct, powerSourceState: state)
+        apply(isOnACPower: isAC, batteryLevel: batteryPct)
     }
 
     // @Published fires on every assignment, and this runs on a 3 s poll.
-    private func apply(isOnACPower: Bool, batteryLevel: Int?, powerSourceState: PowerSourceState) {
+    private func apply(isOnACPower: Bool, batteryLevel: Int?) {
         if self.isOnACPower != isOnACPower { self.isOnACPower = isOnACPower }
         if self.batteryLevel != batteryLevel { self.batteryLevel = batteryLevel }
-        if self.powerSourceState != powerSourceState { self.powerSourceState = powerSourceState }
     }
 
     private func setupPowerNotification() {

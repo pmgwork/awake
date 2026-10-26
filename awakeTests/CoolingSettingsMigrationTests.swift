@@ -48,20 +48,29 @@ final class CoolingSettingsMigrationTests: XCTestCase {
         XCTAssertEqual(existing.manual, .maximum)
     }
 
-    func testNewInstallDefaultsToArmedAgentMode() {
+    func testNewInstallDefaultsToArmedKeepAwakeMode() {
         let state = storedState()
-        XCTAssertEqual(state.mode, .whileAgentRunning)
+        XCTAssertEqual(state.mode, .whileKeepAwakeIsOn)
         XCTAssertTrue(state.armed)
     }
 
-    func testAgentModeKeepsArmedStateAcrossRelaunch() {
+    func testLegacyAgentModeMigratesAndKeepsArmedStateAcrossRelaunch() {
         defaults.set("whileAgentRunning", forKey: "pmgwork.awake.coolingMode")
         defaults.set(true, forKey: "pmgwork.awake.coolingArmed")
-        XCTAssertEqual(storedState().mode, .whileAgentRunning)
+        XCTAssertEqual(storedState().mode, .whileKeepAwakeIsOn)
         XCTAssertTrue(storedState().armed)
 
         defaults.set(false, forKey: "pmgwork.awake.coolingArmed")
         XCTAssertFalse(storedState().armed)
+    }
+
+    func testKeepAwakeModeKeepsPausedAndArmedChoices() {
+        defaults.set("whileKeepAwakeIsOn", forKey: "pmgwork.awake.coolingMode")
+        for armed in [false, true] {
+            defaults.set(armed, forKey: "pmgwork.awake.coolingArmed")
+            XCTAssertEqual(storedState().mode, .whileKeepAwakeIsOn)
+            XCTAssertEqual(storedState().armed, armed)
+        }
     }
 
     func testIndefiniteAndTimedCoolingAreNotRearmedAfterRelaunch() {
@@ -74,29 +83,29 @@ final class CoolingSettingsMigrationTests: XCTestCase {
         }
     }
 
-    func testRemovedSystemModeBecomesStoppedAgentMode() {
+    func testRemovedSystemModeBecomesStoppedKeepAwakeMode() {
         defaults.set("system", forKey: "pmgwork.awake.coolingMode")
         defaults.set(true, forKey: "pmgwork.awake.coolingArmed")
         let state = storedState()
-        XCTAssertEqual(state.mode, .whileAgentRunning)
+        XCTAssertEqual(state.mode, .whileKeepAwakeIsOn)
         XCTAssertFalse(state.armed)
     }
 
-    func testWhileLidClosedBecomesAgentMode() {
+    func testWhileLidClosedBecomesKeepAwakeMode() {
         defaults.set("whileLidClosed", forKey: "pmgwork.awake.coolingMode")
         defaults.set(true, forKey: "pmgwork.awake.coolingArmed")
         let state = storedState()
-        XCTAssertEqual(state.mode, .whileAgentRunning)
+        XCTAssertEqual(state.mode, .whileKeepAwakeIsOn)
         XCTAssertTrue(state.armed)
     }
 
     func testLegacyClosedLidCoolingSettingCarriesOver() {
         defaults.set(true, forKey: "pmgwork.awake.closedLidCoolingEnabled")
-        XCTAssertEqual(storedState().mode, .whileAgentRunning)
+        XCTAssertEqual(storedState().mode, .whileKeepAwakeIsOn)
         XCTAssertTrue(storedState().armed)
 
         defaults.set(false, forKey: "pmgwork.awake.closedLidCoolingEnabled")
-        XCTAssertEqual(storedState().mode, .whileAgentRunning)
+        XCTAssertEqual(storedState().mode, .whileKeepAwakeIsOn)
         XCTAssertFalse(storedState().armed)
     }
 }
