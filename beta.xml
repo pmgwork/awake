@@ -1,6 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Tue, 27 Oct 2026 00:23:35 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b9</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 8
+
+- **Automatic Cooling** now follows Keep Awake in every mode, including timed sessions, downloads, and **Keep Awake After Agents Finish**. The cooling mode is now called **While Keep Awake Is On**. It still runs only with the lid closed and no external display connected, and respects the power and battery settings.
+- Existing automatic cooling settings, fan speeds, and paused state are preserved. The CLI accepts `awake` for automatic cooling; `agent` remains supported as a legacy alias.
+- Simplified the **Keep Awake After Agents Finish** presets to Off, 1, 2, 3, 5, or 10 minutes. Previously saved durations, including 15 and 30 minutes, remain available when selected.
+- Removed unused temperature monitoring, the old fan-speed test code, and duplicate power-state tracking.
+
+This release also includes the fixes from [Beta 8](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.8) and earlier betas.
+
+## Installation
+
+Download `Awake-0.6.0-beta.9.zip` or `Awake-0.6.0-beta.9.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.8...v0.6.0-beta.9)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.9/Awake-0.6.0-beta.9.zip" length="4600233" type="application/octet-stream" sparkle:edSignature="PQRh9TH4y33ZZVir2xUg/62VYULtLTSJvqajQHCsZuYjAOzSLXhvPNo6l+6sFfo61uisRu9Owqh7fYcBnXcFDA==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Mon, 26 Oct 2026 23:33:18 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b8</sparkle:version>
