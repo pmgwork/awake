@@ -25,6 +25,9 @@ public final class AwakeCoordinator: ObservableObject {
     /// Whether the low-battery cutoff currently blocks the selected cooling mode.
     @Published public private(set) var isCoolingBlockedByLowBattery = false
 
+    @Published public private(set) var agentCompletionGraceEndDate: Date?
+    private var agentCompletionGrace = AgentCompletionGrace()
+
     // Sub-services
     public let settings = SettingsStore.shared
     public let sleepManager = SleepManager.shared
@@ -109,6 +112,8 @@ public final class AwakeCoordinator: ObservableObject {
         guard isActive else { return }
 
         isActive = false
+        agentCompletionGrace = AgentCompletionGrace()
+        agentCompletionGraceEndDate = nil
         lowBatteryManualOverride = false
         remainingTimerSeconds = 0
         setTimerEndDate(nil)
@@ -328,16 +333,26 @@ public final class AwakeCoordinator: ObservableObject {
             }
         }
 
-        if isActive && (settings.selectedMode == .whileAgentRunning || settings.selectedMode == .whileDownloading) {
-            let isAgentMode = settings.selectedMode == .whileAgentRunning
-            let isRunning = isAgentMode ? eventMonitor.hasActiveSession : downloadMonitor.isDownloading
-            if !isRunning {
-                stopKeepAwake(
-                    reason: L10n.string(isAgentMode ? "All monitored agents have finished." : "All downloads finished."),
-                    notify: !isAgentMode
-                )
+        if isActive && settings.selectedMode == .whileAgentRunning {
+            let now = Date()
+            let end = agentCompletionGrace.update(
+                running: eventMonitor.hasActiveSession,
+                duration: settings.completionGraceDuration,
+                now: now
+            )
+            if agentCompletionGraceEndDate != end {
+                agentCompletionGraceEndDate = end
+            }
+            let isGraceActive = end.map { $0 > now } ?? false
+            if !settings.agentMonitoringEnabled || (!eventMonitor.hasActiveSession && !isGraceActive) {
+                stopKeepAwake(reason: L10n.string("All monitored agents have finished."))
                 return
             }
+        }
+
+        if isActive && settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading {
+            stopKeepAwake(reason: L10n.string("All downloads finished."), notify: true)
+            return
         }
 
         // Check Timer completion

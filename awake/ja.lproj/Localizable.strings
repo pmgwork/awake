@@ -218,3 +218,7 @@
 "Couldn't turn on Low Power Mode." = "低電力モードをオンにできませんでした。";
 "Couldn't restore the previous Low Power Mode setting." = "低電力モードを元の設定に戻せませんでした。";
 "Low Power Mode with the Lid Closed" = "蓋を閉じている間の低電力モード";
+
+"Keep Awake After Agents Finish" = "完了後のスリープ防止時間";
+"Keeping Awake After Completion" = "完了後のスリープ防止中";
+"%d min" = "%d分";

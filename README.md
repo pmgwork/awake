@@ -42,7 +42,7 @@ Awake runs only in the menu bar (no Dock icon).
 
 - **Left-click** the menu bar cup to open the menu. **Right-click** to toggle the current mode's primary action.
 - Modes:
-  - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session.
+  - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session. Settings → Keep Awake → **Keep Awake After Agents Finish** extends this after the last agent finishes (default: 3 minutes; Off, 1, 2, 3, 5, 10, 15, or 30 minutes). New activity resets the countdown; pausing monitoring or reaching the battery cutoff stops Keep Awake immediately. Earlier saved durations are preserved.
   - *For Duration* — countdown timer (15m / 30m / 1h / 2h / 3h), remembered across launches.
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.
   - *Indefinitely* — until you stop it.

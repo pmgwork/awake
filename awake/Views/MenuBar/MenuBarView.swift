@@ -33,6 +33,17 @@ struct MenuBarView: View {
             if settings.selectedMode == .whileAgentRunning {
                 Divider()
 
+                if let end = coordinator.agentCompletionGraceEndDate, end > Date() {
+                    HStack {
+                        Text(L10n.string("Keeping Awake After Completion"))
+                        Spacer()
+                        Text(timerInterval: Date()...max(end, Date()), countsDown: true)
+                            .monospacedDigit()
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                }
+
                 RunningAgentsView(
                     eventMonitor: coordinator.eventMonitor,
                     integrationManager: coordinator.hookIntegrationManager,

@@ -11,6 +11,17 @@ struct KeepAwakeSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Picker(L10n.string("Keep Awake After Agents Finish"), selection: $settings.completionGraceDuration) {
+                    Text(L10n.string("Off")).tag(TimeInterval(0))
+                    ForEach(graceDurations, id: \.self) { duration in
+                        Text(L10n.format("%d min", Int(duration / 60))).tag(duration)
+                    }
+                }
+            } header: {
+                Text(L10n.string("While Agent Is Running"))
+            }
+
+            Section {
                 Toggle(L10n.string("Stay Awake with the Lid Closed"), isOn: Binding(
                     get: { settings.closedDisplayModeEnabled && closedDisplayModeManager.isHelperInstalled },
                     set: { enabled in
@@ -77,6 +88,13 @@ struct KeepAwakeSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await closedDisplayModeManager.refreshHelperState() }
         }
+    }
+
+    private var graceDurations: [TimeInterval] {
+        var durations: Set<TimeInterval> = [60, 120, 180, 300, 600, 900, 1800]
+        // Keep custom durations saved by earlier releases selectable.
+        if settings.completionGraceDuration > 0 { durations.insert(settings.completionGraceDuration) }
+        return durations.sorted()
     }
 
     /// Low Power Mode applies only while the Mac stays awake with the lid closed.

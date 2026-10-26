@@ -15,6 +15,37 @@ final class AgentSessionStoreTests: XCTestCase {
         try? FileManager.default.removeItem(at: directoryURL)
     }
 
+    func testCompletionGraceStartsOnceAndResetsForNextRun() {
+        var grace = AgentCompletionGrace()
+        let start = Date(timeIntervalSince1970: 1000)
+        XCTAssertNil(grace.update(running: false, duration: 180, now: start))
+        XCTAssertNil(grace.update(running: true, duration: 180, now: start))
+        let finish = start.addingTimeInterval(10)
+        XCTAssertEqual(grace.update(running: false, duration: 180, now: finish), finish.addingTimeInterval(180))
+        // Repeated polls must not extend the deadline, even after expiry.
+        XCTAssertEqual(grace.update(running: false, duration: 180, now: finish.addingTimeInterval(181)), finish.addingTimeInterval(180))
+        // Changing the duration applies to the original completion time.
+        XCTAssertEqual(grace.update(running: false, duration: 60, now: finish.addingTimeInterval(20)), finish.addingTimeInterval(60))
+        XCTAssertNil(grace.update(running: false, duration: 0, now: finish))
+        XCTAssertNil(grace.update(running: true, duration: 180, now: finish.addingTimeInterval(200)))
+        let nextFinish = finish.addingTimeInterval(300)
+        XCTAssertEqual(grace.update(running: false, duration: 180, now: nextFinish), nextFinish.addingTimeInterval(180))
+        grace = AgentCompletionGrace()
+        XCTAssertNil(grace.update(running: false, duration: 180, now: nextFinish))
+    }
+
+    @MainActor
+    func testCompletionGraceRestoresLegacyPreferenceIncludingOff() {
+        let name = "AwakeGraceTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertEqual(SettingsStore.storedCompletionGraceDuration(in: defaults), 180)
+        for duration in [0.0, 60, 420, 1800] {
+            defaults.set(duration, forKey: "pmgwork.awake.completionGraceDuration")
+            XCTAssertEqual(SettingsStore.storedCompletionGraceDuration(in: defaults), duration)
+        }
+    }
+
     func testOlderEventCannotReplaceNewerSessionState() throws {
         let now = Date()
         let newer = AgentHookEvent(

@@ -17,6 +17,7 @@ public final class SettingsStore: ObservableObject {
         static let agentMonitoringEnabled = "pmgwork.awake.agentMonitoringEnabled"
         static let downloadMonitoringEnabled = "pmgwork.awake.downloadMonitoringEnabled"
         static let downloadFolderPath = "pmgwork.awake.downloadFolderPath"
+        static let completionGraceDuration = "pmgwork.awake.completionGraceDuration"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
         /// Replaced by the "While Agent Is Running" cooling mode; read once to migrate.
         static let legacyClosedLidCoolingEnabled = "pmgwork.awake.closedLidCoolingEnabled"
@@ -78,6 +79,19 @@ public final class SettingsStore: ObservableObject {
         didSet {
             UserDefaults.standard.set(downloadFolderPath, forKey: Keys.downloadFolderPath)
         }
+    }
+
+    @Published public var completionGraceDuration: TimeInterval {
+        didSet {
+            UserDefaults.standard.set(completionGraceDuration, forKey: Keys.completionGraceDuration)
+        }
+    }
+
+    /// Reuses the original preference key so earlier user choices survive.
+    static func storedCompletionGraceDuration(in defaults: UserDefaults) -> TimeInterval {
+        guard defaults.object(forKey: Keys.completionGraceDuration) != nil else { return 180 }
+        let duration = defaults.double(forKey: Keys.completionGraceDuration)
+        return duration.isFinite ? max(0, duration) : 180
     }
 
     @Published public var selectedTimerDuration: TimeInterval {
@@ -283,6 +297,8 @@ public final class SettingsStore: ObservableObject {
         }
         self.downloadFolderPath = UserDefaults.standard.string(forKey: Keys.downloadFolderPath)
             ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
+
+        self.completionGraceDuration = Self.storedCompletionGraceDuration(in: .standard)
 
         // Timer Duration (default 30 minutes)
         let savedDuration = UserDefaults.standard.double(forKey: Keys.selectedTimerDuration)
