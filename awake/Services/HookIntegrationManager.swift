@@ -394,7 +394,8 @@ public final class HookIntegrationManager: ObservableObject {
         try atomicWrite(Data(manifest.utf8), to: openCodePluginDirectoryURL.appendingPathComponent("package.json"), permissions: 0o600)
 
         let configURL = configurationURL(for: .openCode)
-        var root = try readJSONObject(at: configURL, allowsJSONC: true)
+        let root = try readJSONObject(at: configURL, allowsJSONC: true)
+        var changes: [(key: String, value: Any?)] = []
         // V1 reads plugin; V2 also accepts it. If native V2 plugins already
         // exists, keep our entry there too because that field takes precedence.
         for key in ["plugin", "plugins"] {
@@ -406,26 +407,26 @@ public final class HookIntegrationManager: ObservableObject {
             var plugins = value as? [Any] ?? []
             plugins.removeAll { isOwnedOpenCodePlugin($0) }
             if key == "plugins" && plugins.isEmpty {
-                root.removeValue(forKey: key)
+                changes.append((key, nil))
                 continue
             }
             plugins.append(openCodePluginDirectoryURL.absoluteString)
-            root[key] = plugins
+            changes.append((key, plugins))
         }
-        try writeJSONObject(root, to: configURL)
+        try writeJSONCChanges(changes, to: configURL, root: root)
     }
 
     private func uninstallOpenCodePlugin() throws {
         for configURL in openCodeConfigurationURLs where fileManager.fileExists(atPath: configURL.path) {
-            var root = try readJSONObject(at: configURL, allowsJSONC: true)
+            let root = try readJSONObject(at: configURL, allowsJSONC: true)
+            var changes: [(key: String, value: Any?)] = []
             for key in ["plugin", "plugins"] {
                 if var plugins = root[key] as? [Any] {
                     plugins.removeAll { isOwnedOpenCodePlugin($0) }
-                    if plugins.isEmpty { root.removeValue(forKey: key) }
-                    else { root[key] = plugins }
+                    changes.append((key, plugins.isEmpty ? nil : plugins))
                 }
             }
-            try writeJSONObject(root, to: configURL)
+            try writeJSONCChanges(changes, to: configURL, root: root)
         }
         try? fileManager.removeItem(at: openCodePluginDirectoryURL)
     }
@@ -595,13 +596,41 @@ public final class HookIntegrationManager: ObservableObject {
         return object
     }
 
-    private func writeJSONObject(_ object: [String: Any], to url: URL) throws {
+    /// Applies top-level changes to the file's text so the user's comments
+    /// and formatting survive. Falls back to rewriting the whole object when
+    /// the file is new or the text can't be edited in place.
+    private func writeJSONCChanges(_ changes: [(key: String, value: Any?)], to url: URL, root: [String: Any]) throws {
+        guard !changes.isEmpty else { return }
+        if let data = try? Data(contentsOf: url),
+           let text = String(data: data, encoding: .utf8),
+           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let edited = JSONCTextEditor.applying(changes, to: text),
+           let parsed = try? JSONSerialization.jsonObject(with: Data(stripJSONC(edited).utf8)) as? [String: Any],
+           changes.allSatisfy({ change in
+               guard let value = change.value else { return parsed[change.key] == nil }
+               return (parsed[change.key] as? NSObject)?.isEqual(value) == true
+           }) {
+            try writeConfiguration(Data(edited.utf8), to: url, allowsJSONC: true)
+            return
+        }
+        var updated = root
+        for change in changes {
+            updated[change.key] = change.value
+        }
+        try writeJSONObject(updated, to: url, allowsJSONC: true)
+    }
+
+    private func writeJSONObject(_ object: [String: Any], to url: URL, allowsJSONC: Bool = false) throws {
         guard JSONSerialization.isValidJSONObject(object) else { throw IntegrationError.invalidConfiguration(url.path) }
         let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) + Data("\n".utf8)
+        try writeConfiguration(data, to: url, allowsJSONC: allowsJSONC || url.pathExtension == "jsonc")
+    }
+
+    private func writeConfiguration(_ data: Data, to url: URL, allowsJSONC: Bool) throws {
         let backup = url.appendingPathExtension("awake-backup")
         do {
             try atomicWrite(data, to: url, permissions: 0o600, createsBackup: true)
-            _ = try readJSONObject(at: url, allowsJSONC: url.pathExtension == "jsonc")
+            _ = try readJSONObject(at: url, allowsJSONC: allowsJSONC)
         } catch {
             if fileManager.fileExists(atPath: backup.path) {
                 try? fileManager.removeItem(at: url)
@@ -702,9 +731,24 @@ public final class HookIntegrationManager: ObservableObject {
                 // JSONC permits trailing commas. Drop a comma only when the
                 // next non-whitespace character closes an array/object; string
                 // contents are never rewritten because this runs outside them.
+                // Comments may sit between the comma and the closing bracket.
                 var lookahead = next
-                while lookahead < text.endIndex, text[lookahead].isWhitespace {
-                    lookahead = text.index(after: lookahead)
+                while lookahead < text.endIndex {
+                    if text[lookahead].isWhitespace {
+                        lookahead = text.index(after: lookahead)
+                        continue
+                    }
+                    guard text[lookahead] == "/" else { break }
+                    let marker = text.index(after: lookahead)
+                    guard marker < text.endIndex else { break }
+                    if text[marker] == "/" {
+                        lookahead = text[marker...].firstIndex(of: "\n") ?? text.endIndex
+                    } else if text[marker] == "*" {
+                        let body = text.index(after: marker)
+                        lookahead = text.range(of: "*/", range: body..<text.endIndex)?.upperBound ?? text.endIndex
+                    } else {
+                        break
+                    }
                 }
                 if lookahead < text.endIndex, text[lookahead] == "}" || text[lookahead] == "]" {
                     index = next

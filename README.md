@@ -135,7 +135,7 @@ Cooling is separate from Keep Awake. Pick a **Cooling Mode** in the menu, then p
 ## Privacy
 
 - Agent activity is detected from local hook events under `~/Library/Application Support/Awake`. Awake does not poll running processes and does not inspect your project or document files.
-- Download detection only looks at file names (`.download`, `.crdownload`, `.part`, …, skipping hidden files) in the folder you choose.
+- Download detection only looks at file names (`.download`, `.crdownload`, `.part`, …, skipping hidden files) and modification dates in the folder you choose. In subfolders, such files count only if they changed in the last 10 minutes, so leftovers in extracted archives don't keep your Mac awake.
 - No analytics, no telemetry, no account. Awake reads update feeds hosted on `raw.githubusercontent.com` and downloads updates from GitHub Releases after you agree to install them. Anonymous system profiling is disabled.
 
 ## Building from source

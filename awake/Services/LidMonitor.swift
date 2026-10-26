@@ -36,7 +36,7 @@ public final class LidMonitor: ObservableObject {
     public func checkLidState() {
         let rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
         guard rootDomain != 0 else {
-            self.isLidClosed = false
+            setLidClosed(false)
             return
         }
         defer { IOObjectRelease(rootDomain) }
@@ -47,11 +47,17 @@ public final class LidMonitor: ObservableObject {
             kCFAllocatorDefault,
             0
         )?.takeRetainedValue() as? Bool {
-            self.isLidClosed = property
+            setLidClosed(property)
         } else {
             // Desktops (Mac Studio / Mac mini / iMac / Mac Pro) do not have AppleClamshellState
-            self.isLidClosed = false
+            setLidClosed(false)
         }
+    }
+
+    // @Published fires on every assignment, and this runs on a 1 Hz poll.
+    private func setLidClosed(_ closed: Bool) {
+        guard isLidClosed != closed else { return }
+        isLidClosed = closed
     }
 
     private func setupIOKitNotification() {

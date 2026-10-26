@@ -72,13 +72,19 @@ public final class DownloadMonitor: ObservableObject {
         }
     }
 
+    /// Partial files inside subfolders count only while they are being
+    /// written. Extracted archives and projects can contain stale files with
+    /// these suffixes that would otherwise keep the Mac awake indefinitely.
+    nonisolated public static let nestedPartialFileMaxAge: TimeInterval = 10 * 60
+
     nonisolated public static func partialDownloadNames(
         in folderURL: URL,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        now: Date = Date()
     ) -> [String] {
         guard let enumerator = fileManager.enumerator(
             at: folderURL,
-            includingPropertiesForKeys: [.nameKey],
+            includingPropertiesForKeys: [.nameKey, .contentModificationDateKey],
             options: [.skipsHiddenFiles],
             errorHandler: { _, _ in true }
         ) else { return [] }
@@ -86,14 +92,39 @@ public final class DownloadMonitor: ObservableObject {
         var names: [String] = []
         for case let url as URL in enumerator {
             let lowercasedName = url.lastPathComponent.lowercased()
-            if partialSuffixes.contains(where: lowercasedName.hasSuffix) {
-                names.append(url.lastPathComponent)
-                if lowercasedName.hasSuffix(".download") {
-                    enumerator.skipDescendants()
-                }
+            guard partialSuffixes.contains(where: lowercasedName.hasSuffix) else { continue }
+            let isBundle = lowercasedName.hasSuffix(".download")
+            if isBundle {
+                enumerator.skipDescendants()
             }
+            if enumerator.level > 1 && !isRecentlyModified(url, isBundle: isBundle, fileManager: fileManager, now: now) {
+                continue
+            }
+            names.append(url.lastPathComponent)
         }
         return names.sorted()
+    }
+
+    nonisolated private static func isRecentlyModified(
+        _ url: URL,
+        isBundle: Bool,
+        fileManager: FileManager,
+        now: Date
+    ) -> Bool {
+        func modificationDate(_ url: URL) -> Date? {
+            try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        }
+        var dates = [modificationDate(url)].compactMap { $0 }
+        // Safari writes into a file inside the .download bundle, which does
+        // not update the bundle's own date.
+        if isBundle, let contents = try? fileManager.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        ) {
+            dates += contents.compactMap(modificationDate)
+        }
+        guard let newest = dates.max() else { return false }
+        return now.timeIntervalSince(newest) < nestedPartialFileMaxAge
     }
 
     public func startMonitoring() {

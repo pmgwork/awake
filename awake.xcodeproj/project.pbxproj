@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C80000000000000000000001 /* JSONCTextEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000000002 /* JSONCTextEditorTests.swift */; };
 		C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000000002 /* DownloadMonitorTests.swift */; };
 		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* main.swift */; };
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -76,6 +77,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C80000000000000000000002 /* JSONCTextEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONCTextEditorTests.swift; sourceTree = "<group>"; };
 		C70000000000000000000002 /* DownloadMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadMonitorTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -162,6 +164,7 @@
 			isa = PBXGroup;
 			children = (
 				C70000000000000000000002 /* DownloadMonitorTests.swift */,
+				C80000000000000000000002 /* JSONCTextEditorTests.swift */,
 				F80000000000000000000030 /* CLITests.swift */,
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
 				C50000000000000000000002 /* CoolingSettingsMigrationTests.swift */,
@@ -364,6 +367,7 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */,
+				C80000000000000000000001 /* JSONCTextEditorTests.swift in Sources */,
 				F80000000000000000000031 /* CLITests.swift in Sources */,
 				C50000000000000000000001 /* CoolingSettingsMigrationTests.swift in Sources */,
 				C40000000000000000000001 /* LocalizationTests.swift in Sources */,

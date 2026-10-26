@@ -148,7 +148,8 @@ public final class LowPowerModeManager: NSObject, ObservableObject {
         requested = false
         handledRequest = false
         guard process != nil else {
-            lastError = nil
+            // Called on every heartbeat while idle; @Published fires on every assignment.
+            if lastError != nil { lastError = nil }
             return
         }
         isStopping = true

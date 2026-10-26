@@ -26,6 +26,8 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     private let helperMutationLock = NSLock()
     private let installCheckQueue = DispatchQueue(label: "pmgwork.awake.smchelper.installcheck", qos: .utility)
     private var cachedInstallCheck: (date: Date, installed: Bool)?
+    /// Logs a missing battery helper once instead of on every heartbeat.
+    private var loggedMissingBatteryHelper = false
     private let installCheckTTL: TimeInterval = 30
 
     private init() {}
@@ -481,8 +483,15 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     /// Starts a root-owned limited-power assertion. The helper watches its
     /// parent Awake process and releases the assertion on termination or crash.
     public func startBatterySleepAssertion() -> Process? {
-        guard checkHelperInstalled() else {
-            NSLog("[SMCHelper] Battery sleep assertion requires the current helper version")
+        let installed = checkHelperInstalled()
+        installStateLock.lock()
+        let shouldLog = !installed && !loggedMissingBatteryHelper
+        loggedMissingBatteryHelper = !installed
+        installStateLock.unlock()
+        guard installed else {
+            if shouldLog {
+                NSLog("[SMCHelper] Battery sleep assertion requires the current helper version")
+            }
             return nil
         }
 

@@ -35,9 +35,7 @@ public final class PowerMonitor: ObservableObject {
         guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let list = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [CFTypeRef] else {
             // Desktops without battery default to AC
-            self.isOnACPower = true
-            self.batteryLevel = nil
-            self.powerSourceState = .acPower
+            apply(isOnACPower: true, batteryLevel: nil, powerSourceState: .acPower)
             return
         }
 
@@ -57,15 +55,22 @@ public final class PowerMonitor: ObservableObject {
             }
         }
 
-        self.isOnACPower = isAC
-        self.batteryLevel = batteryPct
+        let state: PowerSourceState
         if isAC {
-            self.powerSourceState = .acPower
+            state = .acPower
         } else if let pct = batteryPct {
-            self.powerSourceState = .battery(percentage: pct)
+            state = .battery(percentage: pct)
         } else {
-            self.powerSourceState = .battery(percentage: 100)
+            state = .battery(percentage: 100)
         }
+        apply(isOnACPower: isAC, batteryLevel: batteryPct, powerSourceState: state)
+    }
+
+    // @Published fires on every assignment, and this runs on a 3 s poll.
+    private func apply(isOnACPower: Bool, batteryLevel: Int?, powerSourceState: PowerSourceState) {
+        if self.isOnACPower != isOnACPower { self.isOnACPower = isOnACPower }
+        if self.batteryLevel != batteryLevel { self.batteryLevel = batteryLevel }
+        if self.powerSourceState != powerSourceState { self.powerSourceState = powerSourceState }
     }
 
     private func setupPowerNotification() {

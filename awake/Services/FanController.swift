@@ -26,6 +26,9 @@ public final class FanController: ObservableObject {
     private var testResetTimer: Timer?
     private var watchdogTimer: Timer?
     private var isWatchdogCheckInFlight = false
+    /// Only an explicit user action may ask for an administrator password to
+    /// restore the fans. Automatic retries from the heartbeat never prompt.
+    private var restorePromptAllowed = false
     private let testDuration: TimeInterval = 60
     /// A failed automatic restore is retried after this delay so the fail-safe
     /// recovers on its own without hammering the SMC on every heartbeat.
@@ -81,6 +84,7 @@ public final class FanController: ObservableObject {
     /// blocked forever; `force` is used by explicit user actions.
     public func restoreAuto(force: Bool = false) {
         cancelTestResetTimer()
+        if force { restorePromptAllowed = true }
         if requestedMode != .auto {
             failedMode = nil
             failedAt = nil
@@ -106,10 +110,12 @@ public final class FanController: ObservableObject {
 
         let mode = requestedMode
         modeInFlight = mode
+        let allowsPrompt = mode == .auto && restorePromptAllowed
+        if mode == .auto { restorePromptAllowed = false }
         queue.async {
             switch mode {
             case .auto:
-                self.performRestoreAuto()
+                self.performRestoreAuto(allowAuthorizationPrompt: allowsPrompt)
             case .maximum:
                 self.performApplyMaximumCooling()
             case .aggressive:
@@ -120,9 +126,9 @@ public final class FanController: ObservableObject {
         }
     }
 
-    private nonisolated func performRestoreAuto() {
+    private nonisolated func performRestoreAuto(allowAuthorizationPrompt: Bool) {
         NSLog("[FanController] Fail-safe: Restoring fans to Auto (System SMC control)")
-        let success = self.executeSMCRestoreAuto()
+        let success = self.executeSMCRestoreAuto(allowAuthorizationPrompt: allowAuthorizationPrompt)
 
         Task { @MainActor in
             let controller = FanController.shared
@@ -243,9 +249,9 @@ public final class FanController: ObservableObject {
         }
     }
 
-    private nonisolated func executeSMCRestoreAuto() -> Bool {
+    private nonisolated func executeSMCRestoreAuto(allowAuthorizationPrompt: Bool) -> Bool {
         NSLog("[FanController] Sending fan auto restore command to AppleSMC")
-        return SMCHelper.shared.setFanAuto()
+        return SMCHelper.shared.setFanAuto(allowAuthorizationPrompt: allowAuthorizationPrompt)
     }
 
     private func recoverAutomaticControlIfNeeded() {

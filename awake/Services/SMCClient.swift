@@ -317,10 +317,14 @@ public nonisolated final class SMCClient: @unchecked Sendable {
         setAllFans(targetFraction: 0.5)
     }
 
+    /// Only mode 1 is manual. M3/M4 report 3 while thermalmonitord owns the
+    /// fans, which is still system control.
     public func areAnyFansInManualMode() -> Bool {
         let count = getFanCount()
         guard count > 0 else { return false }
-        return (0..<count).contains { (readInt(key: "F\($0)Md") ?? 0) != 0 }
+        return (0..<count).contains { fan in
+            (readInt(key: "F\(fan)Md") ?? readInt(key: "F\(fan)md")) == 1
+        }
     }
 
     /// Whether every fan still reports manual mode (1). M3/M4 report 3 while

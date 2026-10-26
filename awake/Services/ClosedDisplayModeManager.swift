@@ -26,6 +26,10 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
     private var requested = false
     private var isStopping = false
     private var restorationFailed = false
+    /// Bounds automatic helper checks from the heartbeat while the helper is
+    /// missing, outdated, or keeps exiting. Each check launches the helper.
+    private var lastAutomaticCheck: Date?
+    private let automaticCheckInterval: TimeInterval = 15
 
     init(
         helperURL: URL = SMCHelper.shared.closedDisplayHelperURL,
@@ -53,6 +57,11 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
             input = nil
         }
         guard !isCheckingHelper else { return }
+        let now = Date()
+        if let lastAutomaticCheck, now.timeIntervalSince(lastAutomaticCheck) < automaticCheckInterval {
+            return
+        }
+        lastAutomaticCheck = now
         Task { await refreshHelperState() }
     }
 
@@ -141,7 +150,10 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
 
     @objc private func stop() {
         requested = false
-        lastError = nil
+        // A new session checks the helper right away.
+        lastAutomaticCheck = nil
+        // Called on every heartbeat while idle; @Published fires on every assignment.
+        if lastError != nil { lastError = nil }
         guard process != nil else { return }
         isStopping = true
         // A normal stop still goes through the helper's restoration path.

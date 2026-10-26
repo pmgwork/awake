@@ -135,7 +135,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 ## 隐私
 
 - 代理检测只使用 `~/Library/Application Support/Awake` 下的本地 Hook 事件，不轮询进程，也不扫描你的项目或文档文件。
-- 下载检测只查看所选文件夹中的文件名（`.download`、`.crdownload`、`.part` 等，跳过隐藏文件）。
+- 下载检测只查看所选文件夹中的文件名（`.download`、`.crdownload`、`.part` 等，跳过隐藏文件）和修改时间。子文件夹中的此类文件仅在最近 10 分钟内有更新时才计入，因此解压后残留的文件不会阻止 Mac 睡眠。
 - 没有分析、遥测或账号。网络请求仅限于读取 `raw.githubusercontent.com` 上的更新源，以及在你同意更新后从 GitHub Releases 下载更新。不会发送匿名系统分析数据。
 
 ## 从源码构建

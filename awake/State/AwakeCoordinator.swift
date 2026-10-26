@@ -544,6 +544,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         // Observe Lid state changes
         lidMonitor.$isLidClosed
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { _ in
                 AwakeCoordinator.shared.evaluateState()
@@ -552,6 +553,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         // Observe Display changes
         displayMonitor.$hasExternalDisplay
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { _ in
                 AwakeCoordinator.shared.evaluateState()
@@ -560,6 +562,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         // Observe Power changes
         powerMonitor.$isOnACPower
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { _ in
                 AwakeCoordinator.shared.evaluateState()
@@ -590,6 +593,7 @@ public final class AwakeCoordinator: ObservableObject {
             settings.$preventDisplaySleep,
             settings.$preventScreenSaver
         )
+        .removeDuplicates { $0 == $1 }
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in
             self?.applyScreenBehaviorPolicy()

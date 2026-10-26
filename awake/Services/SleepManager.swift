@@ -175,8 +175,7 @@ public final class SleepManager: ObservableObject {
         }
         releaseClosedLidAssertion()
         isClosedLidMode = false
-        health = .inactive
-        lastError = nil
+        setStatus(health: .inactive, lastError: nil)
     }
 
     private func startCaffeinateProcess() {
@@ -252,8 +251,7 @@ public final class SleepManager: ObservableObject {
             isEffective = assertionID != 0
         }
 
-        lastError = failures.isEmpty ? nil : failures.joined(separator: " ")
-
+        let health: SleepPreventionHealth
         if !isEffective {
             health = .failed
         } else if failures.isEmpty {
@@ -261,5 +259,12 @@ public final class SleepManager: ObservableObject {
         } else {
             health = .degraded
         }
+        setStatus(health: health, lastError: failures.isEmpty ? nil : failures.joined(separator: " "))
+    }
+
+    // @Published fires on every assignment, and this runs on the 1 Hz heartbeat.
+    private func setStatus(health: SleepPreventionHealth, lastError: String?) {
+        if self.health != health { self.health = health }
+        if self.lastError != lastError { self.lastError = lastError }
     }
 }

@@ -215,13 +215,16 @@ public final class ScreenBehaviorManager: ObservableObject {
     }
 
     private func refreshLastError() {
+        let error: String?
         if displaySleepPreventionRequested && !isDisplaySleepPrevented {
-            lastError = L10n.string("Couldn't prevent display sleep.")
+            error = L10n.string("Couldn't prevent display sleep.")
         } else if screenSaverPreventionRequested && screenSaverControlFailed {
-            lastError = L10n.string("Couldn't prevent the automatic screen lock.")
+            error = L10n.string("Couldn't prevent the automatic screen lock.")
         } else {
-            lastError = nil
+            error = nil
         }
+        // Runs on every heartbeat; @Published fires on every assignment.
+        if lastError != error { lastError = error }
     }
 
     private var currentSessionIsLocked: Bool {

@@ -41,7 +41,7 @@ public final class DisplayMonitor: ObservableObject {
 
         let result = CGGetOnlineDisplayList(16, &onlineDisplays, &displayCount)
         guard result == .success else {
-            self.hasExternalDisplay = false
+            setHasExternalDisplay(false)
             return
         }
 
@@ -56,7 +56,13 @@ public final class DisplayMonitor: ObservableObject {
             }
         }
 
-        self.hasExternalDisplay = foundExternal
+        setHasExternalDisplay(foundExternal)
+    }
+
+    // @Published fires on every assignment, and this runs on a 2 s poll.
+    private func setHasExternalDisplay(_ value: Bool) {
+        guard hasExternalDisplay != value else { return }
+        hasExternalDisplay = value
     }
 
     private func startPolling() {

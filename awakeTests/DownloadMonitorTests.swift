@@ -49,6 +49,25 @@ final class DownloadMonitorTests: XCTestCase {
         XCTAssertTrue(monitor.activeFileNames.isEmpty)
     }
 
+    func testStaleNestedPartialFilesAreIgnored() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let nested = folder.appendingPathComponent("extracted-archive")
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let stale = Date().addingTimeInterval(-(DownloadMonitor.nestedPartialFileMaxAge + 60))
+        for url in [nested.appendingPathComponent("old.part"), folder.appendingPathComponent("top.part")] {
+            try Data().write(to: url)
+            try FileManager.default.setAttributes([.modificationDate: stale], ofItemAtPath: url.path)
+        }
+        try Data().write(to: nested.appendingPathComponent("fresh.crdownload"))
+
+        // Top-level partial files always count; nested ones only while written.
+        XCTAssertEqual(
+            DownloadMonitor.partialDownloadNames(in: folder),
+            ["fresh.crdownload", "top.part"]
+        )
+    }
+
     @MainActor
     private func waitUntil(_ condition: () -> Bool) async {
         let deadline = Date().addingTimeInterval(5)
