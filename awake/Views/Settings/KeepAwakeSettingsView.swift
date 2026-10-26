@@ -14,9 +14,13 @@ struct KeepAwakeSettingsView: View {
                 Picker(L10n.string("Keep Awake After Agents Finish"), selection: $settings.completionGraceDuration) {
                     Text(L10n.string("Off")).tag(TimeInterval(0))
                     ForEach(graceDurations, id: \.self) { duration in
-                        Text(L10n.format("%d min", Int(duration / 60))).tag(duration)
+                        Text(verbatim: L10n.format("%d min", language: settings.language, Int(duration / 60)))
+                            .tag(duration)
                     }
                 }
+                // AppKit keeps the popup's menu items after SwiftUI refreshes
+                // the selected label. Rebuild them when the app language changes.
+                .id(settings.language)
             } header: {
                 Text(L10n.string("While Agent Is Running"))
             }

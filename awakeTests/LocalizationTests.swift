@@ -14,6 +14,13 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.string("untranslated-key", language: .japanese), "untranslated-key")
     }
 
+    func testCompletionGraceDurationsInEnglishAndJapanese() {
+        for minutes in [1, 2, 3, 5, 10, 15, 30] {
+            XCTAssertEqual(L10n.format("%d min", language: .english, minutes), "\(minutes) min")
+            XCTAssertEqual(L10n.format("%d min", language: .japanese, minutes), "\(minutes)分")
+        }
+    }
+
     func testLanguagePreferencePersistsAndInvalidValueUsesSystem() {
         let name = "pmgwork.awake.language-tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
