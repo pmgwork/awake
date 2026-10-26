@@ -1,6 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Mon, 26 Oct 2026 23:33:18 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b8</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 7
+
+- Restored **Keep Awake After Agents Finish** in **Settings → Keep Awake**. Keep your Mac awake for a little longer after the last monitored agent finishes: Off, 1, 2, 3, 5, 10, 15, or 30 minutes. The default is 3 minutes, and previously saved durations are preserved.
+- The menu shows the remaining time after completion. New agent activity cancels the countdown; the next completion starts a fresh countdown.
+- Pausing agent monitoring, changing the Keep Awake mode, or reaching the battery cutoff ends the grace period immediately.
+
+This release also includes the fixes from [Beta 7](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.7) and earlier betas.
+
+## Installation
+
+Download `Awake-0.6.0-beta.8.zip` or `Awake-0.6.0-beta.8.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.7...v0.6.0-beta.8)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.8/Awake-0.6.0-beta.8.zip" length="4629953" type="application/octet-stream" sparkle:edSignature="69G5bWJG+UFwkAhNVImV1bxuYmhGlljZtK7MC5j2kNH6foBRAIEXfR4Xu/ncsPpahV4XujbCGeiByrgdhPxACQ==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Mon, 26 Oct 2026 14:56:57 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b7</sparkle:version>
