@@ -33,12 +33,14 @@ public final class FanController: ObservableObject {
     /// A failed automatic restore is retried after this delay so the fail-safe
     /// recovers on its own without hammering the SMC on every heartbeat.
     private let autoRetryDelay: TimeInterval = 15
-    /// macOS can take the fans back (for example thermalmonitord, or a sleep
-    /// and wake). The watchdog notices and engages manual control again.
-    private let watchdogInterval: TimeInterval = 10
+    /// The lease helper re-asserts manual control itself when macOS takes the
+    /// fans back (thermalmonitord, or a sleep and wake). The watchdog only
+    /// replaces a helper that exited and retries a failed engage.
+    private let watchdogInterval: TimeInterval = 5
     /// A failed manual engage is retried after this delay instead of leaving
-    /// cooling off until the mode changes.
-    private let manualRetryDelay: TimeInterval = 30
+    /// cooling off until the mode changes. The engage itself can take up to
+    /// about 30 seconds, so a short delay does not hammer the SMC.
+    private let manualRetryDelay: TimeInterval = 5
 
     private init() {
         NotificationCenter.default.addObserver(
@@ -279,7 +281,7 @@ public final class FanController: ObservableObject {
         }
     }
 
-    /// Re-applies a manual mode whose override was lost or whose engage failed.
+    /// Re-applies a manual mode whose lease helper exited or whose engage failed.
     private func verifyManualControl() {
         let mode = requestedMode
         // Only the installed helper can engage without an authorization prompt.
@@ -297,7 +299,9 @@ public final class FanController: ObservableObject {
         guard activeMode == mode, !isWatchdogCheckInFlight else { return }
         isWatchdogCheckInFlight = true
         queue.async {
-            let held = SMCHelper.shared.isFanControlLeaseRunning && SMCClient.shared.areAllFansInManualMode()
+            // Restarting a running lease would first return the fans to the
+            // system, so only a helper that exited is replaced.
+            let held = SMCHelper.shared.isFanControlLeaseRunning
             Task { @MainActor in
                 let controller = FanController.shared
                 controller.isWatchdogCheckInFlight = false
@@ -305,7 +309,7 @@ public final class FanController: ObservableObject {
                       controller.modeInFlight == nil,
                       controller.activeMode == mode,
                       controller.requestedMode == mode else { return }
-                NSLog("[FanController] Manual fan control was lost. Re-applying %@", mode.rawValue)
+                NSLog("[FanController] Fan control lease exited. Re-applying %@", mode.rawValue)
                 // The fans are no longer in this mode; let the request apply again.
                 controller.activeMode = .auto
                 controller.applyRequestedModeIfNeeded()

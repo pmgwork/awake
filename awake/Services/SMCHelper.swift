@@ -12,7 +12,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-12"
+    private let helperProtocolVersion = "awake-smc-13"
 
     var closedDisplayHelperURL: URL { URL(fileURLWithPath: helperToolPath) }
     private let fanLeaseLock = NSLock()
@@ -825,6 +825,43 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             }
         }
 
+        typedef struct {
+            char modeKey[5];
+            char targetKey[5];
+            uint8_t target[32];
+            uint32_t targetSize;
+        } FanLease;
+
+        // macOS can take the fans back (thermalmonitord on M3/M4, or a sleep
+        // and wake). Re-assert manual mode and the target in place, without
+        // handing the fans to the system first. Failed writes retry on the
+        // next pass.
+        static void maintainManual(io_connect_t connection, const FanLease *fans, int fanCount) {
+            for (int fan = 0; fan < fanCount; ++fan) {
+                if (shouldStop || parentDied()) return;
+                uint8_t bytes[32] = {0};
+                uint32_t size = 0;
+                if (readKey(connection, fans[fan].modeKey, bytes, &size) && size == 1 && bytes[0] != 1) {
+                    uint8_t manual = 1;
+                    if (!writeKey(connection, fans[fan].modeKey, &manual, 1)) {
+                        // Ask thermalmonitord to yield again.
+                        SMCParam ftstInfo = {0};
+                        if (keyInfo(connection, "Ftst", &ftstInfo)) {
+                            uint8_t unlock = 1;
+                            (void)writeKey(connection, "Ftst", &unlock, 1);
+                        }
+                        continue;
+                    }
+                }
+                size = 0;
+                if (!readKey(connection, fans[fan].targetKey, bytes, &size) ||
+                    size != fans[fan].targetSize ||
+                    memcmp(bytes, fans[fan].target, size) != 0) {
+                    (void)writeKey(connection, fans[fan].targetKey, fans[fan].target, fans[fan].targetSize);
+                }
+            }
+        }
+
         static int holdBatterySleepAssertion(void) {
             pid_t awakePID = getppid();
             signal(SIGTERM, handleStopSignal);
@@ -967,7 +1004,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-12");
+                puts("awake-smc-13");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
@@ -1034,6 +1071,8 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             }
 
             bool success = true;
+            FanLease fans[10];
+            memset(fans, 0, sizeof(fans));
             for (int fan = 0; fan < fanCount; ++fan) {
                 if (shouldStop || parentDied()) {
                     fprintf(stderr, "cancelled before fan %d", fan);
@@ -1080,6 +1119,10 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                     success = false;
                     break;
                 }
+                memcpy(fans[fan].modeKey, modeKey, 5);
+                memcpy(fans[fan].targetKey, targetKey, 5);
+                memcpy(fans[fan].target, maxBytes, maxSize);
+                fans[fan].targetSize = maxSize;
             }
             if (!success) rollbackToAuto(connection, fanCount);
             if (success && watchParent) {
@@ -1090,7 +1133,11 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                 }
                 puts("READY");
                 fflush(stdout);
-                while (!shouldStop && getppid() == expectedParentPID) sleep(1);
+                while (!shouldStop && getppid() == expectedParentPID) {
+                    sleep(1);
+                    if (shouldStop || parentDied()) break;
+                    maintainManual(connection, fans, fanCount);
+                }
                 rollbackToAuto(connection, fanCount);
             }
             IOServiceClose(connection);
