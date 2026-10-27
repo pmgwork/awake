@@ -58,6 +58,17 @@ final class CLITests: XCTestCase {
     }
 
     @MainActor
+    func testStatusReportsModesWithCommandNames() {
+        XCTAssertEqual(CLIService.modeName(.whileAgentRunning), "agent")
+        XCTAssertEqual(CLIService.modeName(.whileDownloading), "download")
+        XCTAssertEqual(CLIService.modeName(.indefinitely), "indefinitely")
+        XCTAssertEqual(CLIService.modeName(.timer), "timer")
+        for mode in KeepAwakeModeType.allCases {
+            XCTAssertTrue(CLIProtocol.modes.contains(CLIService.modeName(mode)))
+        }
+    }
+
+    @MainActor
     func testMalformedRequestsCannotChangeModeOrDuration() {
         let coordinator = AwakeCoordinator.shared
         let mode = coordinator.settings.selectedMode

@@ -15,14 +15,11 @@ public final class ScreenBehaviorManager: ObservableObject {
 
     private static let userActivityRefreshInterval: TimeInterval = 30
 
-    private var isDisplaySleepPrevented = false
     @Published public private(set) var lastError: String?
 
     private let screenSaverBundleIdentifier = "com.apple.ScreenSaver.Engine"
 
-    private var displaySleepAssertionID: IOPMAssertionID = 0
     private var screenSaverActivityAssertionID: IOPMAssertionID = 0
-    private var displaySleepPreventionRequested = false
     private var screenSaverPreventionRequested = false
     private var lastUserActivityDeclaration: Date?
     private var screenSaverControlFailed = false
@@ -79,18 +76,14 @@ public final class ScreenBehaviorManager: ObservableObject {
 
     public func update(
         sessionActive: Bool,
-        preventDisplaySleep: Bool,
-        preventScreenSaver: Bool,
+        keepScreenOn: Bool,
         lidClosed: Bool,
         hasExternalDisplay: Bool
     ) {
         let policy = DisplayBehaviorPolicy(
             lidClosed: lidClosed, hasExternalDisplay: hasExternalDisplay
         )
-        displaySleepPreventionRequested = sessionActive && preventDisplaySleep && policy.allowsScreenPrevention
-
-        configureDisplaySleepPrevention(enabled: displaySleepPreventionRequested)
-        configureScreenSaverPrevention(enabled: sessionActive && preventScreenSaver && policy.allowsScreenPrevention)
+        configureScreenSaverPrevention(enabled: sessionActive && keepScreenOn && policy.allowsScreenPrevention)
         if screenSaverPreventionRequested {
             stopRunningScreenSaverIfNeeded()
         }
@@ -98,40 +91,7 @@ public final class ScreenBehaviorManager: ObservableObject {
     }
 
     @objc private func handleAppWillTerminate() {
-        configureDisplaySleepPrevention(enabled: false)
         configureScreenSaverPrevention(enabled: false)
-    }
-
-    private func configureDisplaySleepPrevention(enabled: Bool) {
-        if enabled {
-            guard displaySleepAssertionID == 0 else {
-                isDisplaySleepPrevented = true
-                return
-            }
-
-            let result = IOPMAssertionCreateWithName(
-                kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
-                IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                "Awake: Preventing Display Sleep" as CFString,
-                &displaySleepAssertionID
-            )
-            isDisplaySleepPrevented = result == kIOReturnSuccess && displaySleepAssertionID != 0
-            if !isDisplaySleepPrevented {
-                displaySleepAssertionID = 0
-                NSLog(
-                    "[ScreenBehaviorManager] Failed to create display sleep assertion: %d", result)
-            }
-        } else {
-            releaseDisplaySleepAssertion()
-        }
-    }
-
-    private func releaseDisplaySleepAssertion() {
-        if displaySleepAssertionID != 0 {
-            IOPMAssertionRelease(displaySleepAssertionID)
-            displaySleepAssertionID = 0
-        }
-        isDisplaySleepPrevented = false
     }
 
     private func configureScreenSaverPrevention(enabled: Bool) {
@@ -143,8 +103,8 @@ public final class ScreenBehaviorManager: ObservableObject {
             return
         }
 
-        // Prevent the idle screen saver and automatic idle lock before they begin.
-        // A display-sleep assertion by itself does not reset macOS's user-idle timer.
+        // Declaring user activity resets macOS's user-idle timer, so the display
+        // stays on and the idle screen saver and automatic lock never begin.
         refreshUserActivityAssertion()
     }
 
@@ -216,9 +176,7 @@ public final class ScreenBehaviorManager: ObservableObject {
 
     private func refreshLastError() {
         let error: String?
-        if displaySleepPreventionRequested && !isDisplaySleepPrevented {
-            error = L10n.string("Couldn't prevent display sleep.")
-        } else if screenSaverPreventionRequested && screenSaverControlFailed {
+        if screenSaverPreventionRequested && screenSaverControlFailed {
             error = L10n.string("Couldn't prevent the automatic screen lock.")
         } else {
             error = nil

@@ -42,8 +42,8 @@
 ## リリース手順
 
 1. 版数を決める: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
-   (Xcode > Target awake > General、現在 `0.2.0`)。`scripts/package.sh` が
-   引数の版数で両方を上書きするため、通常はプロジェクト側の変更は不要。
+   (Xcode > Target awake > General)。`scripts/package.sh` が
+   引数の版数で両方を上書きするため、プロジェクト側の値は更新しなくてよい。
 2. リリースノート（**英語**）を `dist/release-notes-v<version>.md` として用意する。
    `generate_appcast` が同じ名前の ZIP に紐づけて appcast へ埋め込み、
    Sparkle の更新画面に表示する（任意だが推奨）。
@@ -94,7 +94,10 @@
 - `develop` は次の正式版に向けた開発とベータ版の配布に使う。
 - 正式版の修正は `develop` にも取り込み、開発中の機能を保持する。
 - `0.5.1` は `0.5.0` に更新フィードの分離とベータ受信設定を加えた移行用の正式版。
-  `0.6.0` の冷却・低電力モード変更は `develop` に保持する。
+- 正式版を出すときは、`develop` を `main` にマージして push してから
+  `scripts/release.sh X.Y.Z` を実行する（`release.sh` は HEAD と `origin/main` の一致を確認する）。
+- `dist/` に同じ版数の古い ZIP・DMG・SHA256 が残っている場合は、`--skip-build` を使わない。
+  ベータ期間中に作った成果物をそのまま正式版として添付しないため。
 
 ## ベータ版の配布
 

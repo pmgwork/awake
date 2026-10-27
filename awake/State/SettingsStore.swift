@@ -35,8 +35,10 @@ public final class SettingsStore: ObservableObject {
         static let launchAtLogin = "pmgwork.awake.launchAtLogin"
         static let notificationsEnabled = "pmgwork.awake.notificationsEnabled"
         static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
-        static let preventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
-        static let preventScreenSaver = "pmgwork.awake.preventScreenSaver"
+        static let keepScreenOn = "pmgwork.awake.keepScreenOn"
+        /// Merged into keepScreenOn; read once to migrate and left for older builds.
+        static let legacyPreventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
+        static let legacyPreventScreenSaver = "pmgwork.awake.preventScreenSaver"
         static let closedDisplayModeEnabled = "pmgwork.awake.closedDisplayModeEnabled"
         static let lowPowerModeWhenLidClosed = "pmgwork.awake.lowPowerModeWhenLidClosed"
         static let providerLastTestedAt = "pmgwork.awake.providerLastTestedAt"
@@ -174,15 +176,10 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published public var preventDisplaySleep: Bool {
+    /// Keeps the screen on and prevents the screen saver and automatic lock.
+    @Published public var keepScreenOn: Bool {
         didSet {
-            UserDefaults.standard.set(preventDisplaySleep, forKey: Keys.preventDisplaySleep)
-        }
-    }
-
-    @Published public var preventScreenSaver: Bool {
-        didSet {
-            UserDefaults.standard.set(preventScreenSaver, forKey: Keys.preventScreenSaver)
+            UserDefaults.standard.set(keepScreenOn, forKey: Keys.keepScreenOn)
         }
     }
 
@@ -223,6 +220,19 @@ public final class SettingsStore: ObservableObject {
             speed(for: Keys.automaticCoolingFanMode) ?? previous,
             speed(for: Keys.manualCoolingFanMode) ?? previous
         )
+    }
+
+    /// Earlier versions had separate display-sleep and screen-saver settings.
+    /// Either one kept the screen on, so either one carries over.
+    static func storedKeepScreenOn(in defaults: UserDefaults) -> Bool {
+        if defaults.object(forKey: Keys.keepScreenOn) != nil {
+            return defaults.bool(forKey: Keys.keepScreenOn)
+        }
+        let displaySleep = defaults.object(forKey: Keys.legacyPreventDisplaySleep) == nil
+            ? false : defaults.bool(forKey: Keys.legacyPreventDisplaySleep)
+        let screenSaver = defaults.object(forKey: Keys.legacyPreventScreenSaver) == nil
+            ? true : defaults.bool(forKey: Keys.legacyPreventScreenSaver)
+        return displaySleep || screenSaver
     }
 
     /// Reads the saved cooling mode and whether it is armed, migrating
@@ -346,17 +356,9 @@ public final class SettingsStore: ObservableObject {
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
 
         self.notificationsEnabled = UserDefaults.standard.bool(forKey: Keys.notificationsEnabled)
-        if UserDefaults.standard.object(forKey: Keys.preventDisplaySleep) != nil {
-            self.preventDisplaySleep = UserDefaults.standard.bool(forKey: Keys.preventDisplaySleep)
-        } else {
-            self.preventDisplaySleep = false
-        }
-
-        if UserDefaults.standard.object(forKey: Keys.preventScreenSaver) != nil {
-            self.preventScreenSaver = UserDefaults.standard.bool(forKey: Keys.preventScreenSaver)
-        } else {
-            self.preventScreenSaver = true
-        }
+        let keepScreenOn = Self.storedKeepScreenOn(in: .standard)
+        self.keepScreenOn = keepScreenOn
+        UserDefaults.standard.set(keepScreenOn, forKey: Keys.keepScreenOn)
 
         self.closedDisplayModeEnabled = UserDefaults.standard.object(forKey: Keys.closedDisplayModeEnabled) == nil
             ? true : UserDefaults.standard.bool(forKey: Keys.closedDisplayModeEnabled)

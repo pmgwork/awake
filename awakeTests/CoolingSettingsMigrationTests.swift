@@ -21,6 +21,26 @@ final class CoolingSettingsMigrationTests: XCTestCase {
         SettingsStore.storedCoolingState(in: defaults)
     }
 
+    func testKeepScreenOnDefaultsToOnForNewInstalls() {
+        XCTAssertTrue(SettingsStore.storedKeepScreenOn(in: defaults))
+    }
+
+    func testEitherLegacyScreenSettingKeepsTheScreenOn() {
+        for (displaySleep, screenSaver, expected) in [
+            (false, false, false), (true, false, true), (false, true, true), (true, true, true)
+        ] {
+            defaults.set(displaySleep, forKey: "pmgwork.awake.preventDisplaySleep")
+            defaults.set(screenSaver, forKey: "pmgwork.awake.preventScreenSaver")
+            XCTAssertEqual(SettingsStore.storedKeepScreenOn(in: defaults), expected)
+        }
+    }
+
+    func testSavedKeepScreenOnWinsOverLegacySettings() {
+        defaults.set(true, forKey: "pmgwork.awake.preventScreenSaver")
+        defaults.set(false, forKey: "pmgwork.awake.keepScreenOn")
+        XCTAssertFalse(SettingsStore.storedKeepScreenOn(in: defaults))
+    }
+
     func testSharedFanSpeedMigratesToBothCoolingSpeeds() {
         defaults.set(FanMode.aggressive.rawValue, forKey: "pmgwork.awake.coolingFanMode")
         let speeds = SettingsStore.storedCoolingFanModes(in: defaults, isExistingInstall: true)

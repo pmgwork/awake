@@ -55,8 +55,7 @@ do {
         if !["status", "cooling.status"].contains(request.command) {
             switch request.command {
             case "start":
-                let mode = ["whileAgentRunning": "agent", "whileDownloading": "download", "indefinitely": "indefinitely", "timer": "timer"][response.mode] ?? response.mode
-                print("Keep Awake: \(response.active ? "active" : response.waitingForActivity == true ? "waiting" : "stopped") (\(mode)).")
+                print("Keep Awake: \(response.active ? "active" : response.waitingForActivity == true ? "waiting" : "stopped") (\(response.mode)).")
             case "stop": print("Keep Awake stopped.")
             case "mode": print("Keep Awake mode: \(request.mode ?? response.mode).")
             case "cooling.start":

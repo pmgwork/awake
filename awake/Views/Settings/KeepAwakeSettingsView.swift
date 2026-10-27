@@ -44,11 +44,10 @@ struct KeepAwakeSettingsView: View {
                     }
                 ))
                 .disabled(!isClosedDisplayModeOn)
-                Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
-                Toggle(
-                    L10n.string("Prevent Screen Saver and Auto-Lock"),
-                    isOn: $settings.preventScreenSaver
-                )
+                Toggle(isOn: $settings.keepScreenOn) {
+                    Text(L10n.string("Keep Screen On"))
+                    Text(L10n.string("Also prevents the screen saver and automatic lock."))
+                }
 
                 if let error = screenBehaviorManager.lastError {
                     Label(error, systemImage: "exclamationmark.triangle")

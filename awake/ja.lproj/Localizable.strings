@@ -49,9 +49,8 @@
 "The set time has ended." = "指定した時間が終了しました。";
 "Notifications are turned off in System Settings." = "通知はシステム設定でオフになっています。";
 "These settings apply only while Keep Awake is on." = "これらの設定は、スリープ防止がオンの間だけ適用されます。";
-"Prevent Display Sleep" = "ディスプレイのスリープを防止";
-"Prevent Screen Saver and Auto-Lock" = "スクリーンセーバーと自動ロックを防止";
-"Couldn't prevent display sleep." = "ディスプレイのスリープを防止できませんでした。";
+"Keep Screen On" = "画面をつけたままにする";
+"Also prevents the screen saver and automatic lock." = "スクリーンセーバーと自動ロックも防止します。";
 "Couldn't prevent the automatic screen lock." = "画面の自動ロックを防止できませんでした。";
 "Couldn't return the fans to automatic control. If they stay fast, restart your Mac." = "ファンを自動制御に戻せませんでした。回転が速いままなら、Macを再起動してください。";
 "Fan control failed because the SMC rejected the command. Check the diagnostic log." = "SMCがコマンドを拒否したため、ファンを制御できませんでした。詳しくは診断ログを確認してください。";
@@ -179,6 +178,7 @@
 "Automatic Cooling Stopped" = "自動冷却を停止しました";
 "Battery is at %d%%, so automatic cooling stopped." = "バッテリー残量が%d%%になったため、自動冷却を停止しました。";
 "Automatic cooling is unavailable while the battery is low." = "バッテリー残量が少ないため、自動冷却は使えません。";
+"Update the hardware helper in Permissions to use cooling and closed-lid operation." = "冷却と蓋を閉じた動作を使うには、「権限」でハードウェア制御ヘルパーを更新してください。";
 "The fans may still be under manual control. Restart your Mac to return them to automatic control." = "ファンが手動制御のままの可能性があります。Macを再起動すると自動制御に戻ります。";
 "Link Your Agents" = "エージェントを連携";
 "Closed Lid & Fans" = "蓋を閉じた動作とファン";
@@ -189,7 +189,7 @@
 "Get Started" = "はじめる";
 "Step %d of %d" = "ステップ %1$d / %2$d";
 "Stay awake until the downloads in a folder finish." = "フォルダのダウンロードが終わるまでスリープを防止します。";
-"Run the fans faster while an agent works with the lid closed." = "蓋を閉じてエージェントが作業している間、ファンを速めに回します。";
+"Run the fans faster while Keep Awake is on with the lid closed, or start cooling yourself." = "蓋を閉じてスリープ防止中はファンを速めに回します。手動で冷却を始めることもできます。";
 "Left-Click the Cup" = "カップを左クリック";
 "Choose a mode and start Keep Awake or Cooling." = "モードを選んで、スリープ防止や冷却を開始します。";
 "Right-Click the Cup" = "カップを右クリック";

@@ -14,7 +14,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 - **Other keep-awake modes** — for a fixed duration (15m–3h), while a download is in progress, or indefinitely.
 - **Cooling** — optional fan control while Keep Awake is on with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS.
 - **Battery protection** — turns Keep Awake and automatic cooling off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
-- **Display control** — optionally prevents display sleep, the screen saver, and automatic idle lock during a session.
+- **Display control** — **Keep Screen On** keeps the screen on during a session and also prevents the screen saver and automatic idle lock.
 - **Closed-lid Low Power Mode** — optionally turns on macOS Low Power Mode while the lid is closed during a session, and restores your previous setting afterwards.
 - **Notifications** — tells you when Awake stops automatically or a protection mechanism fails.
 - **In-app updates** — checks GitHub Releases and installs new versions inside the app (Sparkle, EdDSA-verified); no account required.
@@ -48,9 +48,9 @@ Awake runs only in the menu bar (no Dock icon).
   - *Indefinitely* — until you stop it.
 - Settings:
   - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
-  - **Keep Awake** — display and screen saver, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
+  - **Keep Awake** — Keep Screen On, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
   - **Monitor** — link or unlink each agent provider, watch live sessions, and choose the download folder.
-  - **Cooling** — separate automatic and manual fan speeds, and options for the agent mode.
+  - **Cooling** — separate automatic and manual fan speeds, and the "Only When Plugged In" option for automatic cooling.
   - **Permissions** — install, update, or remove the shared helper.
 
 ## Command line
@@ -86,14 +86,14 @@ awake mode timer --duration 1h
 awake start --mode timer
 awake cooling start --mode indefinitely
 awake cooling start --duration 10m
-awake cooling mode agent
+awake cooling mode awake
 awake cooling speed automatic 75
 awake cooling speed manual 50
 awake cooling stop
 awake cooling status --json
 ```
 
-Keep Awake modes are `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `awake` (`agent` remains a legacy alias). `awake mode` and `awake cooling mode` without a value show the current state. Selecting a mode follows the menu: changing it stops the previous session; manual modes wait for Start, and selecting automatic cooling arms it when available. `awake start --mode timer` uses the saved duration; `awake start --mode agent` or `download` requires that monitor to be enabled and waits for activity when idle. `awake cooling start` uses the selected cooling mode. A duration implies `timer`; combining a duration with a different mode is rejected.
+Keep Awake modes are `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `awake` (`agent` remains a legacy alias). `awake mode` and `awake cooling mode` without a value show the current state. `status --json` reports `mode` and `cooling.mode` with these same names. Selecting a mode follows the menu: changing it stops the previous session; manual modes wait for Start, and selecting automatic cooling arms it when available. `awake start --mode timer` uses the saved duration; `awake start --mode agent` or `download` requires that monitor to be enabled and waits for activity when idle. `awake cooling start` uses the selected cooling mode. A duration implies `timer`; combining a duration with a different mode is rejected.
 
 Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling or changing its speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means started, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates a selected conditional mode with monitoring enabled. Cooling commands leave Keep Awake independent.
 
@@ -111,7 +111,7 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 - Only entries owned by Awake (marked with `--owner pmgwork.awake`) are added or removed.
 - Before the first change, the original file is backed up next to it as `<file>.awake-backup`.
 - **Unlink** in Settings → Agents removes only Awake's entries.
-- Monitoring uses filesystem change notifications and cached session snapshots to keep idle CPU usage low. Disabled monitors stop watching; agent monitoring remains active when needed for automatic cooling.
+- Monitoring uses filesystem change notifications and cached session snapshots to keep idle CPU usage low. Pausing or disabling a monitor stops its watcher.
 - Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700). The latest event per session is retained after completion to reject delayed older events, and is replaced when a new turn starts.
 
 ## Cooling
@@ -175,6 +175,7 @@ Release (distribution) steps are documented in `docs/DISTRIBUTION.md`.
 | macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
 | In-app updates fail | Replace the app with the latest release from GitHub |
 | Fan control is unavailable | Settings → Permissions → **Install** / **Update** |
+| Cooling or closed-lid operation stopped after an update | The update replaced the hardware helper. Settings → Permissions → **Update…** (the menu also links there) |
 | Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
 
 ## License

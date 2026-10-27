@@ -36,6 +36,10 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         FileManager.default.fileExists(atPath: helperToolPath)
     }
 
+    /// Whether a helper check has finished since launch, so callers can tell
+    /// a missing helper from one that has not been checked yet.
+    public var hasCheckedHelperInstallState: Bool { cachedInstallState != nil }
+
     /// Returns whether the installed helper matches the expected protocol version.
     ///
     /// The check launches the helper binary and waits for it, so it must never

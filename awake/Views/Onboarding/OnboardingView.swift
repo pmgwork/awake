@@ -177,7 +177,7 @@ struct OnboardingView: View {
                 feature(symbol: "arrow.down.circle", title: "While Downloading",
                         description: "Stay awake until the downloads in a folder finish.")
                 feature(symbol: "fanblades", title: "Cooling",
-                        description: "Run the fans faster while an agent works with the lid closed.")
+                        description: "Run the fans faster while Keep Awake is on with the lid closed, or start cooling yourself.")
             }
             .frame(maxWidth: 420, alignment: .leading)
         }
@@ -279,11 +279,10 @@ struct OnboardingView: View {
         }
 
         Section {
-            Toggle(L10n.string("Prevent Display Sleep"), isOn: $settings.preventDisplaySleep)
-            Toggle(
-                L10n.string("Prevent Screen Saver and Auto-Lock"),
-                isOn: $settings.preventScreenSaver
-            )
+            Toggle(isOn: $settings.keepScreenOn) {
+                Text(L10n.string("Keep Screen On"))
+                Text(L10n.string("Also prevents the screen saver and automatic lock."))
+            }
         } footer: {
             Text(L10n.string("These settings apply only while Keep Awake is on."))
         }

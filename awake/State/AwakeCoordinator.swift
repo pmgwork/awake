@@ -22,6 +22,9 @@ public final class AwakeCoordinator: ObservableObject {
     /// Whether the fan helper is installed. Published so the menu shows the
     /// cooling controls as soon as the asynchronous helper check finishes.
     @Published public private(set) var isFanHelperInstalled = false
+    /// Whether a helper from an earlier version is installed and must be
+    /// updated before cooling and closed-lid operation work again.
+    @Published public private(set) var isFanHelperOutdated = false
     /// Whether the low-battery cutoff currently blocks the selected cooling mode.
     @Published public private(set) var isCoolingBlockedByLowBattery = false
 
@@ -462,6 +465,12 @@ public final class AwakeCoordinator: ObservableObject {
         if isFanHelperInstalled != installed {
             isFanHelperInstalled = installed
         }
+        let outdated = !installed
+            && SMCHelper.shared.hasCheckedHelperInstallState
+            && SMCHelper.shared.isHelperToolPresent()
+        if isFanHelperOutdated != outdated {
+            isFanHelperOutdated = outdated
+        }
         let blocked = isCoolingCutOffByLowBattery
         if isCoolingBlockedByLowBattery != blocked {
             isCoolingBlockedByLowBattery = blocked
@@ -592,16 +601,13 @@ public final class AwakeCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        Publishers.CombineLatest(
-            settings.$preventDisplaySleep,
-            settings.$preventScreenSaver
-        )
-        .removeDuplicates { $0 == $1 }
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.applyScreenBehaviorPolicy()
-        }
-        .store(in: &cancellables)
+        settings.$keepScreenOn
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyScreenBehaviorPolicy()
+            }
+            .store(in: &cancellables)
 
     }
 
@@ -631,8 +637,7 @@ public final class AwakeCoordinator: ObservableObject {
     private func applyScreenBehaviorPolicy() {
         screenBehaviorManager.update(
             sessionActive: isActive,
-            preventDisplaySleep: settings.preventDisplaySleep,
-            preventScreenSaver: settings.preventScreenSaver,
+            keepScreenOn: settings.keepScreenOn,
             lidClosed: lidMonitor.isLidClosed,
             hasExternalDisplay: displayMonitor.hasExternalDisplay
         )

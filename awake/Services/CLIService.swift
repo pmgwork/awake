@@ -105,6 +105,16 @@ final class CLIService {
         }
     }
 
+    /// Reports modes with the names the command accepts.
+    static func modeName(_ mode: KeepAwakeModeType) -> String {
+        switch mode {
+        case .whileAgentRunning: return "agent"
+        case .whileDownloading: return "download"
+        case .indefinitely: return "indefinitely"
+        case .timer: return "timer"
+        }
+    }
+
     private func coolingMode(_ name: String) -> CoolingMode {
         switch name {
         case "awake", "agent": return .whileKeepAwakeIsOn
@@ -137,7 +147,7 @@ final class CLIService {
         let coolingMode = settings.coolingMode == .forced ? "indefinitely" : settings.coolingMode == .timed ? "timer" : "awake"
         return CLIResponse(
             success: error == nil, error: error, active: coordinator.isActive,
-            mode: settings.selectedMode.rawValue,
+            mode: Self.modeName(settings.selectedMode),
             remainingSeconds: remaining, timerEndsAt: coordinator.timerEndDate,
             sleepPreventionHealth: coordinator.sleepManager.health.rawValue,
             cooling: CLICoolingStatus(

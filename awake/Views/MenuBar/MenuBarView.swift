@@ -76,6 +76,10 @@ struct MenuBarView: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            } else if coordinator.isFanHelperOutdated && !coordinator.isRemovingHardwareAuthorization {
+                Divider()
+
+                helperUpdateNotice
             }
 
             Divider()
@@ -119,6 +123,23 @@ struct MenuBarView: View {
             settingsLabel
         }
         .buttonStyle(.borderless)
+    }
+
+    /// Shown after an update that changed the helper, until it is reinstalled.
+    private var helperUpdateNotice: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(L10n.string("Update the hardware helper in Permissions to use cooling and closed-lid operation."),
+                  systemImage: "exclamationmark.triangle")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(L10n.string("Open Permissions")) {
+                popoverCloseAction()
+                SettingsWindowController.shared.show(tab: .permissions)
+            }
+            .buttonStyle(.link)
+            .font(.system(size: 11))
+        }
     }
 
     @ViewBuilder

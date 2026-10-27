@@ -14,7 +14,7 @@
 - **其他模式** — 指定时长（15 分钟～3 小时）、下载中、以及不限时。
 - **散热** — 除了防止睡眠期间合盖时的自动散热外，还支持在任何显示环境下使用的手动散热（Apple Silicon）。合盖并连接外接显示器时，自动散热会将风扇控制交给 macOS。
 - **电池保护** — 在设定的电量（关闭／5～25%，默认 20%）自动停止防止睡眠和自动散热，并把风扇恢复为自动控制。低于该电量时不会自动启动，但仍可手动启动。
-- **屏幕控制** — 仅在会话期间防止显示器睡眠、屏幕保护程序和自动锁定。
+- **屏幕控制** — 开启「保持屏幕常亮」后，会话期间屏幕保持开启，并同时防止屏幕保护程序和自动锁定。
 - **合盖低电量模式** — 会话期间合盖时可开启 macOS 低电量模式，结束后恢复原来的设置（可选）。
 - **通知** — 自动停止或保护机制失败时发出通知。
 - **应用内更新** — 检查 GitHub Releases，并在应用内下载安装新版本（Sparkle，带 EdDSA 签名验证）。无需账号。
@@ -48,9 +48,9 @@ Awake 只在菜单栏运行（不会显示在 Dock 中）。
   - *不限时* — 直到手动停止
 - 设置
   - **一般** — 语言（跟随系统、英语或日语）、登录时启动、通知、菜单栏剩余时间、更新
-  - **防止睡眠** — 屏幕与屏幕保护程序、合盖运行、合盖低电量模式、电池停止阈值
+  - **防止睡眠** — 保持屏幕常亮、合盖运行、合盖低电量模式、电池停止阈值
   - **监视** — 链接／解除链接各代理提供方、查看活动会话、下载文件夹
-  - **散热** — 自动与手动散热各自的风扇速度、自动散热选项
+  - **散热** — 自动与手动散热各自的风扇速度、自动散热的「仅在接通电源时」选项
   - **权限** — 安装、更新或删除共享辅助工具
 
 ## 命令行
@@ -86,14 +86,14 @@ awake mode timer --duration 1h
 awake start --mode timer
 awake cooling start --mode indefinitely
 awake cooling start --duration 10m
-awake cooling mode agent
+awake cooling mode awake
 awake cooling speed automatic 75
 awake cooling speed manual 50
 awake cooling stop
 awake cooling status --json
 ```
 
-防止睡眠模式包括 `indefinitely`（无限期）、`timer`（定时）、`agent`（代理运行时）和 `download`（下载时）。散热支持 `indefinitely`、`timer` 和 `awake`（`agent` 仍可作为旧名称使用）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。模式选择与菜单一致：更改模式会停止之前的会话；手动模式等待启动，自动散热在可用时会自动进入已启动状态。`awake start --mode timer` 使用已保存的时长；以 `agent` 或 `download` 启动需要启用对应监视，无活动时等待。`awake cooling start` 使用当前散热模式。指定时长意味着 `timer`，与其他模式同时使用会被拒绝。
+防止睡眠模式包括 `indefinitely`（无限期）、`timer`（定时）、`agent`（代理运行时）和 `download`（下载时）。散热支持 `indefinitely`、`timer` 和 `awake`（`agent` 仍可作为旧名称使用）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。`status --json` 中的 `mode` 和 `cooling.mode` 也使用相同的名称。模式选择与菜单一致：更改模式会停止之前的会话；手动模式等待启动，自动散热在可用时会自动进入已启动状态。`awake start --mode timer` 使用已保存的时长；以 `agent` 或 `download` 启动需要启用对应监视，无活动时等待。`awake cooling start` 使用当前散热模式。指定时长意味着 `timer`，与其他模式同时使用会被拒绝。
 
 散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示已启动，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示已启用监视的条件防止睡眠模式正在等待活动。散热与防止睡眠保持独立。
 
@@ -111,7 +111,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 - 只添加或删除 Awake 自己的条目（带有 `--owner pmgwork.awake`）。
 - 首次修改前，会在原文件旁生成 `<文件名>.awake-backup` 备份。
 - 在「设置 → 代理」中**解除链接**，只会删除 Awake 的条目。
-- 监视使用文件系统变更通知和会话缓存，降低空闲时的 CPU 占用。关闭监视后会停止监听，但自动散热所需的代理监视仍会继续。
+- 监视使用文件系统变更通知和会话缓存，降低空闲时的 CPU 占用。暂停或关闭监视后会停止监听。
 - 会话事件以 JSON 形式保存在 `~/Library/Application Support/Awake/agent-sessions/v1`（权限 0700）。会话结束后保留每个会话的最新事件，以阻止延迟的旧事件使会话重新变为活动状态，并在新一轮开始时覆盖。
 
 ## 散热
@@ -175,6 +175,7 @@ xcodebuild -project awake.xcodeproj -scheme awake -configuration Debug build
 | 首次启动被 macOS 阻止 | 系统设置 → 隐私与安全性 → **仍要打开**，或清除 quarantine 属性（见「安装」） |
 | 应用内更新失败 | 从最新版本下载并手动重新安装 |
 | 无法使用风扇控制 | 设置 → 权限 → **安装**／**更新** |
+| 更新后散热或合盖运行停止 | 需要更新硬件辅助工具：设置 → 权限 → **更新…**（菜单中也有入口） |
 | 检测不到代理 | 在设置 → 代理中**链接**，然后执行**测试** |
 
 ## 许可证
