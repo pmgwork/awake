@@ -1,6 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.0</title>
+            <pubDate>Tue, 27 Oct 2026 11:13:40 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0b11</sparkle:version>
+            <sparkle:shortVersionString>0.6.0-beta.11</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 10
+
+- Combined **Prevent Display Sleep** and **Prevent Screen Saver and Auto-Lock** into a single **Keep Screen On** setting in **Settings → Keep Awake** and the welcome guide. It keeps the screen on and also prevents the screen saver and automatic lock. Previously, display sleep prevention had no effect while screen saver prevention was on. If either earlier setting was on, **Keep Screen On** is on.
+- When a hardware helper from an earlier version is installed, the menu now explains that it must be updated and links to **Permissions**. Previously, the cooling controls disappeared from the menu without explanation.
+- `awake status --json` now reports `mode` with the same names the command accepts (`agent`, `download`, `indefinitely`, `timer`) instead of internal names such as `whileAgentRunning`.
+- Updated the cooling description in the welcome guide to match the current behavior.
+
+This release also includes the fixes from [Beta 10](https://github.com/PMGWork/awake/releases/tag/v0.6.0-beta.10) and earlier betas.
+
+## Installation
+
+Download `Awake-0.6.0-beta.11.zip` or `Awake-0.6.0-beta.11.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.0-beta.10...v0.6.0-beta.11)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0-beta.11/Awake-0.6.0-beta.11.zip" length="4607831" type="application/octet-stream" sparkle:edSignature="9rnyHTTSyHjPwKFI6vR/CsWycmPQ349q1z7ZDN6xoAj/uH0vNqjbtK1L+zrqjAUVtrWeogmiRGBYC+7taYrBCA==" />
+        </item>
+    <item>
+            <title>0.6.0</title>
             <pubDate>Tue, 27 Oct 2026 01:12:01 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.0b10</sparkle:version>
