@@ -1,5 +1,70 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Stable Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake stable update feed</description><item>
+            <title>0.6.0</title>
+            <pubDate>Thu, 29 Oct 2026 21:17:44 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.0</sparkle:version>
+            <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## Important: Update the Hardware Helper
+
+**This release updates the hardware helper.** After updating, open **Settings → Permissions** and click **Update…** under **Hardware Helper**. macOS asks for an administrator password. Cooling and closed-lid operation stay unavailable until the helper is updated, and the menu shows a link to **Permissions** until then.
+
+## What's Changed
+
+### Command line
+
+- Added a bundled `awake` command-line tool to start, stop, and inspect Keep Awake and cooling from the terminal. The command launches Awake in the background when needed and controls the same session as the menu bar.
+- Select Keep Awake modes (`indefinitely`, `timer`, `agent`, or `download`), set timers, and configure automatic or manual cooling and their speeds. Cooling modes are `indefinitely`, `timer`, and `awake`.
+- Actions print a one-line result, `awake status --json` provides output for scripts, and `awake --help` shows full usage. Cooling controls follow the app's existing permissions and protection rules.
+
+To make the command available on your PATH:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
+```
+
+Ensure `~/.local/bin` is on your PATH. If `awake` already exists there, choose another location. See the [CLI documentation](https://github.com/PMGWork/awake/blob/v0.6.0/README.md#command-line).
+
+### Cooling
+
+- Cooling modes are now **While Keep Awake Is On**, **Indefinitely**, and **For Duration**. Existing selections, fan speeds, and the paused state are migrated.
+- **Automatic Cooling** (While Keep Awake Is On) now follows Keep Awake in every mode, including timed sessions, downloads, and **Keep Awake After Agents Finish**. It runs only with the lid closed and no external display connected, and respects **Only When Plugged In**.
+- **Indefinitely** and **For Duration** cooling now run in every display setup, including with the lid closed and an external display connected. With the lid closed and an external display connected, automatic cooling leaves fan control to macOS, and Awake does not override closed-lid sleep or enable Low Power Mode.
+- Added separate fan speeds for **Automatic Cooling** and **Manual Cooling** in **Settings → Cooling**. Your existing fan speed is carried over to both.
+- The low-battery cutoff now stops only automatic cooling, with a notification and a note in the menu. Cooling you start yourself keeps running.
+- Cooling no longer drops out while it runs. When macOS takes the fans back, for example on M3 and M4 Macs under load or after waking from sleep, Awake restores the selected speed within seconds. Failed attempts are retried, and manual fan control is detected more reliably on M3 and M4 Macs.
+- Fixed repeated administrator password prompts when the fans could not be returned to automatic control, and a false warning at launch that the fans might still be under manual control.
+
+### Keep Awake
+
+- Added **Use Low Power Mode with the Lid Closed** in **Settings → Keep Awake**. Awake turns on macOS Low Power Mode while the lid is closed during a session and restores your previous setting afterwards.
+- **Keep Awake After Agents Finish** in **Settings → Keep Awake** keeps your Mac awake a little longer after the last monitored agent finishes: Off, 1, 2, 3, 5, or 10 minutes (default 3 minutes). The menu shows the remaining time, and new agent activity cancels the countdown. Previously saved durations are preserved.
+- A Keep Awake session started manually below the battery cutoff stays on when the power adapter is connected or disconnected.
+
+### Monitoring and performance
+
+- Reduced background CPU usage. Agent sessions and the download folder are now watched with filesystem change notifications instead of repeated scans, disabled monitors stop, and the menu and settings update only when something changes.
+- **While Downloading** no longer stays on because of leftover partial files, such as `.part` files inside extracted archives. Partial files in subfolders count only while they are being written.
+- Linking or unlinking OpenCode now preserves the comments, trailing commas, and formatting in `opencode.jsonc` and `opencode.json`.
+
+### Other
+
+- Combined **Prevent Display Sleep** and **Prevent Screen Saver and Auto-Lock** into a single **Keep Screen On** setting in **Settings → Keep Awake**. It keeps the screen on and also prevents the screen saver and automatic lock. If either earlier setting was on, **Keep Screen On** is on.
+- Improved the hardware permission status and the settings layout.
+
+If you used the 0.6.0 betas: `awake status --json` now reports `mode` with the same names the command accepts (`agent`, `download`, `indefinitely`, `timer`), and `agent` remains a legacy alias for the `awake` cooling mode.
+
+## Installation
+
+Download `Awake-0.6.0.zip` or `Awake-0.6.0.dmg` and move `Awake.app` to `/Applications`. Existing users can also use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.5.1...v0.6.0)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.0/Awake-0.6.0.zip" length="4607952" type="application/octet-stream" sparkle:edSignature="fPPSS7oog3S/BhfFKwc9wF1PsboOiWF7CTz861cRsqnQMVsRqDiFC9EfdnMziE2hbn27AsEH+Mr16TkjSTVRDA==" />
+        </item>
+    <item>
             <title>0.5.1</title>
             <pubDate>Wed, 14 Oct 2026 07:31:07 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
