@@ -64,7 +64,7 @@ struct KeepAwakeSettingsView: View {
                         .foregroundStyle(.red)
                 }
             } header: {
-                Text(L10n.string("While Keep Awake Is On"))
+                Text(L10n.string("While Keeping Awake"))
             } footer: {
                 if closedDisplayModeManager.isHelperInstalled || closedDisplayModeManager.isCheckingHelper {
                     Text(L10n.string("These settings apply only while Keep Awake is on."))

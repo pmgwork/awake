@@ -26,7 +26,7 @@ struct CoolingSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else if canUseHelper {
-                    Text(L10n.string("Automatic: While Keep Awake Is On or While Rendering. Manual: Indefinitely or For Duration."))
+                    Text(L10n.string("Automatic applies to While Keep Awake Is On and While Rendering. Manual applies to ∞ and timed cooling."))
                 } else {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to control the fans."))
                 }

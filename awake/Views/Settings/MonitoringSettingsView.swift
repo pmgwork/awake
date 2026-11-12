@@ -39,6 +39,8 @@ struct MonitoringSettingsView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                         .lineLimit(2)
+                } else {
+                    Text(L10n.string("Awake detects active work through hooks or plugins added to each CLI."))
                 }
             }
 
@@ -48,6 +50,8 @@ struct MonitoringSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("Rendering"))
+            } footer: {
+                Text(L10n.string("Blender and After Effects use integration for in-app renders; Media Encoder and Houdini are detected automatically."))
             }
 
             Section {
