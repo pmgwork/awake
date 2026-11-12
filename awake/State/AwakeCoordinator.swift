@@ -12,6 +12,9 @@ public final class AwakeCoordinator: ObservableObject {
 
     // MARK: - Published State
     @Published public private(set) var isActive: Bool = false
+    @Published public private(set) var isManualKeepAwakeActive = false
+    @Published public private(set) var isAgentKeepAwakeActive = false
+    @Published public private(set) var isDownloadKeepAwakeActive = false
     @Published public private(set) var isRemovingHardwareAuthorization = false
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
@@ -19,6 +22,8 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var forcedCoolingEndDate: Date?
     /// Whether the cooling mode currently wants the fans at 100%.
     @Published public private(set) var isForcedCoolingActive = false
+    @Published public private(set) var isAutomaticCoolingActive = false
+    @Published public private(set) var isManualCoolingActive = false
     /// Whether the fan helper is installed. Published so the menu shows the
     /// cooling controls as soon as the asynchronous helper check finishes.
     @Published public private(set) var isFanHelperInstalled = false
@@ -79,17 +84,7 @@ public final class AwakeCoordinator: ObservableObject {
     /// `userInitiated: true`, which lets them start even below the battery
     /// cutoff; automatic starts stay paused while the cutoff applies.
     public func startKeepAwake(userInitiated: Bool = false) {
-        guard !isActive, !isRemovingHardwareAuthorization else { return }
-        if settings.selectedMode == .whileAgentRunning {
-            guard settings.agentMonitoringEnabled, eventMonitor.hasActiveSession else {
-                return
-            }
-        }
-        if settings.selectedMode == .whileDownloading {
-            guard settings.downloadMonitoringEnabled, downloadMonitor.isDownloading else {
-                return
-            }
-        }
+        guard !isRemovingHardwareAuthorization else { return }
         if isLowBatteryCutoffActive {
             guard userInitiated else {
                 return
@@ -100,7 +95,7 @@ public final class AwakeCoordinator: ObservableObject {
             lowBatteryManualOverride = true
         }
 
-        isActive = true
+        isManualKeepAwakeActive = true
         if settings.selectedMode == .timer {
             setTimerEndDate(Date().addingTimeInterval(settings.selectedTimerDuration))
             updateRemainingTimerSeconds()
@@ -109,25 +104,24 @@ public final class AwakeCoordinator: ObservableObject {
         evaluateState()
     }
 
-    // Only download completion, timer expiry, and battery cutoff opt into notifications.
-    public func stopKeepAwake(reason: String? = nil, notify: Bool = false) {
-        guard isActive else { return }
-
-        isActive = false
+    /// Explicit global stop (CLI and hardware removal) also disables automation.
+    public func stopKeepAwake() {
+        settings.agentMonitoringEnabled = false
+        settings.downloadMonitoringEnabled = false
         agentCompletionGrace = AgentCompletionGrace()
         agentCompletionGraceEndDate = nil
+        isAgentKeepAwakeActive = false
+        isDownloadKeepAwakeActive = false
+        isActive = false
+        stopManualKeepAwake()
+    }
+
+    public func stopManualKeepAwake() {
         lowBatteryManualOverride = false
+        isManualKeepAwakeActive = false
         remainingTimerSeconds = 0
         setTimerEndDate(nil)
-
         evaluateState()
-        if notify {
-            sendNotification(
-                title: L10n.string("Keep Awake Stopped"),
-                body: reason ?? L10n.string("Your Mac can sleep normally again."),
-                identifier: "awake-deactivated-\(UUID().uuidString)"
-            )
-        }
     }
 
     // MARK: - Forced Cooling
@@ -146,23 +140,27 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     private var isCoolingCutOffByLowBattery: Bool {
-        isLowBatteryCutoffEnforced && settings.coolingMode.stopsAtLowBattery
+        isLowBatteryCutoffEnforced
     }
 
-    /// Selects a cooling mode. Switching modes while cooling is running stops
-    /// it, like switching a Keep Awake mode; conditional modes start waiting
-    /// for their condition right away.
+    /// Legacy automatic mode commands now enable the independent switch.
     public func selectCoolingMode(_ mode: CoolingMode) {
+        if mode == .whileKeepAwakeIsOn {
+            setAutomaticCoolingEnabled(true)
+            return
+        }
         guard settings.coolingMode != mode else { return }
         settings.coolingMode = mode
-        stopCooling()
-        if mode.startsOnSelect {
-            startCooling()
-        }
+        stopManualCooling()
     }
 
-    /// Starts the selected cooling mode. Refused when the helper is missing or
-    /// the battery fail-safe applies.
+    public func setAutomaticCoolingEnabled(_ enabled: Bool) {
+        guard !enabled || canStartCooling(.whileKeepAwakeIsOn) else { return }
+        settings.automaticCoolingEnabled = enabled
+        evaluateState()
+    }
+
+    /// Starts manual cooling. Refused when the helper is unavailable.
     public func startCooling() {
         guard canUseForcedCooling else { return }
         resetCoolingState()
@@ -173,7 +171,13 @@ public final class AwakeCoordinator: ObservableObject {
         evaluateState()
     }
 
+    /// Explicit global stop for CLI; the menu button controls manual cooling.
     public func stopCooling() {
+        settings.automaticCoolingEnabled = false
+        stopManualCooling()
+    }
+
+    public func stopManualCooling() {
         settings.coolingArmed = false
         resetCoolingState()
         evaluateState()
@@ -181,7 +185,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     public func toggleCooling() {
         if settings.coolingArmed {
-            stopCooling()
+            stopManualCooling()
         } else {
             startCooling()
         }
@@ -204,7 +208,10 @@ public final class AwakeCoordinator: ObservableObject {
         guard !isRemovingHardwareAuthorization else { return false }
         isRemovingHardwareAuthorization = true
         defer { isRemovingHardwareAuthorization = false }
+        settings.automaticCoolingEnabled = false
         settings.coolingArmed = false
+        isAutomaticCoolingActive = false
+        isManualCoolingActive = false
         resetCoolingState()
         setForcedCoolingActive(false)
 
@@ -224,67 +231,44 @@ public final class AwakeCoordinator: ObservableObject {
     }
 
     public func toggleKeepAwake() {
-        if isActive {
-            stopKeepAwake()
+        if isManualKeepAwakeActive {
+            stopManualKeepAwake()
         } else {
             startKeepAwake(userInitiated: true)
         }
     }
 
     public func togglePrimaryAction() {
-        switch settings.selectedMode {
-        case .whileAgentRunning:
-            setAgentMonitoringEnabled(!settings.agentMonitoringEnabled)
-        case .whileDownloading:
-            setDownloadMonitoringEnabled(!settings.downloadMonitoringEnabled)
-        case .indefinitely, .timer:
-            toggleKeepAwake()
-        }
+        toggleKeepAwake()
     }
 
     public func setAgentMonitoringEnabled(_ enabled: Bool) {
         guard settings.agentMonitoringEnabled != enabled else { return }
         settings.agentMonitoringEnabled = enabled
-
-        if enabled {
-            if eventMonitor.hasActiveSession {
-                startKeepAwake(userInitiated: true)
-            } else {
-                evaluateState()
-            }
-        } else {
-            if isActive && settings.selectedMode == .whileAgentRunning {
-                stopKeepAwake()
-            } else {
-                evaluateState()
-            }
-        }
+        evaluateState()
     }
 
     public func setDownloadMonitoringEnabled(_ enabled: Bool) {
         guard settings.downloadMonitoringEnabled != enabled else { return }
         settings.downloadMonitoringEnabled = enabled
-
-        if enabled {
-            if downloadMonitor.isDownloading {
-                startKeepAwake(userInitiated: true)
-            } else {
-                evaluateState()
-            }
-        } else if isActive && settings.selectedMode == .whileDownloading {
-            stopKeepAwake()
-        } else {
-            evaluateState()
-        }
+        evaluateState()
     }
 
     public func selectMode(_ mode: KeepAwakeModeType) {
-        guard settings.selectedMode != mode else { return }
-
-        if isActive {
-            stopKeepAwake()
+        // Retain the legacy CLI names as independent automation commands.
+        if mode == .whileAgentRunning {
+            setAgentMonitoringEnabled(true)
+            return
         }
-
+        if mode == .whileDownloading {
+            setDownloadMonitoringEnabled(true)
+            return
+        }
+        guard settings.selectedMode != mode else { return }
+        lowBatteryManualOverride = false
+        isManualKeepAwakeActive = false
+        remainingTimerSeconds = 0
+        setTimerEndDate(nil)
         settings.selectedMode = mode
         evaluateState()
     }
@@ -292,7 +276,7 @@ public final class AwakeCoordinator: ObservableObject {
     public func setTimerDuration(_ duration: TimeInterval) {
         guard duration > 0 else { return }
         settings.selectedTimerDuration = duration
-        if isActive && settings.selectedMode == .timer {
+        if isManualKeepAwakeActive && settings.selectedMode == .timer {
             setTimerEndDate(Date().addingTimeInterval(duration))
             updateRemainingTimerSeconds()
         }
@@ -320,48 +304,59 @@ public final class AwakeCoordinator: ObservableObject {
         if !isBatteryAtCutoffLevel {
             lowBatteryManualOverride = false
         }
-        // Global battery fail-safe: turn off Keep Awake in every mode and stop
-        // automatic cooling when the battery reaches the configured level.
-        // Manual cooling keeps running. A manual start below the threshold
-        // suspends the fail-safe until the session ends or the charge recovers.
+        let wasActive = isActive
+        let wasDownloading = isDownloadKeepAwakeActive
+        var completionReason: String?
         if isLowBatteryCutoffEnforced {
-            if isActive, let batteryLevel = powerMonitor.batteryLevel {
-                NSLog("[AwakeCoordinator] Battery reached %d%%. Turning Awake off.", batteryLevel)
-                stopKeepAwake(reason: L10n.format("Battery is at %d%%, so Keep Awake stopped.", batteryLevel), notify: true)
-                return
+            if isManualKeepAwakeActive { isManualKeepAwakeActive = false }
+            if remainingTimerSeconds != 0 { remainingTimerSeconds = 0 }
+            if timerEndDate != nil { setTimerEndDate(nil) }
+            if wasActive, let batteryLevel = powerMonitor.batteryLevel {
+                completionReason = L10n.format("Battery is at %d%%, so Keep Awake stopped.", batteryLevel)
             }
         }
 
-        if isActive && settings.selectedMode == .whileAgentRunning {
-            let now = Date()
+        if settings.agentMonitoringEnabled && !isLowBatteryCutoffEnforced {
             let end = agentCompletionGrace.update(
                 running: eventMonitor.hasActiveSession,
                 duration: settings.completionGraceDuration,
-                now: now
+                now: Date()
             )
-            if agentCompletionGraceEndDate != end {
-                agentCompletionGraceEndDate = end
-            }
-            let isGraceActive = end.map { $0 > now } ?? false
-            if !settings.agentMonitoringEnabled || (!eventMonitor.hasActiveSession && !isGraceActive) {
-                stopKeepAwake(reason: L10n.string("All monitored agents have finished."))
-                return
-            }
+            if agentCompletionGraceEndDate != end { agentCompletionGraceEndDate = end }
+        } else {
+            agentCompletionGrace = AgentCompletionGrace()
+            if agentCompletionGraceEndDate != nil { agentCompletionGraceEndDate = nil }
         }
 
-        if isActive && settings.selectedMode == .whileDownloading && !downloadMonitor.isDownloading {
-            stopKeepAwake(reason: L10n.string("All downloads finished."), notify: true)
-            return
-        }
-
-        // Check Timer completion
-        if isActive && settings.selectedMode == .timer {
+        if isManualKeepAwakeActive && settings.selectedMode == .timer {
             updateRemainingTimerSeconds()
             if remainingTimerSeconds <= 0 {
-                NSLog("[AwakeCoordinator] Timer expired. Stopping Keep Awake.")
-                stopKeepAwake(reason: L10n.string("The set time has ended."), notify: true)
-                return
+                isManualKeepAwakeActive = false
+                lowBatteryManualOverride = false
+                setTimerEndDate(nil)
+                completionReason = L10n.string("The set time has ended.")
             }
+        }
+
+        let policy = KeepAwakeActivity(
+            manual: isManualKeepAwakeActive,
+            agentEnabled: settings.agentMonitoringEnabled,
+            agentRunning: eventMonitor.hasActiveSession,
+            graceActive: agentCompletionGraceEndDate.map { $0 > Date() } ?? false,
+            downloadEnabled: settings.downloadMonitoringEnabled,
+            downloading: downloadMonitor.isDownloading,
+            batteryBlocked: isLowBatteryCutoffEnforced
+        )
+        if isAgentKeepAwakeActive != policy.agent { isAgentKeepAwakeActive = policy.agent }
+        if isDownloadKeepAwakeActive != policy.download { isDownloadKeepAwakeActive = policy.download }
+        if isActive != policy.active { isActive = policy.active }
+        if !isActive { lowBatteryManualOverride = false }
+        if wasDownloading && !downloadMonitor.isDownloading && completionReason == nil {
+            completionReason = L10n.string("All downloads finished.")
+        }
+        if wasActive && !isActive, let completionReason {
+            sendNotification(title: L10n.string("Keep Awake Stopped"), body: completionReason,
+                             identifier: "awake-deactivated-\(UUID().uuidString)")
         }
 
         updateForcedCooling()
@@ -401,13 +396,9 @@ public final class AwakeCoordinator: ObservableObject {
     /// Runs the fans at the cooling fan speed while a cooling mode wants it,
     /// and hands them back to the system otherwise.
     private func applyFanPolicy() {
-        guard displayBehaviorPolicy.allowsCooling(for: settings.coolingMode) else {
-            fanController.restoreAuto()
-            return
-        }
         if isForcedCoolingActive {
-            fanController.setFanMode(settings.coolingMode == .whileKeepAwakeIsOn
-                ? settings.automaticCoolingFanMode : settings.manualCoolingFanMode)
+            fanController.setFanMode(isManualCoolingActive
+                ? settings.manualCoolingFanMode : settings.automaticCoolingFanMode)
         } else {
             fanController.restoreAuto()
         }
@@ -416,15 +407,14 @@ public final class AwakeCoordinator: ObservableObject {
     private func updateForcedCooling(now: Date = Date()) {
         updateCoolingAvailability()
 
-        if settings.coolingArmed && isRemovingHardwareAuthorization {
+        if isRemovingHardwareAuthorization {
+            settings.automaticCoolingEnabled = false
             settings.coolingArmed = false
             resetCoolingState()
         }
-        if settings.coolingArmed && isCoolingCutOffByLowBattery {
-            settings.coolingArmed = false
-            resetCoolingState()
+        if settings.automaticCoolingEnabled && isCoolingCutOffByLowBattery {
+            settings.automaticCoolingEnabled = false
             if let batteryLevel = powerMonitor.batteryLevel {
-                NSLog("[AwakeCoordinator] Battery reached %d%%. Stopping automatic cooling.", batteryLevel)
                 sendNotification(
                     title: L10n.string("Automatic Cooling Stopped"),
                     body: L10n.format("Battery is at %d%%, so automatic cooling stopped.", batteryLevel),
@@ -432,31 +422,27 @@ public final class AwakeCoordinator: ObservableObject {
                 )
             }
         }
-
-        // While the helper is missing (or its state is still being read at
-        // launch) a started mode stays started but cannot act yet.
-        var active = false
-        if settings.coolingArmed && isFanHelperInstalled {
-            switch settings.coolingMode {
-            case .forced:
-                active = true
-            case .timed:
-                if let end = forcedCoolingEndDate, end > now {
-                    active = true
-                } else {
-                    // The timer ran out: stop, keeping the selected mode.
-                    settings.coolingArmed = false
-                    resetCoolingState()
-                }
-            case .whileKeepAwakeIsOn:
-                active = displayBehaviorPolicy.requestsAutomaticCooling(
-                    keepAwakeActive: isActive,
-                    onlyOnACPower: settings.onlyOnACPower,
-                    isOnACPower: powerMonitor.isOnACPower
-                )
-            }
+        if settings.coolingArmed && settings.coolingMode == .timed,
+           forcedCoolingEndDate.map({ $0 <= now }) ?? true {
+            settings.coolingArmed = false
+            resetCoolingState()
         }
-        setForcedCoolingActive(active)
+
+        let activity = CoolingActivity(
+            manualArmed: settings.coolingArmed,
+            manualMode: settings.coolingMode,
+            automaticEnabled: settings.automaticCoolingEnabled,
+            automaticRequested: displayBehaviorPolicy.requestsAutomaticCooling(
+                keepAwakeActive: isActive,
+                onlyOnACPower: settings.onlyOnACPower,
+                isOnACPower: powerMonitor.isOnACPower
+            ),
+            batteryBlocked: isCoolingCutOffByLowBattery,
+            helperAvailable: isFanHelperInstalled && !isRemovingHardwareAuthorization
+        )
+        if isManualCoolingActive != activity.manual { isManualCoolingActive = activity.manual }
+        if isAutomaticCoolingActive != activity.automatic { isAutomaticCoolingActive = activity.automatic }
+        setForcedCoolingActive(activity.active)
     }
 
     private func updateCoolingAvailability() {
@@ -513,37 +499,14 @@ public final class AwakeCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Observe normalized Hook / Plugin session changes.
         eventMonitor.$hasActiveSession
             .receive(on: DispatchQueue.main)
-            .sink { running in
-                let coordinator = AwakeCoordinator.shared
-                if !coordinator.isActive &&
-                    coordinator.settings.selectedMode == .whileAgentRunning &&
-                    coordinator.settings.agentMonitoringEnabled &&
-                    running &&
-                    !coordinator.isLowBatteryCutoffActive {
-                    NSLog("[AwakeCoordinator] Monitored agent detected, auto-starting Keep Awake.")
-                    coordinator.startKeepAwake()
-                }
-                coordinator.evaluateState()
-            }
+            .sink { [weak self] _ in self?.evaluateState() }
             .store(in: &cancellables)
 
         downloadMonitor.$isDownloading
             .receive(on: DispatchQueue.main)
-            .sink { downloading in
-                let coordinator = AwakeCoordinator.shared
-                if !coordinator.isActive &&
-                    coordinator.settings.selectedMode == .whileDownloading &&
-                    coordinator.settings.downloadMonitoringEnabled &&
-                    downloading &&
-                    !coordinator.isLowBatteryCutoffActive {
-                    NSLog("[AwakeCoordinator] Download detected, auto-starting Keep Awake.")
-                    coordinator.startKeepAwake()
-                }
-                coordinator.evaluateState()
-            }
+            .sink { [weak self] _ in self?.evaluateState() }
             .store(in: &cancellables)
 
         settings.$downloadFolderPath
@@ -720,7 +683,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         timerEndDate = endDate
         updateRemainingTimerSeconds()
-        isActive = true
+        isManualKeepAwakeActive = true
         evaluateState()
     }
 }

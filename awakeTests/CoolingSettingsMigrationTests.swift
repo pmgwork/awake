@@ -17,6 +17,116 @@ final class CoolingSettingsMigrationTests: XCTestCase {
         super.tearDown()
     }
 
+    func testLegacyAutomaticSelectionDoesNotEnableOtherCondition() {
+        for mode in KeepAwakeModeType.allCases {
+            for enabled in [false, true] {
+                defaults.set(mode.rawValue, forKey: "pmgwork.awake.selectedMode")
+                defaults.set(enabled, forKey: "pmgwork.awake.agentMonitoringEnabled")
+                defaults.set(enabled, forKey: "pmgwork.awake.downloadMonitoringEnabled")
+                let state = SettingsStore.storedKeepAwakeState(in: defaults, isExistingInstall: true)
+                XCTAssertEqual(state.agent, mode == .whileAgentRunning && enabled)
+                XCTAssertEqual(state.download, mode == .whileDownloading && enabled)
+                XCTAssertEqual(state.mode, mode == .timer ? .timer : .indefinitely)
+            }
+        }
+    }
+
+    func testIndependentMonitoringMigrationDefaultsAndRelaunch() {
+        let fresh = SettingsStore.storedKeepAwakeState(in: defaults, isExistingInstall: false)
+        XCTAssertTrue(fresh.agent)
+        XCTAssertFalse(fresh.download)
+        let existing = SettingsStore.storedKeepAwakeState(in: defaults, isExistingInstall: true)
+        XCTAssertFalse(existing.agent)
+        XCTAssertFalse(existing.download)
+        defaults.set(true, forKey: "pmgwork.awake.independentMonitoring")
+        defaults.set(true, forKey: "pmgwork.awake.agentMonitoringEnabled")
+        defaults.set(true, forKey: "pmgwork.awake.downloadMonitoringEnabled")
+        defaults.set("timer", forKey: "pmgwork.awake.selectedMode")
+        let restored = SettingsStore.storedKeepAwakeState(in: defaults, isExistingInstall: true)
+        XCTAssertTrue(restored.agent)
+        XCTAssertTrue(restored.download)
+        XCTAssertEqual(restored.mode, .timer)
+    }
+
+    func testIndependentKeepAwakeReasonsAndBatteryCutoff() {
+        // Exhaust every combination, including finishing one condition while
+        // another remains active and turning either condition off during a run.
+        for bits in 0..<128 {
+            let flags = (0..<7).map { bits & (1 << $0) != 0 }
+            let policy = KeepAwakeActivity(manual: flags[0], agentEnabled: flags[1],
+                agentRunning: flags[2], graceActive: flags[3], downloadEnabled: flags[4],
+                downloading: flags[5], batteryBlocked: flags[6])
+            var reasons = [String]()
+            if flags[0] { reasons.append("manual") }
+            if flags[1] && flags[2] { reasons.append("agent") }
+            if flags[1] && flags[3] { reasons.append("grace") }
+            if flags[4] && flags[5] { reasons.append("download") }
+            XCTAssertEqual(policy.active, !flags[6] && !reasons.isEmpty, "flags: \(bits)")
+            XCTAssertEqual(policy.agent, !flags[6] && (reasons.contains("agent") || reasons.contains("grace")))
+            XCTAssertEqual(policy.download, !flags[6] && reasons.contains("download"))
+        }
+    }
+
+    func testIndependentCoolingPreservesLegacyAutomaticChoice() {
+        for mode in ["whileKeepAwakeIsOn", "whileLidClosed", "whileAgentRunning", "forced", "timed", "system"] {
+            for armed in [false, true] {
+                defaults.set(mode, forKey: "pmgwork.awake.coolingMode")
+                defaults.set(armed, forKey: "pmgwork.awake.coolingArmed")
+                let state = SettingsStore.storedIndependentCoolingState(in: defaults)
+                XCTAssertEqual(state.mode, mode == "timed" ? .timed : .forced)
+                XCTAssertEqual(state.automatic,
+                    ["whileKeepAwakeIsOn", "whileLidClosed", "whileAgentRunning"].contains(mode) && armed)
+            }
+        }
+    }
+
+    func testIndependentCoolingRestoresBothChoicesWithoutRearmingManual() {
+        XCTAssertTrue(SettingsStore.storedIndependentCoolingState(in: defaults).automatic)
+        for automatic in [false, true] {
+            defaults.set(automatic, forKey: "pmgwork.awake.automaticCoolingEnabled")
+            for mode in [CoolingMode.forced, .timed] {
+                defaults.set(mode.rawValue, forKey: "pmgwork.awake.coolingMode")
+                defaults.set(true, forKey: "pmgwork.awake.coolingArmed")
+                let state = SettingsStore.storedIndependentCoolingState(in: defaults)
+                XCTAssertEqual(state.automatic, automatic)
+                XCTAssertEqual(state.mode, mode)
+                // Legacy restoration is also used by the independent migration
+                // and never restores a manual fan override after a relaunch.
+                XCTAssertFalse(SettingsStore.storedCoolingState(in: defaults).armed)
+            }
+        }
+    }
+
+    func testManualCoolingEndsWithoutCancellingAutomaticCooling() {
+        for mode in [CoolingMode.forced, .timed] {
+            let both = CoolingActivity(manualArmed: true, manualMode: mode,
+                automaticEnabled: true, automaticRequested: true, batteryBlocked: false, helperAvailable: true)
+            XCTAssertTrue(both.manual)
+            XCTAssertTrue(both.automatic)
+            XCTAssertEqual(both.effectiveMode, mode)
+            let afterManual = CoolingActivity(manualArmed: false, manualMode: mode,
+                automaticEnabled: true, automaticRequested: true, batteryBlocked: false, helperAvailable: true)
+            XCTAssertTrue(afterManual.active)
+            XCTAssertEqual(afterManual.effectiveMode, .whileKeepAwakeIsOn)
+        }
+    }
+
+    func testIndependentCoolingConditionsAndFailSafes() {
+        for bits in 0..<32 {
+            let flags = (0..<5).map { bits & (1 << $0) != 0 }
+            let activity = CoolingActivity(manualArmed: flags[0], manualMode: .timed,
+                automaticEnabled: flags[1], automaticRequested: flags[2],
+                batteryBlocked: flags[3], helperAvailable: flags[4])
+            let manualExpected = flags[0] && flags[4]
+            let automaticExpected = flags[1] && flags[2] && !flags[3] && flags[4]
+            XCTAssertEqual(activity.manual, manualExpected)
+            XCTAssertEqual(activity.automatic, automaticExpected)
+            XCTAssertEqual(activity.active, manualExpected || automaticExpected)
+            XCTAssertEqual(activity.effectiveMode,
+                manualExpected ? .timed : automaticExpected ? .whileKeepAwakeIsOn : nil)
+        }
+    }
+
     private func storedState() -> (mode: CoolingMode, armed: Bool) {
         SettingsStore.storedCoolingState(in: defaults)
     }

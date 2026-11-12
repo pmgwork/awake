@@ -22,8 +22,12 @@ nonisolated enum CLIProtocol {
     Keep Awake modes: indefinitely, timer, agent, download.
     Cooling modes: indefinitely, timer, awake (agent is a legacy alias).
     --duration implies timer mode. start without options keeps its original
-    behavior (indefinitely); cooling start uses the selected cooling mode.
-    mode selects without starting manual modes; conditional modes follow the app.
+    behavior (indefinitely); cooling start uses the selected manual cooling mode.
+    mode selects without starting manual modes; agent/download enable independent
+    automatic conditions without changing the manual mode. stop disables both
+    automatic conditions and stops manual Keep Awake.
+    cooling mode/start awake enables automatic cooling independently of manual
+    cooling. cooling stop stops both; cooling start defaults to the manual mode.
     Keep Awake durations: positive whole numbers with s, m, h; maximum 7 days.
     Cooling durations: 5m, 10m, 15m, 30m (same presets as the app).
     Starting again resets the timer. Requires Awake.app; it launches if needed.
@@ -149,6 +153,9 @@ nonisolated struct CLIResponse: Codable {
     let sleepPreventionHealth: String
     var cooling: CLICoolingStatus? = nil
     var waitingForActivity: Bool? = nil
+    var manualActive: Bool? = nil
+    var agentMonitoringEnabled: Bool? = nil
+    var downloadMonitoringEnabled: Bool? = nil
 }
 
 nonisolated struct CLICoolingStatus: Codable {
@@ -166,4 +173,8 @@ nonisolated struct CLICoolingStatus: Codable {
     let onlyOnAC: Bool
     let fanControl: String
     let error: String?
+    var automaticEnabled: Bool? = nil
+    var automaticActive: Bool? = nil
+    var manualArmed: Bool? = nil
+    var manualActive: Bool? = nil
 }

@@ -30,36 +30,6 @@ struct MenuBarView: View {
             .controlSize(.large)
             .tint(.orange)
 
-            if settings.selectedMode == .whileAgentRunning {
-                Divider()
-
-                if let end = coordinator.agentCompletionGraceEndDate, end > Date() {
-                    HStack {
-                        Text(L10n.string("Keeping Awake After Completion"))
-                        Spacer()
-                        Text(timerInterval: Date()...max(end, Date()), countsDown: true)
-                            .monospacedDigit()
-                    }
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                }
-
-                RunningAgentsView(
-                    eventMonitor: coordinator.eventMonitor,
-                    integrationManager: coordinator.hookIntegrationManager,
-                    settings: settings
-                )
-            }
-
-            if settings.selectedMode == .whileDownloading {
-                Divider()
-
-                DownloadStatusView(
-                    monitor: coordinator.downloadMonitor,
-                    settings: settings
-                )
-            }
-
             if coordinator.isFanHelperInstalled && !coordinator.isRemovingHardwareAuthorization {
                 Divider()
 
@@ -80,6 +50,25 @@ struct MenuBarView: View {
                 Divider()
 
                 helperUpdateNotice
+            }
+
+            if settings.agentMonitoringEnabled && coordinator.isAgentKeepAwakeActive {
+                Divider()
+
+                RunningAgentsView(
+                    eventMonitor: coordinator.eventMonitor,
+                    integrationManager: coordinator.hookIntegrationManager,
+                    settings: settings
+                )
+            }
+
+            if settings.downloadMonitoringEnabled && coordinator.isDownloadKeepAwakeActive {
+                Divider()
+
+                DownloadStatusView(
+                    monitor: coordinator.downloadMonitor,
+                    settings: settings
+                )
             }
 
             Divider()
@@ -153,46 +142,25 @@ struct MenuBarView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .tint(.blue)
-        .disabled(coordinator.isCoolingBlockedByLowBattery)
+        .disabled(!coordinator.canUseForcedCooling && !settings.coolingArmed)
     }
 
     private var coolingActionTitle: String {
-        if settings.coolingMode.startsOnSelect {
-            return settings.coolingArmed ? L10n.string("Pause Automatic Cooling") : L10n.string("Resume Automatic Cooling")
-        }
-        return settings.coolingArmed ? L10n.string("Stop Cooling") : L10n.string("Start Cooling")
+        settings.coolingArmed ? L10n.string("Stop Cooling") : L10n.string("Start Cooling")
     }
 
     private var coolingActionSystemImage: String {
-        if settings.coolingMode.startsOnSelect {
-            return settings.coolingArmed ? "pause.fill" : "play.fill"
-        }
-        return settings.coolingArmed ? "stop.fill" : "fanblades.fill"
+        settings.coolingArmed ? "stop.fill" : "fanblades.fill"
     }
 
     private var primaryActionTitle: String {
-        if settings.selectedMode == .whileAgentRunning {
-            return settings.agentMonitoringEnabled
-                ? L10n.string("Pause Agent Monitoring")
-                : L10n.string("Resume Agent Monitoring")
-        }
-        if settings.selectedMode == .whileDownloading {
-            return settings.downloadMonitoringEnabled
-                ? L10n.string("Pause Download Monitoring")
-                : L10n.string("Resume Download Monitoring")
-        }
-        return coordinator.isActive ? L10n.string("Stop Keep Awake") : L10n.string("Start Keep Awake")
+        coordinator.isManualKeepAwakeActive ? L10n.string("Stop Keep Awake") : L10n.string("Start Keep Awake")
     }
 
     private var primaryActionSystemImage: String {
-        if settings.selectedMode == .whileAgentRunning {
-            return settings.agentMonitoringEnabled ? "pause.fill" : "play.fill"
-        }
-        if settings.selectedMode == .whileDownloading {
-            return settings.downloadMonitoringEnabled ? "pause.fill" : "play.fill"
-        }
-        return coordinator.isActive ? "stop.fill" : "play.fill"
+        coordinator.isManualKeepAwakeActive ? "stop.fill" : "play.fill"
     }
+
 }
 
 private struct DownloadStatusView: View {

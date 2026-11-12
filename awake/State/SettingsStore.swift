@@ -13,6 +13,7 @@ public final class SettingsStore: ObservableObject {
 
     private enum Keys {
         static let monitoredAgents = "pmgwork.awake.monitoredAgents"
+        static let independentMonitoring = "pmgwork.awake.independentMonitoring"
         static let selectedMode = "pmgwork.awake.selectedMode"
         static let agentMonitoringEnabled = "pmgwork.awake.agentMonitoringEnabled"
         static let downloadMonitoringEnabled = "pmgwork.awake.downloadMonitoringEnabled"
@@ -29,6 +30,7 @@ public final class SettingsStore: ObservableObject {
         static let onlyOnACPower = "pmgwork.awake.onlyOnACPower"
         static let forcedCoolingDuration = "pmgwork.awake.forcedCoolingDuration"
         static let coolingMode = "pmgwork.awake.coolingMode"
+        static let automaticCoolingEnabled = "pmgwork.awake.automaticCoolingEnabled"
         static let coolingArmed = "pmgwork.awake.coolingArmed"
         static let stopAtLowBattery = "pmgwork.awake.stopAtLowBattery"
         static let lowBatteryThreshold = "pmgwork.awake.lowBatteryThreshold"
@@ -120,14 +122,20 @@ public final class SettingsStore: ObservableObject {
         }
     }
 
-    /// The selected cooling mode. Selecting it starts only conditional modes.
+    @Published public var automaticCoolingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(automaticCoolingEnabled, forKey: Keys.automaticCoolingEnabled)
+        }
+    }
+
+    /// The selected manual cooling mode; automation has its own switch.
     @Published public var coolingMode: CoolingMode {
         didSet {
             UserDefaults.standard.set(coolingMode.rawValue, forKey: Keys.coolingMode)
         }
     }
 
-    /// Whether cooling has been started for the selected mode.
+    /// Whether manual cooling has been started for the selected mode.
     @Published public var coolingArmed: Bool {
         didSet {
             UserDefaults.standard.set(coolingArmed, forKey: Keys.coolingArmed)
@@ -235,6 +243,17 @@ public final class SettingsStore: ObservableObject {
         return displaySleep || screenSaver
     }
 
+    /// Preserve the old effective automatic choice without rearming manual fans.
+    static func storedIndependentCoolingState(in defaults: UserDefaults)
+        -> (mode: CoolingMode, automatic: Bool) {
+        let legacy = storedCoolingState(in: defaults)
+        let mode: CoolingMode = legacy.mode == .timed ? .timed : .forced
+        let automatic = defaults.object(forKey: Keys.automaticCoolingEnabled) != nil
+            ? defaults.bool(forKey: Keys.automaticCoolingEnabled)
+            : legacy.mode == .whileKeepAwakeIsOn && legacy.armed
+        return (mode, automatic)
+    }
+
     /// Reads the saved cooling mode and whether it is armed, migrating
     /// settings from earlier versions.
     static func storedCoolingState(in defaults: UserDefaults) -> (mode: CoolingMode, armed: Bool) {
@@ -284,26 +303,14 @@ public final class SettingsStore: ObservableObject {
             || UserDefaults.standard.object(forKey: Keys.hasCompletedOnboarding) != nil
             || UserDefaults.standard.object(forKey: Keys.monitoredAgents) != nil
 
-        // Mode (defaults to the agent mode, the main use of Awake)
-        if let modeRaw = UserDefaults.standard.string(forKey: Keys.selectedMode),
-           let mode = KeepAwakeModeType(rawValue: modeRaw) {
-            self.selectedMode = mode
-        } else {
-            // Existing installs that never changed the mode keep the old default.
-            self.selectedMode = isExistingInstall ? .indefinitely : .whileAgentRunning
-        }
-
-        if UserDefaults.standard.object(forKey: Keys.agentMonitoringEnabled) != nil {
-            self.agentMonitoringEnabled = UserDefaults.standard.bool(forKey: Keys.agentMonitoringEnabled)
-        } else {
-            self.agentMonitoringEnabled = true
-        }
-
-        if UserDefaults.standard.object(forKey: Keys.downloadMonitoringEnabled) != nil {
-            self.downloadMonitoringEnabled = UserDefaults.standard.bool(forKey: Keys.downloadMonitoringEnabled)
-        } else {
-            self.downloadMonitoringEnabled = true
-        }
+        let keepAwake = Self.storedKeepAwakeState(in: .standard, isExistingInstall: isExistingInstall)
+        self.selectedMode = keepAwake.mode
+        self.agentMonitoringEnabled = keepAwake.agent
+        self.downloadMonitoringEnabled = keepAwake.download
+        UserDefaults.standard.set(keepAwake.mode.rawValue, forKey: Keys.selectedMode)
+        UserDefaults.standard.set(keepAwake.agent, forKey: Keys.agentMonitoringEnabled)
+        UserDefaults.standard.set(keepAwake.download, forKey: Keys.downloadMonitoringEnabled)
+        UserDefaults.standard.set(true, forKey: Keys.independentMonitoring)
         self.downloadFolderPath = UserDefaults.standard.string(forKey: Keys.downloadFolderPath)
             ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.path
 
@@ -327,11 +334,13 @@ public final class SettingsStore: ObservableObject {
         // Automatic cooling is limited to closed-lid operation. Preserve the former
         // agentCoolingRequiresLidClosed preference on disk for older builds.
 
-        let cooling = Self.storedCoolingState(in: .standard)
+        let cooling = Self.storedIndependentCoolingState(in: .standard)
         self.coolingMode = cooling.mode
-        self.coolingArmed = cooling.armed
+        self.coolingArmed = false
+        self.automaticCoolingEnabled = cooling.automatic
         UserDefaults.standard.set(cooling.mode.rawValue, forKey: Keys.coolingMode)
-        UserDefaults.standard.set(cooling.armed, forKey: Keys.coolingArmed)
+        UserDefaults.standard.set(false, forKey: Keys.coolingArmed)
+        UserDefaults.standard.set(cooling.automatic, forKey: Keys.automaticCoolingEnabled)
         let savedBoostDuration = UserDefaults.standard.double(forKey: Keys.forcedCoolingDuration)
         self.forcedCoolingDuration = Self.forcedCoolingDurations.contains(savedBoostDuration)
             ? savedBoostDuration : 10 * 60
@@ -370,6 +379,25 @@ public final class SettingsStore: ObservableObject {
         }
 
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: Keys.hasCompletedOnboarding)
+    }
+
+    /// Only the previously selected automatic condition was effective. Do not
+    /// activate the other monitor just because its legacy flag defaulted to true.
+    static func storedKeepAwakeState(in defaults: UserDefaults, isExistingInstall: Bool)
+        -> (mode: KeepAwakeModeType, agent: Bool, download: Bool) {
+        let savedMode = defaults.string(forKey: Keys.selectedMode).flatMap(KeepAwakeModeType.init(rawValue:))
+        let mode: KeepAwakeModeType = savedMode == .timer ? .timer : .indefinitely
+        if defaults.bool(forKey: Keys.independentMonitoring) {
+            return (mode, defaults.bool(forKey: Keys.agentMonitoringEnabled),
+                    defaults.bool(forKey: Keys.downloadMonitoringEnabled))
+        }
+        let legacyMode = savedMode ?? (isExistingInstall ? .indefinitely : .whileAgentRunning)
+        let agent = defaults.object(forKey: Keys.agentMonitoringEnabled) == nil
+            || defaults.bool(forKey: Keys.agentMonitoringEnabled)
+        let download = defaults.object(forKey: Keys.downloadMonitoringEnabled) == nil
+            || defaults.bool(forKey: Keys.downloadMonitoringEnabled)
+        return (mode, legacyMode == .whileAgentRunning && agent,
+                legacyMode == .whileDownloading && download)
     }
 
     private func saveAgents() {

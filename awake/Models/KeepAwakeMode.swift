@@ -43,7 +43,20 @@ public struct TimerPreset: Identifiable, Hashable {
         TimerPreset(title: "15m", duration: 15 * 60),
         TimerPreset(title: "30m", duration: 30 * 60),
         TimerPreset(title: "1h", duration: 60 * 60),
-        TimerPreset(title: "2h", duration: 2 * 60 * 60),
-        TimerPreset(title: "3h", duration: 3 * 60 * 60)
+        TimerPreset(title: "2h", duration: 2 * 60 * 60)
     ]
+}
+
+/// Independent reasons for preventing sleep; ending one leaves the others active.
+struct KeepAwakeActivity {
+    let agent: Bool
+    let download: Bool
+    let active: Bool
+
+    init(manual: Bool, agentEnabled: Bool, agentRunning: Bool, graceActive: Bool,
+         downloadEnabled: Bool, downloading: Bool, batteryBlocked: Bool) {
+        agent = !batteryBlocked && agentEnabled && (agentRunning || graceActive)
+        download = !batteryBlocked && downloadEnabled && downloading
+        active = !batteryBlocked && (manual || agent || download)
+    }
 }

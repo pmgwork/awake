@@ -46,3 +46,19 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
         self == .whileKeepAwakeIsOn
     }
 }
+
+/// Manual cooling takes priority while running; automatic cooling remains armed
+/// and can continue after the manual timer ends or the user stops it.
+struct CoolingActivity {
+    let manual: Bool
+    let automatic: Bool
+    let effectiveMode: CoolingMode?
+    var active: Bool { manual || automatic }
+
+    init(manualArmed: Bool, manualMode: CoolingMode, automaticEnabled: Bool,
+         automaticRequested: Bool, batteryBlocked: Bool, helperAvailable: Bool) {
+        manual = helperAvailable && manualArmed && manualMode != .whileKeepAwakeIsOn
+        automatic = helperAvailable && automaticEnabled && automaticRequested && !batteryBlocked
+        effectiveMode = manual ? manualMode : automatic ? .whileKeepAwakeIsOn : nil
+    }
+}

@@ -57,6 +57,15 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         #endif
 
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--show-menu") {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let button = self.statusItem.button else { return }
+                NSApp.activate(ignoringOtherApps: true)
+                self.resizePopoverToFitContent()
+                self.showPopover(from: button)
+                self.popover.contentViewController?.view.window?.makeKey()
+            }
+        }
         // Opens a settings tab on launch so each pane can be captured.
         if let raw = UserDefaults.standard.string(forKey: "AwakeDebugSettingsTab"),
            let tab = SettingsTab(rawValue: raw) {
@@ -221,7 +230,7 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
 
-        let shouldShowTimer = coordinator.isActive &&
+        let shouldShowTimer = coordinator.isManualKeepAwakeActive &&
             coordinator.settings.selectedMode == .timer &&
             coordinator.settings.showTimerInMenuBar
         isShowingTimerInStatusItem = shouldShowTimer
@@ -296,41 +305,15 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var isAutomaticMonitoring: Bool {
-        switch coordinator.settings.selectedMode {
-        case .whileAgentRunning:
-            return coordinator.settings.agentMonitoringEnabled
-        case .whileDownloading:
-            return coordinator.settings.downloadMonitoringEnabled
-        case .indefinitely, .timer:
-            return false
-        }
+        coordinator.settings.agentMonitoringEnabled || coordinator.settings.downloadMonitoringEnabled
     }
 
     private var settingsToolTip: String {
-        if coordinator.settings.selectedMode == .whileAgentRunning {
-            return coordinator.settings.agentMonitoringEnabled
-                ? L10n.string("Click to open the menu. Right-click to pause agent monitoring.")
-                : L10n.string("Click to open the menu. Right-click to resume agent monitoring.")
-        }
-        if coordinator.settings.selectedMode == .whileDownloading {
-            return coordinator.settings.downloadMonitoringEnabled
-                ? L10n.string("Click to open the menu. Right-click to pause download monitoring.")
-                : L10n.string("Click to open the menu. Right-click to resume download monitoring.")
-        }
-        return L10n.string("Click to open the menu. Right-click to start or stop Keep Awake.")
+        L10n.string("Click to open the menu. Right-click to start or stop manual Keep Awake.")
     }
 
     private var accessibilityStatus: String {
-        if coordinator.settings.selectedMode == .whileAgentRunning && !coordinator.isActive {
-            return coordinator.settings.agentMonitoringEnabled
-                ? L10n.string("Monitoring")
-                : L10n.string("Monitoring Paused")
-        }
-        if coordinator.settings.selectedMode == .whileDownloading && !coordinator.isActive {
-            return coordinator.settings.downloadMonitoringEnabled
-                ? L10n.string("Monitoring")
-                : L10n.string("Monitoring Paused")
-        }
-        return coordinator.isActive ? L10n.string("On") : L10n.string("Off")
+        if coordinator.isActive { return L10n.string("On") }
+        return isAutomaticMonitoring ? L10n.string("Waiting for Activity") : L10n.string("Off")
     }
 }

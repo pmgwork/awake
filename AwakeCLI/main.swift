@@ -70,12 +70,17 @@ do {
             exit(0)
         }
         print("Keep Awake: \(response.active ? "active" : response.waitingForActivity == true ? "waiting" : "stopped")")
-        print("Mode: \(response.mode)")
+        print("Manual mode: \(response.mode)")
+        if let enabled = response.agentMonitoringEnabled { print("While Agent Is Running: \(enabled ? "on" : "off")") }
+        if let enabled = response.downloadMonitoringEnabled { print("While Downloading: \(enabled ? "on" : "off")") }
+        if let active = response.manualActive { print("Manual Keep Awake: \(active ? "active" : "stopped")") }
         if response.timerEndsAt != nil { print("Remaining: \(response.remainingSeconds)s") }
         print("Sleep prevention: \(response.sleepPreventionHealth)")
         if let cooling = response.cooling {
             print("Cooling: \(cooling.active ? "active" : cooling.armed ? "waiting" : "stopped")")
-            print("Cooling mode: \(cooling.mode)")
+            print("Manual cooling mode: \(cooling.mode)")
+            if let enabled = cooling.automaticEnabled { print("Automatic cooling: \(enabled ? "on" : "off")") }
+            if let armed = cooling.manualArmed { print("Manual cooling: \(armed ? "started" : "stopped")") }
             if cooling.timerEndsAt != nil { print("Cooling remaining: \(cooling.remainingSeconds)s") }
             print("Cooling available: \(cooling.available ? "yes" : "no") (helper: \(cooling.helperInstalled ? "installed" : "missing"), low-battery block: \(cooling.blockedByLowBattery ? "yes" : "no"))")
             print("Cooling speed: automatic \(cooling.automaticSpeed)%, manual \(cooling.manualSpeed)%")

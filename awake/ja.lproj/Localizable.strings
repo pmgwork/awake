@@ -214,3 +214,7 @@
 "Keep Awake After Agents Finish" = "完了後のスリープ防止時間";
 "Keeping Awake After Completion" = "完了後のスリープ防止中";
 "%d min" = "%d分";
+
+"Keeping Awake" = "スリープ防止中";
+"Waiting for Activity" = "待機中";
+"Click to open the menu. Right-click to start or stop manual Keep Awake." = "クリックでメニューを開きます。右クリックで手動のスリープ防止を開始・停止します。";

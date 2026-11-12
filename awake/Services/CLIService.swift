@@ -46,21 +46,11 @@ final class CLIService {
         switch request.command {
         case "start", "mode":
             let mode = keepAwakeMode(request.mode ?? (request.durationSeconds == nil ? "indefinitely" : "timer"))
-            if request.command == "start" {
-                if mode == .whileAgentRunning && !settings.agentMonitoringEnabled {
-                    return snapshot(error: "Agent monitoring is disabled. Enable it in Settings → Monitor.")
-                }
-                if mode == .whileDownloading && !settings.downloadMonitoringEnabled {
-                    return snapshot(error: "Download monitoring is disabled. Enable it in Settings → Monitor.")
-                }
-                coordinator.stopKeepAwake()
-            }
             coordinator.selectMode(mode)
             if let duration = request.durationSeconds { coordinator.setTimerDuration(duration) }
-            if request.command == "start" {
+            if request.command == "start" && (mode == .indefinitely || mode == .timer) {
                 coordinator.startKeepAwake(userInitiated: true)
-                // Conditional modes may wait for the next agent/download event.
-                if !coordinator.isActive && (mode == .indefinitely || mode == .timer) {
+                if !coordinator.isManualKeepAwakeActive {
                     return snapshot(error: "Keep Awake could not be started.")
                 }
             }
@@ -77,8 +67,12 @@ final class CLIService {
             coordinator.selectCoolingMode(mode)
             if let duration = request.durationSeconds { coordinator.setCoolingDuration(duration) }
             if request.command == "cooling.start" {
-                coordinator.startCooling()
-                guard settings.coolingArmed else { return snapshot(error: coolingUnavailableReason()) }
+                if mode == .whileKeepAwakeIsOn {
+                    guard settings.automaticCoolingEnabled else { return snapshot(error: coolingUnavailableReason()) }
+                } else {
+                    coordinator.startCooling()
+                    guard settings.coolingArmed else { return snapshot(error: coolingUnavailableReason()) }
+                }
             }
         case "cooling.stop": coordinator.stopCooling()
         case "cooling.speed":
@@ -151,7 +145,7 @@ final class CLIService {
             remainingSeconds: remaining, timerEndsAt: coordinator.timerEndDate,
             sleepPreventionHealth: coordinator.sleepManager.health.rawValue,
             cooling: CLICoolingStatus(
-                mode: coolingMode, armed: settings.coolingArmed, active: coordinator.isForcedCoolingActive,
+                mode: coolingMode, armed: settings.coolingArmed || settings.automaticCoolingEnabled, active: coordinator.isForcedCoolingActive,
                 available: coordinator.canUseForcedCooling, helperInstalled: coordinator.isFanHelperInstalled,
                 blockedByLowBattery: coordinator.isCoolingBlockedByLowBattery,
                 durationSeconds: Int(settings.forcedCoolingDuration),
@@ -160,12 +154,18 @@ final class CLIService {
                 automaticSpeed: speedPercent(settings.automaticCoolingFanMode),
                 manualSpeed: speedPercent(settings.manualCoolingFanMode), onlyOnAC: settings.onlyOnACPower,
                 fanControl: coordinator.fanController.activeMode == .auto ? "auto" : "\(speedPercent(coordinator.fanController.activeMode))%",
-                error: coordinator.fanController.controlError
+                error: coordinator.fanController.controlError,
+                automaticEnabled: settings.automaticCoolingEnabled,
+                automaticActive: coordinator.isAutomaticCoolingActive,
+                manualArmed: settings.coolingArmed,
+                manualActive: coordinator.isManualCoolingActive
             ),
             waitingForActivity: !coordinator.isActive && (
-                (settings.selectedMode == .whileAgentRunning && settings.agentMonitoringEnabled) ||
-                (settings.selectedMode == .whileDownloading && settings.downloadMonitoringEnabled)
-            )
+                settings.agentMonitoringEnabled || settings.downloadMonitoringEnabled
+            ),
+            manualActive: coordinator.isManualKeepAwakeActive,
+            agentMonitoringEnabled: settings.agentMonitoringEnabled,
+            downloadMonitoringEnabled: settings.downloadMonitoringEnabled
         )
     }
 }
