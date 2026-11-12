@@ -24,6 +24,7 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var isForcedCoolingActive = false
     @Published public private(set) var isAutomaticCoolingActive = false
     @Published public private(set) var isManualCoolingActive = false
+    @Published public private(set) var isRenderCoolingActive = false
     /// Whether the fan helper is installed. Published so the menu shows the
     /// cooling controls as soon as the asynchronous helper check finishes.
     @Published public private(set) var isFanHelperInstalled = false
@@ -44,6 +45,7 @@ public final class AwakeCoordinator: ObservableObject {
     public let powerMonitor = PowerMonitor.shared
     public let eventMonitor = AgentEventMonitor.shared
     public let downloadMonitor = DownloadMonitor.shared
+    public let renderMonitor = RenderMonitor.shared
     public let hookIntegrationManager = HookIntegrationManager.shared
     public let fanController = FanController.shared
     public let screenBehaviorManager = ScreenBehaviorManager.shared
@@ -65,6 +67,7 @@ public final class AwakeCoordinator: ObservableObject {
     private init() {
         eventMonitor.updateEnabledProviders(settings.enabledProviders)
         downloadMonitor.updateFolder(path: settings.downloadFolderPath)
+        renderMonitor.updateEnabledApps(settings.enabledRenderApps)
         SMCHelper.shared.prewarmHelperInstallState()
         setupSubscriptions()
         startHeartbeat()
@@ -160,6 +163,12 @@ public final class AwakeCoordinator: ObservableObject {
         evaluateState()
     }
 
+    public func setRenderCoolingEnabled(_ enabled: Bool) {
+        guard !enabled || canStartCooling(.whileKeepAwakeIsOn) else { return }
+        settings.renderCoolingEnabled = enabled
+        evaluateState()
+    }
+
     /// Starts manual cooling. Refused when the helper is unavailable.
     public func startCooling() {
         guard canUseForcedCooling else { return }
@@ -174,6 +183,7 @@ public final class AwakeCoordinator: ObservableObject {
     /// Explicit global stop for CLI; the menu button controls manual cooling.
     public func stopCooling() {
         settings.automaticCoolingEnabled = false
+        settings.renderCoolingEnabled = false
         stopManualCooling()
     }
 
@@ -209,9 +219,11 @@ public final class AwakeCoordinator: ObservableObject {
         isRemovingHardwareAuthorization = true
         defer { isRemovingHardwareAuthorization = false }
         settings.automaticCoolingEnabled = false
+        settings.renderCoolingEnabled = false
         settings.coolingArmed = false
         isAutomaticCoolingActive = false
         isManualCoolingActive = false
+        isRenderCoolingActive = false
         resetCoolingState()
         setForcedCoolingActive(false)
 
@@ -409,6 +421,7 @@ public final class AwakeCoordinator: ObservableObject {
 
         if isRemovingHardwareAuthorization {
             settings.automaticCoolingEnabled = false
+            settings.renderCoolingEnabled = false
             settings.coolingArmed = false
             resetCoolingState()
         }
@@ -437,11 +450,13 @@ public final class AwakeCoordinator: ObservableObject {
                 onlyOnACPower: settings.onlyOnACPower,
                 isOnACPower: powerMonitor.isOnACPower
             ),
+            renderingRequested: settings.renderCoolingEnabled && renderMonitor.isRendering,
             batteryBlocked: isCoolingCutOffByLowBattery,
             helperAvailable: isFanHelperInstalled && !isRemovingHardwareAuthorization
         )
         if isManualCoolingActive != activity.manual { isManualCoolingActive = activity.manual }
         if isAutomaticCoolingActive != activity.automatic { isAutomaticCoolingActive = activity.automatic }
+        if isRenderCoolingActive != activity.rendering { isRenderCoolingActive = activity.rendering }
         setForcedCoolingActive(activity.active)
     }
 
@@ -505,6 +520,29 @@ public final class AwakeCoordinator: ObservableObject {
             .store(in: &cancellables)
 
         downloadMonitor.$isDownloading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.evaluateState() }
+            .store(in: &cancellables)
+
+        settings.$enabledRenderApps
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] apps in self?.renderMonitor.updateEnabledApps(apps) }
+            .store(in: &cancellables)
+
+        settings.$renderCoolingEnabled
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                guard let self else { return }
+                if enabled { self.renderMonitor.startMonitoring() }
+                else { self.renderMonitor.stopMonitoring() }
+            }
+            .store(in: &cancellables)
+
+        renderMonitor.$renderingApps
+            .map(\.isEmpty)
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.evaluateState() }
             .store(in: &cancellables)

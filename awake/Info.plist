@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Awake reads the Adobe After Effects render queue to cool your Mac while rendering.</string>
 	<!-- Stable by default. AppUpdater selects the beta feed only with opt-in. -->
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/PMGWork/awake/update-feeds/stable.xml</string>

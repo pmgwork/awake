@@ -45,36 +45,87 @@ final class CLIService {
         }
         switch request.command {
         case "start", "mode":
-            let mode = keepAwakeMode(request.mode ?? (request.durationSeconds == nil ? "indefinitely" : "timer"))
+            let mode: KeepAwakeModeType
+            if let requestedMode = request.mode {
+                mode = keepAwakeMode(requestedMode)
+            } else if request.durationSeconds != nil {
+                mode = .timer
+            } else {
+                mode = settings.selectedMode == .timer ? .timer : .indefinitely
+            }
             coordinator.selectMode(mode)
             if let duration = request.durationSeconds { coordinator.setTimerDuration(duration) }
-            if request.command == "start" && (mode == .indefinitely || mode == .timer) {
+            if request.command == "start" {
                 coordinator.startKeepAwake(userInitiated: true)
                 if !coordinator.isManualKeepAwakeActive {
                     return snapshot(error: "Keep Awake could not be started.")
                 }
             }
-        case "stop": coordinator.stopKeepAwake()
+        case "stop":
+            if request.all == true {
+                coordinator.stopKeepAwake()
+            } else {
+                coordinator.stopManualKeepAwake()
+            }
+        case "auto":
+            let enabled = request.enabled == true
+            switch request.condition {
+            case "agent":
+                coordinator.setAgentMonitoringEnabled(enabled)
+            case "download":
+                coordinator.setDownloadMonitoringEnabled(enabled)
+            default:
+                return snapshot(error: CLIProtocol.invalidArguments)
+            }
         case "cooling.start", "cooling.mode":
             // Keep a failed start from replacing a running cooling session or its settings.
             coordinator.evaluateState()
-            let mode = request.mode.map(coolingMode)
-                ?? (request.durationSeconds == nil ? settings.coolingMode : .timed)
+            let mode: CoolingMode
+            if let requestedMode = request.mode {
+                mode = coolingMode(requestedMode)
+            } else if request.durationSeconds != nil {
+                mode = .timed
+            } else {
+                mode = settings.coolingMode == .timed ? .timed : .forced
+            }
             if request.command == "cooling.start" && !coordinator.canStartCooling(mode) {
                 return snapshot(error: coolingUnavailableReason())
             }
-            // A mode change can arm automatic cooling, just like the menu.
             coordinator.selectCoolingMode(mode)
             if let duration = request.durationSeconds { coordinator.setCoolingDuration(duration) }
             if request.command == "cooling.start" {
-                if mode == .whileKeepAwakeIsOn {
-                    guard settings.automaticCoolingEnabled else { return snapshot(error: coolingUnavailableReason()) }
-                } else {
-                    coordinator.startCooling()
-                    guard settings.coolingArmed else { return snapshot(error: coolingUnavailableReason()) }
-                }
+                coordinator.startCooling()
+                guard settings.coolingArmed else { return snapshot(error: coolingUnavailableReason()) }
             }
-        case "cooling.stop": coordinator.stopCooling()
+        case "cooling.stop":
+            if request.all == true {
+                coordinator.stopCooling()
+            } else {
+                coordinator.stopManualCooling()
+            }
+        case "cooling.auto":
+            coordinator.evaluateState()
+            let enabled = request.enabled == true
+            switch request.condition {
+            case "awake":
+                if enabled && !coordinator.canStartCooling(.whileKeepAwakeIsOn) {
+                    return snapshot(error: coolingUnavailableReason())
+                }
+                coordinator.setAutomaticCoolingEnabled(enabled)
+                if enabled && !settings.automaticCoolingEnabled {
+                    return snapshot(error: coolingUnavailableReason())
+                }
+            case "render":
+                if enabled && !coordinator.canStartCooling(.whileKeepAwakeIsOn) {
+                    return snapshot(error: coolingUnavailableReason())
+                }
+                coordinator.setRenderCoolingEnabled(enabled)
+                if enabled && !settings.renderCoolingEnabled {
+                    return snapshot(error: coolingUnavailableReason())
+                }
+            default:
+                return snapshot(error: CLIProtocol.invalidArguments)
+            }
         case "cooling.speed":
             coordinator.evaluateState()
             guard coordinator.isFanHelperInstalled else {
@@ -91,30 +142,16 @@ final class CLIService {
     }
 
     private func keepAwakeMode(_ name: String) -> KeepAwakeModeType {
-        switch name {
-        case "agent": return .whileAgentRunning
-        case "download": return .whileDownloading
-        case "timer": return .timer
-        default: return .indefinitely
-        }
+        name == "timer" ? .timer : .indefinitely
     }
 
     /// Reports modes with the names the command accepts.
     static func modeName(_ mode: KeepAwakeModeType) -> String {
-        switch mode {
-        case .whileAgentRunning: return "agent"
-        case .whileDownloading: return "download"
-        case .indefinitely: return "indefinitely"
-        case .timer: return "timer"
-        }
+        mode == .timer ? "timer" : "indefinitely"
     }
 
     private func coolingMode(_ name: String) -> CoolingMode {
-        switch name {
-        case "awake", "agent": return .whileKeepAwakeIsOn
-        case "timer": return .timed
-        default: return .forced
-        }
+        name == "timer" ? .timed : .forced
     }
 
     private func coolingUnavailableReason() -> String {
@@ -138,14 +175,14 @@ final class CLIService {
         let coordinator = AwakeCoordinator.shared
         let settings = coordinator.settings
         let remaining = coordinator.timerEndDate.map { max(0, Int(ceil($0.timeIntervalSinceNow))) } ?? 0
-        let coolingMode = settings.coolingMode == .forced ? "indefinitely" : settings.coolingMode == .timed ? "timer" : "awake"
+        let coolingMode = settings.coolingMode == .timed ? "timer" : "indefinitely"
         return CLIResponse(
             success: error == nil, error: error, active: coordinator.isActive,
             mode: Self.modeName(settings.selectedMode),
             remainingSeconds: remaining, timerEndsAt: coordinator.timerEndDate,
             sleepPreventionHealth: coordinator.sleepManager.health.rawValue,
             cooling: CLICoolingStatus(
-                mode: coolingMode, armed: settings.coolingArmed || settings.automaticCoolingEnabled, active: coordinator.isForcedCoolingActive,
+                mode: coolingMode, armed: settings.coolingArmed || settings.automaticCoolingEnabled || settings.renderCoolingEnabled, active: coordinator.isForcedCoolingActive,
                 available: coordinator.canUseForcedCooling, helperInstalled: coordinator.isFanHelperInstalled,
                 blockedByLowBattery: coordinator.isCoolingBlockedByLowBattery,
                 durationSeconds: Int(settings.forcedCoolingDuration),
@@ -158,14 +195,18 @@ final class CLIService {
                 automaticEnabled: settings.automaticCoolingEnabled,
                 automaticActive: coordinator.isAutomaticCoolingActive,
                 manualArmed: settings.coolingArmed,
-                manualActive: coordinator.isManualCoolingActive
+                manualActive: coordinator.isManualCoolingActive,
+                renderEnabled: settings.renderCoolingEnabled,
+                renderActive: coordinator.isRenderCoolingActive
             ),
             waitingForActivity: !coordinator.isActive && (
                 settings.agentMonitoringEnabled || settings.downloadMonitoringEnabled
             ),
             manualActive: coordinator.isManualKeepAwakeActive,
             agentMonitoringEnabled: settings.agentMonitoringEnabled,
-            downloadMonitoringEnabled: settings.downloadMonitoringEnabled
+            downloadMonitoringEnabled: settings.downloadMonitoringEnabled,
+            agentActive: coordinator.isAgentKeepAwakeActive,
+            downloadActive: coordinator.isDownloadKeepAwakeActive
         )
     }
 }

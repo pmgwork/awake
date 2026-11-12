@@ -31,6 +31,8 @@ public final class SettingsStore: ObservableObject {
         static let forcedCoolingDuration = "pmgwork.awake.forcedCoolingDuration"
         static let coolingMode = "pmgwork.awake.coolingMode"
         static let automaticCoolingEnabled = "pmgwork.awake.automaticCoolingEnabled"
+        static let renderCoolingEnabled = "pmgwork.awake.renderCoolingEnabled"
+        static let disabledRenderApps = "pmgwork.awake.disabledRenderApps"
         static let coolingArmed = "pmgwork.awake.coolingArmed"
         static let stopAtLowBattery = "pmgwork.awake.stopAtLowBattery"
         static let lowBatteryThreshold = "pmgwork.awake.lowBatteryThreshold"
@@ -125,6 +127,22 @@ public final class SettingsStore: ObservableObject {
     @Published public var automaticCoolingEnabled: Bool {
         didSet {
             UserDefaults.standard.set(automaticCoolingEnabled, forKey: Keys.automaticCoolingEnabled)
+        }
+    }
+
+    /// Cools while a supported app is rendering. Off by default.
+    @Published public var renderCoolingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(renderCoolingEnabled, forKey: Keys.renderCoolingEnabled)
+        }
+    }
+
+    /// Apps watched by "While Rendering". Stored as the apps turned off, so
+    /// apps added in later versions start on.
+    @Published public var enabledRenderApps: Set<RenderApp> {
+        didSet {
+            let disabled = RenderApp.allCases.filter { !enabledRenderApps.contains($0) }.map(\.rawValue)
+            UserDefaults.standard.set(disabled, forKey: Keys.disabledRenderApps)
         }
     }
 
@@ -338,6 +356,9 @@ public final class SettingsStore: ObservableObject {
         self.coolingMode = cooling.mode
         self.coolingArmed = false
         self.automaticCoolingEnabled = cooling.automatic
+        self.renderCoolingEnabled = UserDefaults.standard.bool(forKey: Keys.renderCoolingEnabled)
+        let disabledRenderApps = Set(UserDefaults.standard.stringArray(forKey: Keys.disabledRenderApps) ?? [])
+        self.enabledRenderApps = Set(RenderApp.allCases.filter { !disabledRenderApps.contains($0.rawValue) })
         UserDefaults.standard.set(cooling.mode.rawValue, forKey: Keys.coolingMode)
         UserDefaults.standard.set(false, forKey: Keys.coolingArmed)
         UserDefaults.standard.set(cooling.automatic, forKey: Keys.automaticCoolingEnabled)

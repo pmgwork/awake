@@ -3,31 +3,35 @@ import Foundation
 /// Shared wire format for the bundled command and the running menu bar app.
 nonisolated enum CLIProtocol {
     static var portName: String { "pmgwork.awake.cli.v1.\(getuid())" }
-    static let modes = ["indefinitely", "timer", "agent", "download"]
-    static let coolingModes = ["indefinitely", "timer", "awake", "agent"]
+    static let modes = ["indefinitely", "timer"]
+    static let coolingModes = ["indefinitely", "timer"]
+    static let autoConditions = ["agent", "download"]
+    static let coolingAutoConditions = ["awake", "render"]
     static let coolingDurations: [TimeInterval] = [300, 600, 900, 1800]
     static let invalidArguments = "Invalid arguments. See 'awake --help'."
     static let usage = """
     Usage: awake start [--mode <mode>] [--duration <duration>]
-           awake stop
+           awake stop [--all]
            awake mode [<mode>] [--duration <duration>]
+           awake auto <agent|download> <on|off>
            awake status [--json]
            awake cooling start [--mode <mode>] [--duration <duration>]
-           awake cooling stop
+           awake cooling stop [--all]
            awake cooling mode [<mode>] [--duration <duration>]
+           awake cooling auto <awake|render> <on|off>
            awake cooling speed <automatic|manual> <50|75|100>
            awake cooling status [--json]
            awake --help
 
-    Keep Awake modes: indefinitely, timer, agent, download.
-    Cooling modes: indefinitely, timer, awake (agent is a legacy alias).
-    --duration implies timer mode. start without options keeps its original
-    behavior (indefinitely); cooling start uses the selected manual cooling mode.
-    mode selects without starting manual modes; agent/download enable independent
-    automatic conditions without changing the manual mode. stop disables both
-    automatic conditions and stops manual Keep Awake.
-    cooling mode/start awake enables automatic cooling independently of manual
-    cooling. cooling stop stops both; cooling start defaults to the manual mode.
+    Manual modes: indefinitely, timer (for both Keep Awake and cooling).
+    --duration implies timer mode. start and cooling start use the selected
+    manual mode unless --mode or --duration is given, and preserve automatic
+    conditions. mode and cooling mode select without starting manual sessions
+    (or show status when omitted).
+    stop and cooling stop end only the manual session; pass --all to also turn
+    off both automatic conditions.
+    auto and cooling auto toggle each automatic condition independently
+    without changing manual sessions or the other condition.
     Keep Awake durations: positive whole numbers with s, m, h; maximum 7 days.
     Cooling durations: 5m, 10m, 15m, 30m (same presets as the app).
     Starting again resets the timer. Requires Awake.app; it launches if needed.
@@ -57,11 +61,17 @@ nonisolated enum CLIProtocol {
         case "status":
             guard args.isEmpty || args == ["--json"] else { throw CLIError(message: invalidArguments) }
         case "stop":
-            guard args.isEmpty else { throw CLIError(message: invalidArguments) }
+            if args == ["--all"] {
+                request.all = true
+            } else if !args.isEmpty {
+                throw CLIError(message: invalidArguments)
+            }
         case "start", "mode":
             if action == "mode" {
                 if args.isEmpty { return CLIRequest(command: cooling ? "cooling.status" : "status") }
-                request.mode = args.removeFirst()
+                if let first = args.first, !first.hasPrefix("--") {
+                    request.mode = args.removeFirst()
+                }
             }
             while !args.isEmpty {
                 let option = args.removeFirst()
@@ -82,6 +92,14 @@ nonisolated enum CLIProtocol {
                 }
             }
             if request.durationSeconds != nil && request.mode == nil { request.mode = "timer" }
+        case "auto":
+            guard args.count == 2 else { throw CLIError(message: invalidArguments) }
+            let allowed = cooling ? coolingAutoConditions : autoConditions
+            guard allowed.contains(args[0]), ["on", "off"].contains(args[1]) else {
+                throw CLIError(message: invalidArguments)
+            }
+            request.condition = args[0]
+            request.enabled = (args[1] == "on")
         case "speed" where cooling:
             guard args.count == 2, let speed = Int(args[1]) else { throw CLIError(message: invalidArguments) }
             request.speedTarget = args[0]
@@ -112,19 +130,39 @@ nonisolated enum CLIProtocol {
         }
         switch action {
         case "start", "mode":
-            guard request.speed == nil, request.speedTarget == nil,
+            guard request.all == nil, request.condition == nil, request.enabled == nil,
+                  request.speed == nil, request.speedTarget == nil,
                   action != "mode" || request.mode != nil,
                   request.mode == nil || (cooling ? coolingModes : modes).contains(request.mode!),
                   request.durationSeconds == nil || request.mode == nil || request.mode == "timer" else {
                 throw CLIError(message: "Invalid mode or options. See 'awake --help'.")
             }
-        case "stop", "status":
-            guard request.mode == nil, request.durationSeconds == nil, request.speed == nil,
-                  request.speedTarget == nil else { throw CLIError(message: invalidArguments) }
-        case "speed" where cooling:
+        case "stop":
             guard request.mode == nil, request.durationSeconds == nil,
+                  request.condition == nil, request.enabled == nil,
+                  request.speed == nil, request.speedTarget == nil else {
+                throw CLIError(message: invalidArguments)
+            }
+        case "status":
+            guard request.all == nil, request.mode == nil, request.durationSeconds == nil,
+                  request.condition == nil, request.enabled == nil,
+                  request.speed == nil, request.speedTarget == nil else {
+                throw CLIError(message: invalidArguments)
+            }
+        case "auto":
+            let allowed = cooling ? coolingAutoConditions : autoConditions
+            guard request.all == nil, request.mode == nil, request.durationSeconds == nil,
+                  request.speed == nil, request.speedTarget == nil,
+                  allowed.contains(request.condition ?? ""), request.enabled != nil else {
+                throw CLIError(message: invalidArguments)
+            }
+        case "speed" where cooling:
+            guard request.all == nil, request.mode == nil, request.durationSeconds == nil,
+                  request.condition == nil, request.enabled == nil,
                   ["automatic", "manual"].contains(request.speedTarget ?? ""),
-                  [50, 75, 100].contains(request.speed ?? 0) else { throw CLIError(message: invalidArguments) }
+                  [50, 75, 100].contains(request.speed ?? 0) else {
+                throw CLIError(message: invalidArguments)
+            }
         default: throw CLIError(message: "Unknown command. See 'awake --help'.")
         }
     }
@@ -139,6 +177,9 @@ nonisolated struct CLIRequest: Codable {
     let command: String
     var durationSeconds: TimeInterval? = nil
     var mode: String? = nil
+    var all: Bool? = nil
+    var condition: String? = nil
+    var enabled: Bool? = nil
     var speedTarget: String? = nil
     var speed: Int? = nil
 }
@@ -156,6 +197,8 @@ nonisolated struct CLIResponse: Codable {
     var manualActive: Bool? = nil
     var agentMonitoringEnabled: Bool? = nil
     var downloadMonitoringEnabled: Bool? = nil
+    var agentActive: Bool? = nil
+    var downloadActive: Bool? = nil
 }
 
 nonisolated struct CLICoolingStatus: Codable {
@@ -177,4 +220,6 @@ nonisolated struct CLICoolingStatus: Codable {
     var automaticActive: Bool? = nil
     var manualArmed: Bool? = nil
     var manualActive: Bool? = nil
+    var renderEnabled: Bool? = nil
+    var renderActive: Bool? = nil
 }

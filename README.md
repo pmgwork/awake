@@ -10,9 +10,9 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 
 ## Features
 
-- **Agent-driven keep awake** — follows Codex, Claude Code, OpenCode, and Antigravity through their own hook events. No process polling.
+- **Agent-driven keep awake** — follows Codex, Claude Code, Antigravity, and OpenCode through their own hook events. No process polling.
 - **Independent controls** — enable agent and download conditions together, and optionally start manual Keep Awake for a fixed duration (15m–2h) or indefinitely.
-- **Cooling** — optional fan control while Keep Awake is on with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS.
+- **Cooling** — optional fan control while Keep Awake is on with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS. Cooling can also follow rendering in Blender, Adobe After Effects, Adobe Media Encoder, and Houdini.
 - **Battery protection** — turns Keep Awake and automatic cooling off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — **Keep Screen On** keeps the screen on during a session and also prevents the screen saver and automatic idle lock.
 - **Closed-lid Low Power Mode** — optionally turns on macOS Low Power Mode while the lid is closed during a session, and restores your previous setting afterwards.
@@ -49,7 +49,7 @@ Awake runs only in the menu bar (no Dock icon).
 - Settings:
   - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
   - **Keep Awake** — Keep Screen On, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
-  - **Monitor** — link or unlink each agent provider, watch live sessions, and choose the download folder.
+  - **Monitor** — turn each agent on or off (turning on an unlinked agent links it), turn each rendering app on or off, and choose the download folder.
   - **Cooling** — separate automatic and manual fan speeds, and the "Only When Plugged In" option for automatic cooling.
   - **Permissions** — install, update, or remove the shared helper.
 
@@ -65,37 +65,40 @@ ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
 Ensure `~/.local/bin` is on your PATH. If that command name already exists, choose another location instead of replacing it. The symlink continues to work after app updates at the same location. Remove the symlink to uninstall the command.
 
 ```sh
-awake start                 # Start indefinitely
+awake start                 # Start using the selected manual mode
 awake start --duration 30m  # Start for 30 minutes
-awake stop                  # Stop Keep Awake
+awake stop                  # Stop manual Keep Awake
+awake stop --all            # Stop manual Keep Awake and turn off automatic conditions
 awake status                # Show state, mode, remaining seconds, and sleep-prevention health
 awake status --json         # Machine-readable status (ISO 8601 timer end date)
 awake --help
 ```
 
-The command launches its containing app in the background if needed and controls the same session shown in the menu bar. `start` selects Indefinitely; `start --duration` selects For Duration and saves the duration. Repeating `start` resets the manual timer while preserving automatic conditions. Durations accept positive whole numbers followed by `s`, `m`, or `h`, up to 7 days. `stop` stops manual Keep Awake and turns both automatic conditions OFF; cooling remains independent. CLI starts follow the same rules as manual starts, including the low-battery override. Existing hardware permissions still apply. Status includes the actual sleep-prevention health; an active session can report degraded or failed protection. Commands return 0 on success and nonzero on invalid input, connection failure, or a rejected command. The CLI requires the app and a logged-in macOS GUI session.
+The command launches its containing app in the background if needed and controls the same session shown in the menu bar. `start` uses the selected manual mode unless `--mode` or `--duration` is given; `start --duration` selects For Duration and saves the duration. Repeating `start` resets the manual timer while preserving automatic conditions. Durations accept positive whole numbers followed by `s`, `m`, or `h`, up to 7 days. `stop` ends only manual Keep Awake; `stop --all` also turns both automatic conditions OFF. Cooling remains independent. CLI starts follow the same rules as manual starts, including the low-battery override. Existing hardware permissions still apply. Status includes the actual sleep-prevention health; an active session can report degraded or failed protection. Commands return 0 on success and nonzero on invalid input, connection failure, or a rejected command. The CLI requires the app and a logged-in macOS GUI session.
 
 Actions print a one-line result. Input errors stay brief; `awake --help` shows the full help. Use `status` for details or `status --json` for scripts.
 
-Mode selection and cooling are also available:
+Mode selection, automatic switches, and cooling are also available:
 
 ```sh
-awake mode agent
-awake start --mode download
+awake auto agent on
+awake auto download off
 awake mode timer --duration 1h
-awake start --mode timer
+awake start --mode indefinitely
 awake cooling start --mode indefinitely
 awake cooling start --duration 10m
-awake cooling mode awake
+awake cooling auto awake on
+awake cooling auto render on
 awake cooling speed automatic 75
 awake cooling speed manual 50
 awake cooling stop
+awake cooling stop --all
 awake cooling status --json
 ```
 
-Keep Awake commands accept `indefinitely`, `timer`, `agent`, and `download`; cooling supports `indefinitely`, `timer`, and `awake` (`agent` remains a legacy alias). `awake mode` and `awake cooling mode` without a value show the current state. `status --json` reports the selected manual mode (`indefinitely` or `timer`) in `mode`, and the selected manual cooling mode in `cooling.mode`. Selecting `timer` or `indefinitely` stops only the previous manual session and waits for Start. `awake start --mode timer` uses the saved duration. Selecting or starting `agent` or `download` turns that independent condition ON and waits for activity when idle, preserving the other condition and manual session. Selecting automatic cooling arms it when available. `awake cooling start` uses the selected manual cooling mode. `cooling mode awake` and `cooling start --mode awake` enable automatic cooling without changing the manual session. `cooling stop` stops both automatic and manual cooling. A duration implies `timer`; combining a duration with a different mode is rejected.
+Manual Keep Awake and manual cooling modes accept `indefinitely` and `timer`. `awake mode` and `awake cooling mode` without a value show the current state. `status --json` reports the selected manual mode (`indefinitely` or `timer`) in `mode`, and the selected manual cooling mode in `cooling.mode`. Selecting `timer` or `indefinitely` stops only the previous manual session and waits for Start. `awake start --mode timer` and `awake cooling start` use the saved duration when `timer` is selected. `awake auto <agent|download> <on|off>` and `awake cooling auto <awake|render> <on|off>` toggle each automatic condition independently without changing manual sessions or the other condition. `cooling stop` stops only manual cooling; `cooling stop --all` also turns off both automatic cooling switches. A duration implies `timer`; combining a duration with `indefinitely` is rejected.
 
-Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling or changing its speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means either automatic or manual cooling is enabled, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates that automation is enabled while Keep Awake is idle. `manualActive`, `agentMonitoringEnabled`, and `downloadMonitoringEnabled` report the independent controls. `automaticEnabled` / `automaticActive` and `manualArmed` / `manualActive` report each cooling state separately. Cooling commands leave Keep Awake independent.
+Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling, enabling automatic cooling, or changing speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means either automatic or manual cooling is enabled, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates that automation is enabled while Keep Awake is idle. `manualActive`, `agentMonitoringEnabled`, `downloadMonitoringEnabled`, `agentActive`, and `downloadActive` report the independent Keep Awake controls. `automaticEnabled` / `automaticActive`, `renderEnabled` / `renderActive`, and `manualArmed` / `manualActive` report each cooling state separately. Cooling commands leave Keep Awake independent.
 
 ## Agent integrations
 
@@ -105,12 +108,12 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 | --- | --- |
 | Codex | `~/.codex/hooks.json` |
 | Claude Code | `~/.claude/settings.json` |
-| OpenCode | `~/.config/opencode/opencode.json` (or `opencode.jsonc`), plus a plugin in `~/Library/Application Support/Awake/integrations/opencode` |
 | Antigravity | `~/.gemini/config/hooks.json` |
+| OpenCode | `~/.config/opencode/opencode.json` (or `opencode.jsonc`), plus a plugin in `~/Library/Application Support/Awake/integrations/opencode` |
 
 - Only entries owned by Awake (marked with `--owner pmgwork.awake`) are added or removed.
 - Before the first change, the original file is backed up next to it as `<file>.awake-backup`.
-- **Unlink** in Settings → Agents removes only Awake's entries.
+- To unlink, click the circled **…** next to the agent in Settings → Monitor, then choose **Unlink**. Only Awake's entries are removed. The same menu has **Test** and **Reinstall**.
 - Monitoring uses filesystem change notifications and cached session snapshots to keep idle CPU usage low. Pausing or disabling a monitor stops its watcher.
 - Session events are stored as JSON files under `~/Library/Application Support/Awake/agent-sessions/v1` (permissions 0700). The latest event per session is retained after completion to reject delayed older events, and is replaced when a new turn starts.
 
@@ -123,6 +126,7 @@ Automatic cooling follows Keep Awake; manual cooling runs independently. Both ca
 | Indefinitely | Fans stay up until you stop cooling |
 | For Duration | 5 / 10 / 15 / 30 minutes, then fans go back to macOS |
 | While Keep Awake Is On | Follows Keep Awake in every mode, with the lid closed. A 30-minute Keep Awake timer also gives 30 minutes of cooling. Enable or disable it with its switch; it remains independent of manual cooling (default: on) |
+| While Rendering | Cools while a supported app is rendering, with the lid open or closed (see below). While it runs, the menu shows which apps are rendering. Turn individual apps on or off in Settings → Monitor. Uses the automatic fan speed and stops at the low-battery cutoff (default: off) |
 
 - Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
@@ -136,6 +140,12 @@ Automatic cooling follows Keep Awake; manual cooling runs independently. Both ca
 
 - Agent activity is detected from local hook events under `~/Library/Application Support/Awake`. Awake does not poll running processes and does not inspect your project or document files.
 - Download detection only looks at file names (`.download`, `.crdownload`, `.part`, …, skipping hidden files) and modification dates in the folder you choose. In subfolders, such files count only if they changed in the last 10 minutes, so leftovers in extracted archives don't keep your Mac awake.
+- Render detection runs only while **While Rendering** is on and checks running processes every 3 seconds. Nothing is sent anywhere.
+  - Render processes start cooling at once and stop it about 10 seconds after they exit: `aerender` (Adobe After Effects), `husk` and `mantra` (Houdini, including renders started from its window), and Blender started with `-b` and `-f` or `-a`.
+  - Blender gives no outside signal for renders started from its window. In Settings → Monitor, turning Blender on for the first time asks before adding `awake_render_monitor.py` to `scripts/startup` of each existing version under `~/Library/Application Support/Blender`. Restart Blender after linking. The script creates a file named after Blender’s process ID in `~/Library/Application Support/Awake/render-sessions` while a render runs. Turning monitoring off keeps the integration. Use the circled **…** next to Blender to reinstall or unlink it, then restart Blender. Unlinking removes only scripts created by Awake. After installing and opening a new Blender version, use **Reinstall** to add the script to that version.
+  - For Adobe After Effects renders started from the app, choose **Link** from the circled **…** in Settings → Monitor. Allow macOS Automation access and enable **Allow Scripts to Write Files and Access Network** in Adobe After Effects. Awake attaches a session-only script to each running AE instance and observes render queue item states without saving the project. Pausing, stopping, errors, and completion stop cooling after the same 10-second grace period. Turning monitoring off or choosing **Unlink** removes session files; callback cleanup waits until AE is no longer rendering or paused. Use **Reconnect** after changing permissions. Linking persists across Awake restarts. A render already in progress when Awake connects may be missed until AE becomes available. `aerender` detection also works without linking.
+  - Except for Media Encoder, only explicit render processes and Blender/Adobe After Effects render notifications trigger cooling. For these apps, preview rendering and editing activity are excluded; CPU load is not used. Awake reads executable names, Blender’s command-line arguments, and linked apps’ render notifications.
+  - Adobe Media Encoder uses sustained CPU or GPU load from its own process and child processes. Cooling starts after about 10 seconds at one CPU core or 20% GPU time, and stops after about 30 seconds below half a CPU core and 10% GPU time. This is a load heuristic, so imports or analysis can also trigger it. GPU counters are driver-dependent; when unavailable, only CPU load is used. Device-wide GPU load is never used. No integration script or administrator authorization is required.
 - No analytics, no telemetry, no account. Awake reads update feeds hosted on `raw.githubusercontent.com` and downloads updates from GitHub Releases after you agree to install them. Anonymous system profiling is disabled.
 
 ## Building from source

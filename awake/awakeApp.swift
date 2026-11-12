@@ -39,6 +39,10 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private var isShowingTimerInStatusItem = false
     private static let statusIconSize = NSSize(width: 21, height: 16.8)
 
+    func applicationWillTerminate(_ notification: Notification) {
+        AfterEffectsRenderIntegration.shared.setEnabled(false)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         CLIService.shared.start()
         configureStatusItem()

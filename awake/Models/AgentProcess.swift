@@ -63,20 +63,20 @@ public nonisolated struct MonitoredAgent: Identifiable, Codable, Equatable, Hash
             provider: .claude
         ),
         MonitoredAgent(
-            id: AgentProvider.openCode.rawValue,
-            name: "OpenCode",
-            processNames: ["opencode", "opencode2"],
-            isEnabled: false,
-            isPreset: true,
-            provider: .openCode
-        ),
-        MonitoredAgent(
             id: AgentProvider.antigravity.rawValue,
             name: "Antigravity",
             processNames: ["antigravity", "agy"],
             isEnabled: false,
             isPreset: true,
             provider: .antigravity
+        ),
+        MonitoredAgent(
+            id: AgentProvider.openCode.rawValue,
+            name: "OpenCode",
+            processNames: ["opencode", "opencode2"],
+            isEnabled: false,
+            isPreset: true,
+            provider: .openCode
         )
     ]
 }

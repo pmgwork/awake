@@ -52,13 +52,18 @@ public enum CoolingMode: String, Codable, CaseIterable, Identifiable {
 struct CoolingActivity {
     let manual: Bool
     let automatic: Bool
+    /// Rendering cooling runs in every lid and display configuration, like
+    /// manual cooling, but stops at low battery like automatic cooling.
+    let rendering: Bool
     let effectiveMode: CoolingMode?
-    var active: Bool { manual || automatic }
+    var active: Bool { manual || automatic || rendering }
 
     init(manualArmed: Bool, manualMode: CoolingMode, automaticEnabled: Bool,
-         automaticRequested: Bool, batteryBlocked: Bool, helperAvailable: Bool) {
+         automaticRequested: Bool, renderingRequested: Bool = false,
+         batteryBlocked: Bool, helperAvailable: Bool) {
         manual = helperAvailable && manualArmed && manualMode != .whileKeepAwakeIsOn
         automatic = helperAvailable && automaticEnabled && automaticRequested && !batteryBlocked
-        effectiveMode = manual ? manualMode : automatic ? .whileKeepAwakeIsOn : nil
+        rendering = helperAvailable && renderingRequested && !batteryBlocked
+        effectiveMode = manual ? manualMode : (automatic || rendering) ? .whileKeepAwakeIsOn : nil
     }
 }

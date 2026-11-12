@@ -52,14 +52,17 @@ struct MenuBarView: View {
                 helperUpdateNotice
             }
 
-            if settings.agentMonitoringEnabled && coordinator.isAgentKeepAwakeActive {
-                Divider()
-
+            // Each list adds its own divider and appears only while something runs.
+            // Same order as the sections above: Keep Awake, then cooling.
+            if settings.agentMonitoringEnabled {
                 RunningAgentsView(
                     eventMonitor: coordinator.eventMonitor,
-                    integrationManager: coordinator.hookIntegrationManager,
                     settings: settings
                 )
+            }
+
+            if settings.renderCoolingEnabled && coordinator.isRenderCoolingActive {
+                RenderingAppsView(monitor: coordinator.renderMonitor)
             }
 
             if settings.downloadMonitoringEnabled && coordinator.isDownloadKeepAwakeActive {

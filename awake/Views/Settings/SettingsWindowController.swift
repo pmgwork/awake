@@ -154,7 +154,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             case .monitoring:
                 MonitoringSettingsView(
                     settings: AwakeCoordinator.shared.settings,
-                    eventMonitor: AwakeCoordinator.shared.eventMonitor,
                     integrationManager: AwakeCoordinator.shared.hookIntegrationManager
                 )
             case .cooling:

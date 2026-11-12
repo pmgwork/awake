@@ -9,10 +9,11 @@
 "Stop Keep Awake" = "スリープ防止を停止";
 "Settings…" = "設定…";
 "Quit" = "終了";
-"Monitored Agents" = "監視するエージェント";
-"Running" = "実行中";
+"Running Agents" = "実行中のエージェント";
+"Rendering Apps" = "レンダリング中のアプリ";
+"Rendering" = "レンダリング";
 "%d running" = "%d件実行中";
-"No agents are being monitored. Turn them on in Settings." = "監視するエージェントがありません。「設定」の「監視」でオンにしてください。";
+"%d rendering" = "%d件レンダリング中";
 "Maximum" = "最大";
 "Aggressive" = "強";
 "Moderate" = "中";
@@ -68,7 +69,6 @@
 "Downloads" = "ダウンロード";
 "%d downloading" = "%d件ダウンロード中";
 "No downloads in progress." = "進行中のダウンロードはありません。";
-"Download Monitoring" = "ダウンロード監視";
 "Monitored Folder" = "監視フォルダ";
 "Choose…" = "選択…";
 "Choose" = "選択";
@@ -90,7 +90,7 @@
 "Test" = "テスト";
 "Reinstall" = "再インストール";
 "Unlink" = "連携解除";
-"%d active" = "%d件実行中";
+"Actions" = "操作";
 "Not linked" = "未連携";
 "Linked" = "連携済み";
 "Needs repair" = "修復が必要";
@@ -116,8 +116,6 @@
 "Not Checked" = "未確認";
 "Delete" = "削除";
 "Monitor %@" = "%@を監視";
-"Actions" = "操作";
-"Link this agent to monitor it." = "監視するには、先にこのエージェントを連携してください。";
 "Awake keeps your Mac awake while AI coding agents work, even with the lid closed. This short guide sets up the essentials." = "AwakeはAIコーディングエージェントの作業中、Macをスリープさせません。\n蓋を閉じていても使えます。このガイドで基本の設定を済ませましょう。";
 "You're Ready" = "準備完了";
 "Back" = "戻る";
@@ -129,7 +127,9 @@
 "Check for Updates" = "アップデートを確認";
 "Last checked %@" = "最終確認 %@";
 "Stay Awake with the Lid Closed" = "蓋を閉じてもスリープしない";
-"While Keep Awake Is On" = "スリープ防止中";
+"While Keep Awake Is On" = "スリープ防止と連動";
+"While Rendering" = "レンダリング中";
+"Cools during rendering or sustained Media Encoder load." = "レンダリング中、または Media Encoder の高負荷が続く間に冷却します。";
 "Language" = "言語";
 "System Default" = "システムに合わせる";
 "15m" = "15分";
@@ -172,7 +172,7 @@
 "Follows Keep Awake in every mode. Runs only with the lid closed." = "すべてのモードでスリープ防止に連動し、蓋を閉じている間だけ動作します。";
 "Automatic Cooling" = "自動冷却";
 "Manual Cooling" = "手動冷却";
-"Automatic: While Keep Awake Is On. Manual: Indefinitely or For Duration." = "自動は「スリープ防止中」、手動は「無期限」「時間を指定」に適用します。";
+"Automatic: While Keep Awake Is On or While Rendering. Manual: Indefinitely or For Duration." = "自動は「スリープ防止と連動」「レンダリング中」、手動は「無期限」「時間を指定」に適用します。";
 "Pause Automatic Cooling" = "自動冷却を一時停止";
 "Resume Automatic Cooling" = "自動冷却を再開";
 "Automatic Cooling Stopped" = "自動冷却を停止しました";
@@ -218,3 +218,15 @@
 "Keeping Awake" = "スリープ防止中";
 "Waiting for Activity" = "待機中";
 "Click to open the menu. Right-click to start or stop manual Keep Awake." = "クリックでメニューを開きます。右クリックで手動のスリープ防止を開始・停止します。";
+
+"Awake adds a startup script to each existing Blender version. Restart Blender after linking." = "Blender の各バージョンに起動スクリプトを追加します。連携後に Blender を再起動してください。";
+"Awake removes only its Blender startup scripts. Restart Blender to finish unlinking." = "Awake が追加した Blender の起動スクリプトだけを削除します。連携解除を完了するには Blender を再起動してください。";
+"Open Blender once before linking it, then try again." = "Blender を一度起動してから、もう一度連携してください。";
+"Awake cannot replace a file it did not create: %@" = "Awake が作成していないファイルは置き換えられません: %@";
+"Blender Integration" = "Blender の連携";
+"Restart Blender to apply the integration change." = "連携の変更を反映するには Blender を再起動してください。";
+
+"Reconnect" = "再接続";
+"Awake connects to Adobe After Effects through macOS Automation. Allow Automation access and enable Allow Scripts to Write Files and Access Network in Adobe After Effects. Your project is not saved or changed." = "macOSのオートメーションでAdobe After Effectsに接続します。オートメーションを許可し、Adobe After Effectsで「スクリプトによるファイルへの書き込みとネットワークへのアクセスを許可」を有効にしてください。プロジェクトの保存や変更は行いません。";
+"Adobe After Effects integration failed. Check Automation permission and allow scripts to write files in Adobe After Effects." = "Adobe After Effectsに接続できません。オートメーションの許可と、Adobe After Effectsのスクリプトによるファイル書き込みの設定を確認してください。";
+"Link to monitor the render queue." = "連携するとレンダーキューを監視できます。";

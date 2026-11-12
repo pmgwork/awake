@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C80000000000000000000001 /* JSONCTextEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80000000000000000000002 /* JSONCTextEditorTests.swift */; };
 		C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70000000000000000000002 /* DownloadMonitorTests.swift */; };
+		CB0000000000000000000001 /* RenderMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000002 /* RenderMonitorTests.swift */; };
 		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* main.swift */; };
 		A10000000000000000000003 /* AwakeHookBridge in Embed Hook Bridge */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AwakeHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1000000000000000000000F /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */; };
@@ -79,6 +80,7 @@
 /* Begin PBXFileReference section */
 		C80000000000000000000002 /* JSONCTextEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONCTextEditorTests.swift; sourceTree = "<group>"; };
 		C70000000000000000000002 /* DownloadMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadMonitorTests.swift; sourceTree = "<group>"; };
+		CB0000000000000000000002 /* RenderMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderMonitorTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* AwakeHookBridge */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AwakeHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000010 /* awake/Resources/Hooks/OpenCodeAwakePlugin.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = awake/Resources/Hooks/OpenCodeAwakePlugin.ts; sourceTree = SOURCE_ROOT; };
@@ -164,6 +166,7 @@
 			isa = PBXGroup;
 			children = (
 				C70000000000000000000002 /* DownloadMonitorTests.swift */,
+				CB0000000000000000000002 /* RenderMonitorTests.swift */,
 				C80000000000000000000002 /* JSONCTextEditorTests.swift */,
 				F80000000000000000000030 /* CLITests.swift */,
 				A10000000000000000000012 /* AgentSessionStoreTests.swift */,
@@ -367,6 +370,7 @@
 			files = (
 				A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */,
 				C70000000000000000000001 /* DownloadMonitorTests.swift in Sources */,
+				CB0000000000000000000001 /* RenderMonitorTests.swift in Sources */,
 				C80000000000000000000001 /* JSONCTextEditorTests.swift in Sources */,
 				F80000000000000000000031 /* CLITests.swift in Sources */,
 				C50000000000000000000001 /* CoolingSettingsMigrationTests.swift in Sources */,
@@ -600,6 +604,7 @@
 				DEVELOPMENT_TEAM = MMQS9J58YW;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				AUTOMATION_APPLE_EVENTS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -635,6 +640,7 @@
 				DEVELOPMENT_TEAM = MMQS9J58YW;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				AUTOMATION_APPLE_EVENTS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;

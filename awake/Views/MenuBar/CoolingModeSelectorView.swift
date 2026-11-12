@@ -25,32 +25,44 @@ struct CoolingModeSelectorView: View {
             }
             .foregroundStyle(.secondary)
 
-            HStack(spacing: 7) {
-                Text(L10n.string("While Keep Awake Is On"))
-                    .foregroundStyle(.primary)
-                if coordinator.isAutomaticCoolingActive {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 5, height: 5)
-                        .accessibilityHidden(true)
-                }
-                Spacer(minLength: 8)
-                Toggle(L10n.string("While Keep Awake Is On"), isOn: Binding(
-                    get: { settings.automaticCoolingEnabled },
-                    set: { coordinator.setAutomaticCoolingEnabled($0) }
-                ))
+            VStack(alignment: .leading, spacing: 6) {
+                automaticCondition("While Keep Awake Is On", enabled: settings.automaticCoolingEnabled,
+                                   active: coordinator.isAutomaticCoolingActive,
+                                   setEnabled: coordinator.setAutomaticCoolingEnabled)
+                automaticCondition("While Rendering", enabled: settings.renderCoolingEnabled,
+                                   active: coordinator.isRenderCoolingActive,
+                                   help: "Cools during rendering or sustained Media Encoder load.",
+                                   setEnabled: coordinator.setRenderCoolingEnabled)
+            }
+
+            durationPresets
+                .padding(.top, 4)
+        }
+    }
+
+    private func automaticCondition(_ title: String, enabled: Bool, active: Bool,
+                                    help: String? = nil,
+                                    setEnabled: @escaping (Bool) -> Void) -> some View {
+        HStack(spacing: 7) {
+            Text(L10n.string(title))
+                .foregroundStyle(.primary)
+            if active {
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: 5, height: 5)
+                    .accessibilityHidden(true)
+            }
+            Spacer(minLength: 8)
+            Toggle(L10n.string(title), isOn: Binding(get: { enabled }, set: setEnabled))
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .tint(.blue)
                 .fixedSize()
                 .disabled(coordinator.isCoolingBlockedByLowBattery)
-            }
-            .frame(minHeight: 20)
-
-            durationPresets
-                .padding(.top, 4)
         }
+        .frame(minHeight: 20)
+        .help(help.map { L10n.string($0) } ?? "")
     }
 
     private var durationPresets: some View {

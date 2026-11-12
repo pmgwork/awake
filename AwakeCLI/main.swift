@@ -55,16 +55,31 @@ do {
         if !["status", "cooling.status"].contains(request.command) {
             switch request.command {
             case "start":
-                print("Keep Awake: \(response.active ? "active" : response.waitingForActivity == true ? "waiting" : "stopped") (\(response.mode)).")
-            case "stop": print("Keep Awake stopped.")
-            case "mode": print("Keep Awake mode: \(request.mode ?? response.mode).")
+                print("Manual Keep Awake: \(response.manualActive == true ? "active" : "stopped") (\(response.mode)).")
+            case "stop":
+                print(request.all == true
+                    ? "Manual Keep Awake stopped; automatic conditions disabled."
+                    : "Manual Keep Awake stopped.")
+            case "mode":
+                print("Keep Awake mode: \(request.mode ?? response.mode).")
+            case "auto":
+                let label = request.condition == "agent" ? "While Agent Is Running" : "While Downloading"
+                print("\(label): \(request.enabled == true ? "on" : "off").")
             case "cooling.start":
                 if let cooling = response.cooling {
-                    print("Cooling: \(cooling.active ? "active" : cooling.armed ? "waiting" : "stopped") (\(cooling.mode)).")
-                } else { print("Cooling started.") }
-            case "cooling.stop": print("Cooling stopped.")
-            case "cooling.mode": print("Cooling mode: \(request.mode ?? "").")
-            case "cooling.speed": print("\((request.speedTarget ?? "").capitalized) cooling speed: \(request.speed ?? 0)%.")
+                    print("Manual cooling: \(cooling.manualArmed == true ? "started" : "stopped") (\(cooling.mode)).")
+                } else { print("Manual cooling started.") }
+            case "cooling.stop":
+                print(request.all == true
+                    ? "Manual cooling stopped; automatic cooling disabled."
+                    : "Manual cooling stopped.")
+            case "cooling.mode":
+                print("Cooling mode: \(request.mode ?? "").")
+            case "cooling.auto":
+                let label = request.condition == "awake" ? "While Keep Awake Is On" : "While Rendering"
+                print("\(label): \(request.enabled == true ? "on" : "off").")
+            case "cooling.speed":
+                print("\((request.speedTarget ?? "").capitalized) cooling speed: \(request.speed ?? 0)%.")
             default: break
             }
             exit(0)
@@ -80,6 +95,7 @@ do {
             print("Cooling: \(cooling.active ? "active" : cooling.armed ? "waiting" : "stopped")")
             print("Manual cooling mode: \(cooling.mode)")
             if let enabled = cooling.automaticEnabled { print("Automatic cooling: \(enabled ? "on" : "off")") }
+            if let enabled = cooling.renderEnabled { print("While Rendering: \(enabled ? "on" : "off")") }
             if let armed = cooling.manualArmed { print("Manual cooling: \(armed ? "started" : "stopped")") }
             if cooling.timerEndsAt != nil { print("Cooling remaining: \(cooling.remainingSeconds)s") }
             print("Cooling available: \(cooling.available ? "yes" : "no") (helper: \(cooling.helperInstalled ? "installed" : "missing"), low-battery block: \(cooling.blockedByLowBattery ? "yes" : "no"))")

@@ -10,9 +10,9 @@
 
 ## 功能
 
-- **跟随代理保持唤醒** — 通过 Codex、Claude Code、OpenCode、Antigravity 各自的 Hook 事件进行检测，不轮询进程。
+- **跟随代理保持唤醒** — 通过 Codex、Claude Code、Antigravity、OpenCode 各自的 Hook 事件进行检测，不轮询进程。
 - **独立开关** — 可同时启用代理和下载条件，并结合指定时长或不限时的手动防止睡眠。
-- **散热** — 除了防止睡眠期间合盖时的自动散热外，还支持在任何显示环境下使用的手动散热（Apple Silicon）。合盖并连接外接显示器时，自动散热会将风扇控制交给 macOS。
+- **散热** — 除了防止睡眠期间合盖时的自动散热外，还支持在任何显示环境下使用的手动散热（Apple Silicon）。合盖并连接外接显示器时，自动散热会将风扇控制交给 macOS。也可以在 Blender、Adobe After Effects、Adobe Media Encoder 和 Houdini 渲染时自动散热。
 - **电池保护** — 在设定的电量（关闭／5～25%，默认 20%）自动停止防止睡眠和自动散热，并把风扇恢复为自动控制。低于该电量时不会自动启动，但仍可手动启动。
 - **屏幕控制** — 开启「保持屏幕常亮」后，会话期间屏幕保持开启，并同时防止屏幕保护程序和自动锁定。
 - **合盖低电量模式** — 会话期间合盖时可开启 macOS 低电量模式，结束后恢复原来的设置（可选）。
@@ -49,7 +49,7 @@ Awake 只在菜单栏运行（不会显示在 Dock 中）。
 - 设置
   - **一般** — 语言（跟随系统、英语或日语）、登录时启动、通知、菜单栏剩余时间、更新
   - **防止睡眠** — 保持屏幕常亮、合盖运行、合盖低电量模式、电池停止阈值
-  - **监视** — 链接／解除链接各代理提供方、查看活动会话、下载文件夹
+  - **监视** — 开启或关闭各代理（开启未链接的代理时会进行链接）、开启或关闭各渲染应用、下载文件夹
   - **散热** — 自动与手动散热各自的风扇速度、自动散热的「仅在接通电源时」选项
   - **权限** — 安装、更新或删除共享辅助工具
 
@@ -65,37 +65,40 @@ ln -s /Applications/Awake.app/Contents/Helpers/awake "$HOME/.local/bin/awake"
 请确保 `~/.local/bin` 位于 PATH 中。如果已存在同名命令，请选择其他位置，不要覆盖。同一位置的应用更新后，链接仍然有效。删除该符号链接即可卸载命令。
 
 ```sh
-awake start                 # 无限期启动
+awake start                 # 使用当前所选手动模式启动
 awake start --duration 30m  # 启动30分钟
-awake stop                  # 停止防止睡眠
+awake stop                  # 仅停止手动防止睡眠
+awake stop --all            # 停止手动防止睡眠并关闭全部自动条件
 awake status                # 显示状态、模式、剩余秒数及睡眠保护运行状态
 awake status --json         # JSON 状态（定时结束时间使用 ISO 8601）
 awake --help
 ```
 
-命令会在需要时于后台启动其所属应用，并控制菜单栏中的同一会话。`start` 选择无限期模式；`start --duration` 选择定时模式并保存时长。再次启动会重置手动定时器，保留自动条件。时长支持正整数加 `s`、`m` 或 `h`，最多7天。`stop` 停止手动防止睡眠并关闭两个自动条件；散热仍独立运行。CLI 启动遵循与手动启动相同的规则，包括低电量时的手动覆盖。硬件操作仍需现有授权。状态包含实际睡眠保护运行状态；即使会话处于活动状态，保护仍可能降级或失败。成功时退出码为0；输入无效、连接失败或操作被拒绝时为非0。需要应用本体及已登录的 macOS GUI 会话。
+命令会在需要时于后台启动其所属应用，并控制菜单栏中的同一会话。未指定 `--mode` 或 `--duration` 时，`start` 使用当前所选手动模式启动；`start --duration` 选择定时模式并保存时长。再次执行 `start` 会重置手动定时器，保留自动条件。时长支持正整数加 `s`、`m` 或 `h`，最多7天。`stop` 仅停止手动防止睡眠；`stop --all` 还会关闭两个自动条件。散热仍独立运行。CLI 启动遵循与手动启动相同的规则，包括低电量时的手动覆盖。硬件操作仍需现有授权。状态包含实际睡眠保护运行状态；即使会话处于活动状态，保护仍可能降级或失败。成功时退出码为0；输入无效、连接失败或操作被拒绝时为非0。需要应用本体及已登录的 macOS GUI 会话。
 
 操作命令仅显示一行结果。输入错误也保持简短；使用 `awake --help` 查看完整帮助。使用 `status` 查看详情，或使用 `status --json` 获取脚本用输出。
 
-也支持模式选择和散热控制：
+也支持模式选择、自动开关和散热控制：
 
 ```sh
-awake mode agent
-awake start --mode download
+awake auto agent on
+awake auto download off
 awake mode timer --duration 1h
-awake start --mode timer
+awake start --mode indefinitely
 awake cooling start --mode indefinitely
 awake cooling start --duration 10m
-awake cooling mode awake
+awake cooling auto awake on
+awake cooling auto render on
 awake cooling speed automatic 75
 awake cooling speed manual 50
 awake cooling stop
+awake cooling stop --all
 awake cooling status --json
 ```
 
-防止睡眠命令接受 `indefinitely`（无限期）、`timer`（定时）、`agent`（代理运行时）和 `download`（下载时）。散热支持 `indefinitely`、`timer` 和 `awake`（`agent` 仍可作为旧名称使用）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。`status --json` 中的 `mode` 表示所选手动模式（`indefinitely` 或 `timer`），`cooling.mode` 表示所选手动散热模式。选择 `timer` 或 `indefinitely` 仅停止此前的手动会话并等待启动。`awake start --mode timer` 使用保存的时长。选择或启动 `agent`、`download` 会开启对应的独立自动条件，保留另一条件和手动会话；无活动时等待。选择自动散热会在可用时进入已启动状态。`awake cooling start` 使用所选手动散热模式。`cooling mode awake` 和 `cooling start --mode awake` 保留手动会话并启用自动散热；`cooling stop` 同时停止两者。指定时长意味着 `timer`，与其他模式同时使用会被拒绝。
+手动防止睡眠和手动散热模式接受 `indefinitely`（无限期）和 `timer`（定时）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。`status --json` 中的 `mode` 表示所选手动模式（`indefinitely` 或 `timer`），`cooling.mode` 表示所选手动散热模式。选择 `timer` 或 `indefinitely` 仅停止此前的手动会话并等待启动。选择 `timer` 时，`awake start --mode timer` 和 `awake cooling start` 会使用保存的时长。`awake auto <agent|download> <on|off>` 与 `awake cooling auto <awake|render> <on|off>` 可在不影响手动会话及另一条件的情况下独立切换各自动条件。`cooling stop` 仅停止手动散热；`cooling stop --all` 还会关闭两个自动散热开关。指定时长意味着 `timer`，与 `indefinitely` 同时使用会被拒绝。
 
-散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示自动或手动散热已启用，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示自动条件已开启且防止睡眠正在等待活动。`manualActive`、`agentMonitoringEnabled` 和 `downloadMonitoringEnabled` 分别报告独立控制状态。`automaticEnabled`／`automaticActive` 和 `manualArmed`／`manualActive` 分别报告自动与手动散热状态。散热与防止睡眠保持独立。
+散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热、启用自动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示自动或手动散热已启用，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示自动条件已开启且防止睡眠正在等待活动。`manualActive`、`agentMonitoringEnabled`、`downloadMonitoringEnabled`、`agentActive` 和 `downloadActive` 分别报告独立控制与运行状态。`automaticEnabled`／`automaticActive`、`renderEnabled`／`renderActive` 与 `manualArmed`／`manualActive` 分别报告自动、渲染与手动散热状态。散热与防止睡眠保持独立。
 
 ## 代理集成
 
@@ -105,12 +108,12 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 | --- | --- |
 | Codex | `~/.codex/hooks.json` |
 | Claude Code | `~/.claude/settings.json` |
-| OpenCode | `~/.config/opencode/opencode.json`（或 `opencode.jsonc`），以及 `~/Library/Application Support/Awake/integrations/opencode` 中的插件 |
 | Antigravity | `~/.gemini/config/hooks.json` |
+| OpenCode | `~/.config/opencode/opencode.json`（或 `opencode.jsonc`），以及 `~/Library/Application Support/Awake/integrations/opencode` 中的插件 |
 
 - 只添加或删除 Awake 自己的条目（带有 `--owner pmgwork.awake`）。
 - 首次修改前，会在原文件旁生成 `<文件名>.awake-backup` 备份。
-- 在「设置 → 代理」中**解除链接**，只会删除 Awake 的条目。
+- 要解除链接，请在「设置 → 监视」中点按该代理右侧圆圈内的 **…**，然后选择**解除链接**，只会删除 Awake 的条目。同一菜单中还有**测试**和**重新安装**。
 - 监视使用文件系统变更通知和会话缓存，降低空闲时的 CPU 占用。暂停或关闭监视后会停止监听。
 - 会话事件以 JSON 形式保存在 `~/Library/Application Support/Awake/agent-sessions/v1`（权限 0700）。会话结束后保留每个会话的最新事件，以阻止延迟的旧事件使会话重新变为活动状态，并在新一轮开始时覆盖。
 
@@ -123,6 +126,7 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 | 不限时 | 风扇持续运转，直到手动停止散热 |
 | 指定时长 | 5／10／15／30 分钟后将风扇交还给 macOS |
 | 防止睡眠期间 | 跟随所有防止睡眠模式，仅在合盖时运行。防止睡眠定时30分钟，散热也运行30分钟。通过开关启用或关闭，与手动散热独立（默认开启） |
+| 渲染时 | 支持的应用渲染时散热，无论是否合盖（见下文）。运行时菜单会显示正在渲染的应用。可在「设置 → 监视」中分别开启或关闭各应用。使用自动散热的风扇速度，达到电池停止阈值时停止（默认关闭） |
 
 - 在「设置 → 权限」中查看权限状态，并安装或更新。合盖运行与风扇控制共用同一个管理员权限辅助工具。
 - 首次启用时会请求一次管理员密码，安装辅助工具 `/Library/PrivilegedHelperTools/pmgwork.awake.smc`（`root:admin`，setuid root）。
@@ -136,6 +140,12 @@ Awake 会把内置的 `AwakeHookBridge` 命令（安装在 `~/Library/Applicatio
 
 - 代理检测只使用 `~/Library/Application Support/Awake` 下的本地 Hook 事件，不轮询进程，也不扫描你的项目或文档文件。
 - 下载检测只查看所选文件夹中的文件名（`.download`、`.crdownload`、`.part` 等，跳过隐藏文件）和修改时间。子文件夹中的此类文件仅在最近 10 分钟内有更新时才计入，因此解压后残留的文件不会阻止 Mac 睡眠。
+- 渲染检测仅在「渲染时」开启时运行，每 3 秒检查一次正在运行的进程，不会向外发送任何内容。
+  - 渲染专用进程运行时立即开始散热，退出约 10 秒后停止：`aerender`（Adobe After Effects）、`husk` 和 `mantra`（Houdini，包括从窗口启动的渲染），以及带 `-b` 和 `-f`／`-a` 启动的 Blender。
+  - Blender 不会向外部报告从窗口启动的渲染。在「设置 → 监视」中首次开启 Blender 时，Awake 会先请求确认，再将 `awake_render_monitor.py` 添加到 `~/Library/Application Support/Blender` 下各个现有版本的 `scripts/startup` 中。链接后请重启 Blender。渲染期间，该脚本会在 `~/Library/Application Support/Awake/render-sessions` 中创建以 Blender 进程 ID 命名的文件。关闭监视会保留链接。点按 Blender 右侧圆圈内的 **…** 可重新安装或解除链接，之后请重启 Blender。解除链接只会删除 Awake 创建的脚本。安装并启动新版 Blender 后，可通过**重新安装**为该版本添加脚本。
+  - 对于从 Adobe After Effects 窗口启动的渲染，在「设置 → 监视」中点击右侧圆圈 **…**，选择 **Link**。允许 macOS 自动化访问，并在 Adobe After Effects 中启用 **Allow Scripts to Write Files and Access Network**。Awake 为每个运行中的 AE 实例加载仅在当前会话中使用的脚本，根据渲染队列项目状态控制散热，不保存项目。暂停、停止、错误或完成后，散热会在约 10 秒后停止。关闭监视或选择 **Unlink** 会删除会话文件；回调会等到 AE 不再渲染或暂停后恢复。修改权限后可选择 **Reconnect**。Awake 重启后会保留关联设置。如果连接时渲染已经开始，可能要等 AE 恢复响应后才能检测。`aerender` 无需关联也可检测。
+  - 除 Media Encoder 外，只检测渲染专用进程和 Blender／Adobe After Effects 的渲染通知，不包括预览和编辑过程，也不根据 CPU 负载推测状态。Awake 读取可执行文件名、Blender 的启动参数及已关联应用的渲染通知。
+  - Adobe Media Encoder 根据自身进程及子进程的持续 CPU 或 GPU 负载判断。CPU 达到一个核心的负载或 GPU 时间达到20%并持续约10秒后开始散热；CPU 低于半个核心且 GPU 时间低于10%并持续约30秒后停止。此方式根据负载推测，因此导入或分析也可能触发。无法取得 GPU 数据时仅使用 CPU，不使用整台 Mac 的 GPU 负载。不需要链接脚本或管理员授权。
 - 没有分析、遥测或账号。网络请求仅限于读取 `raw.githubusercontent.com` 上的更新源，以及在你同意更新后从 GitHub Releases 下载更新。不会发送匿名系统分析数据。
 
 ## 从源码构建

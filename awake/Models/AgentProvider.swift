@@ -6,12 +6,15 @@
 import Foundation
 
 public nonisolated enum AgentProvider: String, Codable, CaseIterable, Identifiable, Sendable {
+    // Declaration order is the display order.
     case codex
     case claude
-    case openCode = "opencode"
     case antigravity
+    case openCode = "opencode"
 
     public var id: String { rawValue }
+
+    public var sortIndex: Int { Self.allCases.firstIndex(of: self) ?? Self.allCases.count }
 
     public var displayName: String {
         switch self {
