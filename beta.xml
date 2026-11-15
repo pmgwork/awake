@@ -1,6 +1,35 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.1</title>
+            <pubDate>Sun, 15 Nov 2026 17:16:31 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.1b3</sparkle:version>
+            <sparkle:shortVersionString>0.6.1-beta.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 2
+
+- Fixed child process discovery for **Adobe Media Encoder** load monitoring so `proc_listchildpids` counts are no longer divided by PID byte size, preventing child processes from being dropped when 1–3 child processes exist.
+- Fixed menu bar remaining-time text contrast when automatic Keep Awake monitoring uses the orange non-template cup icon, resolving `labelColor` against the status button's current appearance and updating when the menu bar appearance changes.
+- Fixed the **Adobe After Effects** toggle in **Settings → Monitor** so it stays off until linked, opens the link confirmation when toggled on, and clears the enabled state on **Unlink**.
+- Stopped the AC-only `caffeinate` fallback process when switching to battery power while the lid is closed.
+- Allowed turning off an enabled automatic cooling switch (such as **While Rendering**) from the menu bar popover during low-battery cutoff while continuing to block turning switches on.
+- Incremented `RenderMonitor` generation when changing monitored render apps so in-flight background samples cannot overwrite newly updated settings.
+- Updated the welcome guide's right-click and cooling descriptions, refreshed `Picker` popup items in **Settings → General** (**Language**) and **Settings → Keep Awake** (**Stop at Battery Level**) immediately when switching languages, and synced documentation across the English, Japanese, and Chinese READMEs.
+
+This release also builds on [Beta 2](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.2) and [Beta 1](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.1).
+
+## Installation
+
+Download `Awake-0.6.1-beta.3.zip` or `Awake-0.6.1-beta.3.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.1-beta.2...v0.6.1-beta.3)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.1-beta.3/Awake-0.6.1-beta.3.zip" length="4867430" type="application/octet-stream" sparkle:edSignature="NouoWZlSgJwtMoCrSFtVs3oW8Tn7wjKssPP6371lJy6vBBik3n+cBXgwmbBnSwgeZkTmyZh7omcuQ52OIyI8DQ==" />
+        </item>
+    <item>
+            <title>0.6.1</title>
             <pubDate>Fri, 13 Nov 2026 05:33:24 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.1b2</sparkle:version>
