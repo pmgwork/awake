@@ -33,7 +33,6 @@
 "Helper installation was cancelled or failed." = "ヘルパーのインストールがキャンセルされたか、失敗しました。";
 
 "Keep Awake Stopped" = "スリープ防止を終了しました";
-"Click to open the menu. Right-click to start or stop Keep Awake." = "クリックでメニューを開きます。右クリックでスリープ防止を開始・停止します。";
 "On" = "オン";
 "Off" = "オフ";
 "Inactive" = "無効";
@@ -55,17 +54,7 @@
 "Couldn't prevent the automatic screen lock." = "画面の自動ロックを防げませんでした。";
 "Couldn't return the fans to automatic control. If they stay fast, restart your Mac." = "ファンを自動制御に戻せませんでした。回転が速いままなら、Macを再起動してください。";
 "Fan control failed because the SMC rejected the command. Check the diagnostic log." = "SMCがコマンドを拒否したため、ファンを制御できませんでした。詳しくは診断ログを確認してください。";
-"Pause Agent Monitoring" = "エージェント監視を一時停止";
-"Resume Agent Monitoring" = "エージェント監視を再開";
-"Monitoring" = "監視中";
-"Monitoring Paused" = "監視を一時停止中";
-"Click to open the menu. Right-click to pause agent monitoring." = "クリックでメニューを開きます。右クリックでエージェント監視を一時停止します。";
-"Click to open the menu. Right-click to resume agent monitoring." = "クリックでメニューを開きます。右クリックでエージェント監視を再開します。";
 "All downloads finished." = "すべてのダウンロードが完了しました。";
-"Pause Download Monitoring" = "ダウンロード監視を一時停止";
-"Resume Download Monitoring" = "ダウンロード監視を再開";
-"Click to open the menu. Right-click to pause download monitoring." = "クリックでメニューを開きます。右クリックでダウンロード監視を一時停止します。";
-"Click to open the menu. Right-click to resume download monitoring." = "クリックでメニューを開きます。右クリックでダウンロード監視を再開します。";
 "Downloads" = "ダウンロード";
 "%d downloading" = "%d件ダウンロード中";
 "No downloads in progress." = "ダウンロード中のファイルはありません。";
@@ -190,11 +179,12 @@
 "Get Started" = "はじめる";
 "Step %d of %d" = "ステップ %1$d / %2$d";
 "Stay awake until the downloads in a folder finish." = "フォルダのダウンロードが終わるまでスリープを防ぎます。";
-"Run the fans faster while Keep Awake is on with the lid closed, or start cooling yourself." = "蓋を閉じたスリープ防止中にファンを強めに回したり、手動で冷却を始めたりできます。";
+"Run the fans faster while Keep Awake is on with the lid closed, while rendering, or start cooling yourself." = "蓋を閉じたスリープ防止中やレンダリング中にファンを強めに回したり、手動で冷却を始めたりできます。";
 "Left-Click the Cup" = "カップを左クリック";
 "Choose a mode and start Keep Awake or Cooling." = "モードを選んで、スリープ防止や冷却を開始します。";
 "Right-Click the Cup" = "カップを右クリック";
-"Start or stop Keep Awake, or pause monitoring, with one click." = "スリープ防止の開始・停止や、監視の一時停止をワンクリックで行えます。";
+"Start or stop manual Keep Awake with one click." = "手動のスリープ防止をワンクリックで開始・停止します。";
+"OK" = "OK";
 "Settings" = "設定";
 "Open Settings from the menu at any time. You can reopen this guide from General." = "設定はいつでもメニューから開けます。このガイドは「一般」からもう一度開けます。";
 "Open Permissions" = "「権限」を開く";

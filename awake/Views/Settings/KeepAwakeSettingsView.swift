@@ -80,6 +80,7 @@ struct KeepAwakeSettingsView: View {
                         Text("\(threshold)%").tag(threshold)
                     }
                 }
+                .id(settings.language)
             } header: {
                 Text(L10n.string("Battery"))
             } footer: {

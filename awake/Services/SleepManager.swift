@@ -115,7 +115,7 @@ public final class SleepManager: ObservableObject {
             }
             if closedLid && !appliesToBattery && caffeinateProcess == nil {
                 startCaffeinateProcess()
-            } else if !closedLid {
+            } else if !closedLid || appliesToBattery {
                 stopCaffeinateProcess()
             }
 

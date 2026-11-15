@@ -261,7 +261,10 @@ struct MonitoringSettingsView: View {
                                 && settings.renderCoolingEnabled)
                         }
                         Divider()
-                        Button(L10n.string("Unlink"), role: .destructive) { afterEffects.unlink() }
+                        Button(L10n.string("Unlink"), role: .destructive) {
+                            afterEffects.unlink()
+                            settings.enabledRenderApps.remove(.afterEffects)
+                        }
                     } else {
                         Button(L10n.string("Link")) { pendingAEAction = true }
                     }
@@ -269,7 +272,11 @@ struct MonitoringSettingsView: View {
             }
 
             Toggle(L10n.format("Monitor %@", app.displayName), isOn: Binding(
-                get: { settings.enabledRenderApps.contains(app) && (app != .blender || blenderStatus == .linked) },
+                get: {
+                    settings.enabledRenderApps.contains(app)
+                        && (app != .blender || blenderStatus == .linked)
+                        && (app != .afterEffects || afterEffects.isLinked)
+                },
                 set: { enabled in
                     if app == .afterEffects && enabled && !afterEffects.isLinked {
                         pendingAEAction = true

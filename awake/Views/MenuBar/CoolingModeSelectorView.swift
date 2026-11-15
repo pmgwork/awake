@@ -59,7 +59,7 @@ struct CoolingModeSelectorView: View {
                 .controlSize(.mini)
                 .tint(.blue)
                 .fixedSize()
-                .disabled(coordinator.isCoolingBlockedByLowBattery)
+                .disabled(!enabled && coordinator.isCoolingBlockedByLowBattery)
         }
         .frame(minHeight: 20)
         .help(help.map { L10n.string($0) } ?? "")

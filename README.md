@@ -49,7 +49,7 @@ Awake runs only in the menu bar (no Dock icon).
 - Settings:
   - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
   - **Keep Awake** — Keep Screen On, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
-  - **Monitor** — turn each agent on or off (turning on an unlinked agent links it), turn each rendering app on or off, and choose the download folder.
+  - **Monitor** — turn each agent or rendering app on or off (turning on an unlinked agent, Blender, or After Effects links it), and choose the download folder.
   - **Cooling** — separate automatic and manual fan speeds, and the "Only When Plugged In" option for automatic cooling.
   - **Permissions** — install, update, or remove the shared helper.
 
@@ -119,7 +119,7 @@ Awake links a provider by adding the bundled `AwakeHookBridge` command (installe
 
 ## Cooling
 
-Automatic cooling follows Keep Awake; manual cooling runs independently. Both can be enabled together: choosing a manual duration leaves the automatic switch unchanged. Manual cooling uses the manual fan speed while it runs; automatic cooling continues afterward if its conditions apply. Use the **While Keep Awake Is On** switch for automatic cooling. For manual cooling, choose a preset (∞ / 5m / 10m / 15m / 30m), then press **Start Cooling**. Settings → Cooling has separate fan speeds for **Automatic Cooling** (While Keep Awake Is On) and **Manual Cooling** (Indefinitely and For Duration), both defaulting to 100% on new installations. Existing fan-speed settings are carried over to both. While cooling is stopped or paused, macOS controls the fans.
+Automatic cooling follows Keep Awake; manual cooling runs independently. Both can be enabled together: choosing a manual duration leaves the automatic switch unchanged. Manual cooling uses the manual fan speed while it runs; automatic cooling continues afterward if its conditions apply. Use the **While Keep Awake Is On** switch for automatic cooling. For manual cooling, choose a preset (∞ / 5m / 10m / 15m / 30m), then press **Start Cooling**. Settings → Cooling has separate fan speeds for **Automatic Cooling** (While Keep Awake Is On and While Rendering) and **Manual Cooling** (Indefinitely and For Duration), both defaulting to 100% on new installations. Existing fan-speed settings are carried over to both. While cooling is stopped or paused, macOS controls the fans.
 
 | Mode | Behavior |
 |---|---|
@@ -143,7 +143,7 @@ Automatic cooling follows Keep Awake; manual cooling runs independently. Both ca
 - Render detection runs only while **While Rendering** is on and checks running processes every 3 seconds. Nothing is sent anywhere.
   - Render processes start cooling at once and stop it about 10 seconds after they exit: `aerender` (Adobe After Effects), `husk` and `mantra` (Houdini, including renders started from its window), and Blender started with `-b` and `-f` or `-a`.
   - Blender gives no outside signal for renders started from its window. In Settings → Monitor, turning Blender on for the first time asks before adding `awake_render_monitor.py` to `scripts/startup` of each existing version under `~/Library/Application Support/Blender`. Restart Blender after linking. The script creates a file named after Blender’s process ID in `~/Library/Application Support/Awake/render-sessions` while a render runs. Turning monitoring off keeps the integration. Use the circled **…** next to Blender to reinstall or unlink it, then restart Blender. Unlinking removes only scripts created by Awake. After installing and opening a new Blender version, use **Reinstall** to add the script to that version.
-  - For Adobe After Effects renders started from the app, choose **Link** from the circled **…** in Settings → Monitor. Allow macOS Automation access and enable **Allow Scripts to Write Files and Access Network** in Adobe After Effects. Awake attaches a session-only script to each running AE instance and observes render queue item states without saving the project. Pausing, stopping, errors, and completion stop cooling after the same 10-second grace period. Turning monitoring off or choosing **Unlink** removes session files; callback cleanup waits until AE is no longer rendering or paused. Use **Reconnect** after changing permissions. Linking persists across Awake restarts. A render already in progress when Awake connects may be missed until AE becomes available. `aerender` detection also works without linking.
+  - For Adobe After Effects renders started from the app, turn Adobe After Effects on or choose **Link** from the circled **…** in Settings → Monitor. Allow macOS Automation access and enable **Allow Scripts to Write Files and Access Network** in Adobe After Effects. Awake attaches a session-only script to each running AE instance and observes render queue item states without saving the project. Pausing, stopping, errors, and completion stop cooling after the same 10-second grace period. Turning monitoring off or choosing **Unlink** removes session files; callback cleanup waits until AE is no longer rendering or paused. Use **Reconnect** after changing permissions. Linking persists across Awake restarts. A render already in progress when Awake connects may be missed until AE becomes available. `aerender` detection also works without linking.
   - Except for Media Encoder, only explicit render processes and Blender/Adobe After Effects render notifications trigger cooling. For these apps, preview rendering and editing activity are excluded; CPU load is not used. Awake reads executable names, Blender’s command-line arguments, and linked apps’ render notifications.
   - Adobe Media Encoder uses sustained CPU or GPU load from its own process and child processes. Cooling starts after about 10 seconds at one CPU core or 20% GPU time, and stops after about 30 seconds below half a CPU core and 10% GPU time. This is a load heuristic, so imports or analysis can also trigger it. GPU counters are driver-dependent; when unavailable, only CPU load is used. Device-wide GPU load is never used. No integration script or administrator authorization is required.
 - No analytics, no telemetry, no account. Awake reads update feeds hosted on `raw.githubusercontent.com` and downloads updates from GitHub Releases after you agree to install them. Anonymous system profiling is disabled.
@@ -186,7 +186,7 @@ Release (distribution) steps are documented in `docs/DISTRIBUTION.md`.
 | In-app updates fail | Replace the app with the latest release from GitHub |
 | Fan control is unavailable | Settings → Permissions → **Install** / **Update** |
 | Cooling or closed-lid operation stopped after an update | The update replaced the hardware helper. Settings → Permissions → **Update…** (the menu also links there) |
-| Agents are not detected | Settings → Agents → **Link** for that provider, then **Test** |
+| Agents are not detected | Settings → Monitor → **Link** for that provider, then **Test** |
 
 ## License
 

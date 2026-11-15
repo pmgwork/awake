@@ -50,12 +50,14 @@ public final class RenderMonitor: ObservableObject {
         let apps = BlenderRenderIntegration.status() == .linked ? apps : apps.subtracting([.blender])
         guard enabledApps != apps else { return }
         enabledApps = apps
+        generation += 1
         AfterEffectsRenderIntegration.shared.setEnabled(timer != nil && apps.contains(.afterEffects))
         previousAMELoad = nil
         ameDetector = AMELoadDetector()
         detectors = detectors.filter { apps.contains($0.key) }
         let rendering = renderingApps.intersection(apps)
         if renderingApps != rendering { renderingApps = rendering }
+        if timer != nil && !apps.isEmpty { sample() }
     }
 
     public func stopMonitoring() {

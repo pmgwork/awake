@@ -28,12 +28,13 @@ struct awakeApp: App {
 }
 
 @MainActor
-private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
+final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private let coordinator = AwakeCoordinator.shared
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private var cancellables = Set<AnyCancellable>()
     private var popoverContentSizeObservation: NSKeyValueObservation?
+    private var statusButtonAppearanceObservation: NSKeyValueObservation?
     private var popoverAnchorWindow: NSWindow?
     private var iconOnlyButtonWidth: CGFloat?
     private var isShowingTimerInStatusItem = false
@@ -156,6 +157,14 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
                 self?.statusItem.button?.highlight(false)
             }
             .store(in: &cancellables)
+
+        if let button = statusItem.button {
+            statusButtonAppearanceObservation = button.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+                DispatchQueue.main.async {
+                    self?.updateStatusItem()
+                }
+            }
+        }
     }
 
     @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
@@ -240,8 +249,9 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         isShowingTimerInStatusItem = shouldShowTimer
 
         let icon = statusIcon()
+        let appearance = button.effectiveAppearance
         button.image = shouldShowTimer
-            ? icon.map { timerStatusImage(icon: $0, text: coordinator.formattedRemainingTime) }
+            ? icon.map { Self.timerStatusImage(icon: $0, text: coordinator.formattedRemainingTime, appearance: appearance) }
             : icon
         button.title = ""
         button.imagePosition = .imageOnly
@@ -251,13 +261,25 @@ private final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
             : accessibilityStatus)
     }
 
-    /// Draws the remaining time and the icon into one template image. Keeping
-    /// the button image-only gives the icon the same trailing padding as when
-    /// no time is shown, so it does not shift when the time appears.
-    private func timerStatusImage(icon: NSImage, text: String) -> NSImage {
+    /// Draws the remaining time and the icon into one image. Keeping the button
+    /// image-only gives the icon the same trailing padding as when no time is
+    /// shown, so it does not shift when the time appears. Non-template icons
+    /// (automatic monitoring) resolve `labelColor` against `appearance` because
+    /// AppKit does not recolor non-template status bar images.
+    static func timerStatusImage(icon: NSImage, text: String, appearance: NSAppearance) -> NSImage {
+        let textColor: NSColor
+        if icon.isTemplate {
+            textColor = .black
+        } else {
+            var resolvedColor: NSColor = .labelColor
+            appearance.performAsCurrentDrawingAppearance {
+                resolvedColor = NSColor.labelColor.usingColorSpace(.sRGB) ?? .labelColor
+            }
+            textColor = resolvedColor
+        }
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
-            .foregroundColor: NSColor.black
+            .foregroundColor: textColor
         ]
         let textSize = (text as NSString).size(withAttributes: attributes)
         let spacing: CGFloat = 4

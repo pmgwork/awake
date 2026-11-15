@@ -107,14 +107,16 @@ nonisolated enum AMELoadSampler {
         return Double(info.numer) / Double(info.denom) / 1_000_000_000
     }()
 
-    private static func children(of pid: pid_t) -> [pid_t] {
-        let size = proc_listchildpids(pid, nil, 0)
-        guard size > 0 else { return [] }
-        var children = [pid_t](repeating: 0, count: Int(size) / MemoryLayout<pid_t>.size + 16)
+    static func children(of pid: pid_t) -> [pid_t] {
+        // proc_listchildpids returns a process count (both when buffer is nil
+        // and when populated), not a byte size.
+        let count = proc_listchildpids(pid, nil, 0)
+        guard count > 0 else { return [] }
+        var children = [pid_t](repeating: 0, count: Int(count) + 32)
         let capacity = Int32(children.count * MemoryLayout<pid_t>.size)
-        let written = proc_listchildpids(pid, &children, capacity)
-        guard written > 0 else { return [] }
-        return Array(children.prefix(Int(written) / MemoryLayout<pid_t>.size)).filter { $0 > 0 }
+        let filled = proc_listchildpids(pid, &children, capacity)
+        guard filled > 0 else { return [] }
+        return Array(children.prefix(Int(filled))).filter { $0 > 0 }
     }
 
     /// Driver-specific counters are optional. Never substitute device-wide

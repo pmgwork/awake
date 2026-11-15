@@ -148,4 +148,32 @@ final class RenderMonitorTests: XCTestCase {
             XCTAssertFalse(blocked.active)
         }
     }
+
+    func testChildPIDListingReturnsActiveChildren() throws {
+        var processes: [Process] = []
+        defer {
+            for process in processes where process.isRunning {
+                process.terminate()
+                process.waitUntilExit()
+            }
+        }
+
+        let first = Process()
+        first.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        first.arguments = ["10"]
+        try first.run()
+        processes.append(first)
+
+        XCTAssertTrue(AMELoadSampler.children(of: getpid()).contains(first.processIdentifier))
+
+        let second = Process()
+        second.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        second.arguments = ["10"]
+        try second.run()
+        processes.append(second)
+
+        let children = Set(AMELoadSampler.children(of: getpid()))
+        XCTAssertTrue(children.contains(first.processIdentifier))
+        XCTAssertTrue(children.contains(second.processIdentifier))
+    }
 }

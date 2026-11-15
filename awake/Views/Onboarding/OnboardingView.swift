@@ -177,7 +177,7 @@ struct OnboardingView: View {
                 feature(symbol: "arrow.down.circle", title: "While Downloading",
                         description: "Stay awake until the downloads in a folder finish.")
                 feature(symbol: "fanblades", title: "Cooling",
-                        description: "Run the fans faster while Keep Awake is on with the lid closed, or start cooling yourself.")
+                        description: "Run the fans faster while Keep Awake is on with the lid closed, while rendering, or start cooling yourself.")
             }
             .frame(maxWidth: 420, alignment: .leading)
         }
@@ -303,7 +303,7 @@ struct OnboardingView: View {
                 feature(symbol: "cursorarrow.click", title: "Left-Click the Cup",
                         description: "Choose a mode and start Keep Awake or Cooling.")
                 feature(symbol: "cursorarrow.click.2", title: "Right-Click the Cup",
-                        description: "Start or stop Keep Awake, or pause monitoring, with one click.")
+                        description: "Start or stop manual Keep Awake with one click.")
                 feature(symbol: "gearshape", title: "Settings",
                         description: "Open Settings from the menu at any time. You can reopen this guide from General.")
             }

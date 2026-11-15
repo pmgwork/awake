@@ -25,6 +25,7 @@ struct GeneralSettingsView: View {
                         Text(language.displayName).tag(language)
                     }
                 }
+                .id(settings.language)
             } header: {
                 Text(L10n.string("General Preferences"))
             }
