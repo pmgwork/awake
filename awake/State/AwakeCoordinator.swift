@@ -15,6 +15,7 @@ public final class AwakeCoordinator: ObservableObject {
     @Published public private(set) var isManualKeepAwakeActive = false
     @Published public private(set) var isAgentKeepAwakeActive = false
     @Published public private(set) var isDownloadKeepAwakeActive = false
+    @Published public private(set) var isRenderKeepAwakeActive = false
     @Published public private(set) var isRemovingHardwareAuthorization = false
     @Published public private(set) var remainingTimerSeconds: Int = 0
     @Published public private(set) var timerEndDate: Date?
@@ -111,10 +112,12 @@ public final class AwakeCoordinator: ObservableObject {
     public func stopKeepAwake() {
         settings.agentMonitoringEnabled = false
         settings.downloadMonitoringEnabled = false
+        settings.renderKeepAwakeEnabled = false
         agentCompletionGrace = AgentCompletionGrace()
         agentCompletionGraceEndDate = nil
         isAgentKeepAwakeActive = false
         isDownloadKeepAwakeActive = false
+        isRenderKeepAwakeActive = false
         isActive = false
         stopManualKeepAwake()
     }
@@ -266,6 +269,12 @@ public final class AwakeCoordinator: ObservableObject {
         evaluateState()
     }
 
+    public func setRenderKeepAwakeEnabled(_ enabled: Bool) {
+        guard settings.renderKeepAwakeEnabled != enabled else { return }
+        settings.renderKeepAwakeEnabled = enabled
+        evaluateState()
+    }
+
     public func selectMode(_ mode: KeepAwakeModeType) {
         // Retain the legacy CLI names as independent automation commands.
         if mode == .whileAgentRunning {
@@ -294,14 +303,6 @@ public final class AwakeCoordinator: ObservableObject {
         }
     }
 
-    public var formattedRemainingTime: String {
-        let totalSecs = remainingTimerSeconds
-        let hours = totalSecs / 3600
-        let minutes = (totalSecs % 3600) / 60
-        let seconds = totalSecs % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-    }
-
     // MARK: - Sleep Prevention Policy
     public func evaluateState() {
         defer {
@@ -318,6 +319,7 @@ public final class AwakeCoordinator: ObservableObject {
         }
         let wasActive = isActive
         let wasDownloading = isDownloadKeepAwakeActive
+        let wasRendering = isRenderKeepAwakeActive
         var completionReason: String?
         if isLowBatteryCutoffEnforced {
             if isManualKeepAwakeActive { isManualKeepAwakeActive = false }
@@ -357,14 +359,20 @@ public final class AwakeCoordinator: ObservableObject {
             graceActive: agentCompletionGraceEndDate.map { $0 > Date() } ?? false,
             downloadEnabled: settings.downloadMonitoringEnabled,
             downloading: downloadMonitor.isDownloading,
+            renderEnabled: settings.renderKeepAwakeEnabled,
+            rendering: renderMonitor.isRendering,
             batteryBlocked: isLowBatteryCutoffEnforced
         )
         if isAgentKeepAwakeActive != policy.agent { isAgentKeepAwakeActive = policy.agent }
         if isDownloadKeepAwakeActive != policy.download { isDownloadKeepAwakeActive = policy.download }
+        if isRenderKeepAwakeActive != policy.render { isRenderKeepAwakeActive = policy.render }
         if isActive != policy.active { isActive = policy.active }
         if !isActive { lowBatteryManualOverride = false }
         if wasDownloading && !downloadMonitor.isDownloading && completionReason == nil {
             completionReason = L10n.string("All downloads finished.")
+        }
+        if wasRendering && !renderMonitor.isRendering && completionReason == nil {
+            completionReason = L10n.string("Rendering finished.")
         }
         if wasActive && !isActive, let completionReason {
             sendNotification(title: L10n.string("Keep Awake Stopped"), body: completionReason,
@@ -530,7 +538,8 @@ public final class AwakeCoordinator: ObservableObject {
             .sink { [weak self] apps in self?.renderMonitor.updateEnabledApps(apps) }
             .store(in: &cancellables)
 
-        settings.$renderCoolingEnabled
+        Publishers.CombineLatest(settings.$renderKeepAwakeEnabled, settings.$renderCoolingEnabled)
+            .map { $0 || $1 }
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled in

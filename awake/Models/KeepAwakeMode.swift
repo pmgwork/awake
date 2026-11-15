@@ -51,12 +51,16 @@ public struct TimerPreset: Identifiable, Hashable {
 struct KeepAwakeActivity {
     let agent: Bool
     let download: Bool
+    let render: Bool
     let active: Bool
 
     init(manual: Bool, agentEnabled: Bool, agentRunning: Bool, graceActive: Bool,
-         downloadEnabled: Bool, downloading: Bool, batteryBlocked: Bool) {
+         downloadEnabled: Bool, downloading: Bool,
+         renderEnabled: Bool = false, rendering: Bool = false,
+         batteryBlocked: Bool) {
         agent = !batteryBlocked && agentEnabled && (agentRunning || graceActive)
         download = !batteryBlocked && downloadEnabled && downloading
-        active = !batteryBlocked && (manual || agent || download)
+        render = !batteryBlocked && renderEnabled && rendering
+        active = !batteryBlocked && (manual || agent || download || render)
     }
 }

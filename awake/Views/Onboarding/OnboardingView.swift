@@ -275,7 +275,6 @@ struct OnboardingView: View {
                 )
                 .foregroundStyle(.red)
             }
-            Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
         }
 
         Section {

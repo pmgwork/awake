@@ -18,12 +18,10 @@
 "Aggressive" = "強";
 "Moderate" = "中";
 "Auto" = "自動";
-"Idle" = "待機中";
 
 "General Preferences" = "一般設定";
 "Launch Awake at Login" = "ログイン時にAwakeを起動";
 "Enable Notifications" = "通知を有効にする";
-"Show Remaining Time in Menu Bar" = "メニューバーに残り時間を表示";
 
 "Cancel" = "キャンセル";
 
@@ -43,9 +41,7 @@
 "Couldn't prevent sleep with the lid closed." = "蓋を閉じたときのスリープを防止できませんでした。";
 "The caffeinate fallback isn't running." = "代替手段（caffeinate）が動作していません。";
 "The helper for closed-lid operation on battery isn't running." = "バッテリー駆動中に蓋を閉じて使うためのヘルパーが動作していません。";
-"Your Mac can sleep normally again." = "Macは通常どおりスリープできるようになりました。";
 "Battery is at %d%%, so Keep Awake stopped." = "バッテリー残量が%d%%になったため、スリープ防止を停止しました。";
-"All monitored agents have finished." = "監視中のエージェントがすべて終了しました。";
 "The set time has ended." = "指定した時間が終了しました。";
 "Notifications are turned off in System Settings." = "通知はシステム設定でオフになっています。";
 "These settings apply only while Keep Awake is on." = "これらの設定は、スリープ防止がオンの間だけ適用されます。";
@@ -55,6 +51,7 @@
 "Couldn't return the fans to automatic control. If they stay fast, restart your Mac." = "ファンを自動制御に戻せませんでした。回転が速いままなら、Macを再起動してください。";
 "Fan control failed because the SMC rejected the command. Check the diagnostic log." = "SMCがコマンドを拒否したため、ファンを制御できませんでした。詳しくは診断ログを確認してください。";
 "All downloads finished." = "すべてのダウンロードが完了しました。";
+"Rendering finished." = "レンダリングが完了しました。";
 "Downloads" = "ダウンロード";
 "%d downloading" = "%d件ダウンロード中";
 "No downloads in progress." = "ダウンロード中のファイルはありません。";
@@ -119,6 +116,7 @@
 "While Keep Awake Is On" = "スリープ防止と連動";
 "While Keeping Awake" = "スリープ防止中の動作";
 "While Rendering" = "レンダリング中";
+"Keeps your Mac awake during rendering or sustained Media Encoder load." = "レンダリング中やMedia Encoderの高負荷が続いている間にスリープを防ぎます。";
 "Cools during rendering or sustained Media Encoder load." = "レンダリング中やMedia Encoderの高負荷が続いている間に冷却します。";
 "Language" = "言語";
 "System Default" = "システムに合わせる";
@@ -163,8 +161,6 @@
 "Automatic Cooling" = "自動冷却";
 "Manual Cooling" = "手動冷却";
 "Automatic applies to While Keep Awake Is On and While Rendering. Manual applies to ∞ and timed cooling." = "自動冷却は「スリープ防止と連動」「レンダリング中」、手動冷却は「∞」や時間指定の冷却に適用されます。";
-"Pause Automatic Cooling" = "自動冷却を一時停止";
-"Resume Automatic Cooling" = "自動冷却を再開";
 "Automatic Cooling Stopped" = "自動冷却を停止しました";
 "Battery is at %d%%, so automatic cooling stopped." = "バッテリー残量が%d%%になったため、自動冷却を停止しました。";
 "Automatic cooling is unavailable while the battery is low." = "バッテリー残量が少ないため、自動冷却は利用できません。";

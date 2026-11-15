@@ -63,7 +63,11 @@ do {
             case "mode":
                 print("Keep Awake mode: \(request.mode ?? response.mode).")
             case "auto":
-                let label = request.condition == "agent" ? "While Agent Is Running" : "While Downloading"
+                let label = switch request.condition {
+                case "agent": "While Agent Is Running"
+                case "download": "While Downloading"
+                default: "While Rendering"
+                }
                 print("\(label): \(request.enabled == true ? "on" : "off").")
             case "cooling.start":
                 if let cooling = response.cooling {
@@ -88,6 +92,7 @@ do {
         print("Manual mode: \(response.mode)")
         if let enabled = response.agentMonitoringEnabled { print("While Agent Is Running: \(enabled ? "on" : "off")") }
         if let enabled = response.downloadMonitoringEnabled { print("While Downloading: \(enabled ? "on" : "off")") }
+        if let enabled = response.renderMonitoringEnabled { print("While Rendering: \(enabled ? "on" : "off")") }
         if let active = response.manualActive { print("Manual Keep Awake: \(active ? "active" : "stopped")") }
         if response.timerEndsAt != nil { print("Remaining: \(response.remainingSeconds)s") }
         print("Sleep prevention: \(response.sleepPreventionHealth)")

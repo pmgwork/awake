@@ -35,9 +35,6 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var popoverContentSizeObservation: NSKeyValueObservation?
     private var statusButtonAppearanceObservation: NSKeyValueObservation?
-    private var popoverAnchorWindow: NSWindow?
-    private var iconOnlyButtonWidth: CGFloat?
-    private var isShowingTimerInStatusItem = false
     private static let statusIconSize = NSSize(width: 21, height: 16.8)
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -65,10 +62,7 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.arguments.contains("--show-menu") {
             DispatchQueue.main.async { [weak self] in
                 guard let self, let button = self.statusItem.button else { return }
-                NSApp.activate(ignoringOtherApps: true)
-                self.resizePopoverToFitContent()
                 self.showPopover(from: button)
-                self.popover.contentViewController?.view.window?.makeKey()
             }
         }
         // Opens a settings tab on launch so each pane can be captured.
@@ -151,13 +145,6 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: NSPopover.didCloseNotification, object: popover)
-            .sink { [weak self] _ in
-                self?.popoverAnchorWindow?.orderOut(nil)
-                self?.statusItem.button?.highlight(false)
-            }
-            .store(in: &cancellables)
-
         if let button = statusItem.button {
             statusButtonAppearanceObservation = button.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
                 DispatchQueue.main.async {
@@ -177,58 +164,15 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            NSApp.activate(ignoringOtherApps: true)
-            resizePopoverToFitContent()
             showPopover(from: sender)
-            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
-    /// Shows the popover from a fixed, invisible window laid exactly over the
-    /// icon. Anchoring to the status button itself makes AppKit misplace the
-    /// popover when the item widens for the remaining time (it applies the
-    /// button's new offset but not the window's new origin). The icon is drawn
-    /// at the trailing edge (see `timerStatusImage`) and status items grow
-    /// leftward, so this window keeps matching the icon.
     private func showPopover(from button: NSStatusBarButton) {
-        guard let buttonWindow = button.window else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            return
-        }
-        if !isShowingTimerInStatusItem {
-            iconOnlyButtonWidth = button.bounds.width
-        }
-        // Opened while the remaining time is already showing (e.g. right after
-        // launch): estimate the icon-only width from the image plus padding.
-        let estimatedIconWidth = Self.statusIconSize.width + 16
-        let width = min(iconOnlyButtonWidth ?? estimatedIconWidth, button.bounds.width)
-        let iconRect = NSRect(
-            x: button.bounds.maxX - width,
-            y: button.bounds.minY,
-            width: width,
-            height: button.bounds.height
-        )
-        let screenRect = buttonWindow.convertToScreen(button.convert(iconRect, to: nil))
-
-        let anchorWindow = popoverAnchorWindow ?? {
-            let window = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            window.hasShadow = false
-            window.ignoresMouseEvents = true
-            window.level = .statusBar
-            window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-            window.isReleasedWhenClosed = false
-            window.contentView = NSView()
-            popoverAnchorWindow = window
-            return window
-        }()
-        anchorWindow.setFrame(screenRect, display: false)
-        anchorWindow.orderFrontRegardless()
-
-        guard let anchorView = anchorWindow.contentView else { return }
-        popover.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
-        button.highlight(true)
+        NSApp.activate(ignoringOtherApps: true)
+        resizePopoverToFitContent()
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     private func resizePopoverToFitContent() {
@@ -243,95 +187,98 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
 
-        let shouldShowTimer = coordinator.isManualKeepAwakeActive &&
-            coordinator.settings.selectedMode == .timer &&
-            coordinator.settings.showTimerInMenuBar
-        isShowingTimerInStatusItem = shouldShowTimer
-
-        let icon = statusIcon()
-        let appearance = button.effectiveAppearance
-        button.image = shouldShowTimer
-            ? icon.map { Self.timerStatusImage(icon: $0, text: coordinator.formattedRemainingTime, appearance: appearance) }
-            : icon
-        button.title = ""
-        button.imagePosition = .imageOnly
-        button.toolTip = settingsToolTip
-        button.setAccessibilityValue(shouldShowTimer
-            ? "\(accessibilityStatus), \(coordinator.formattedRemainingTime)"
-            : accessibilityStatus)
-    }
-
-    /// Draws the remaining time and the icon into one image. Keeping the button
-    /// image-only gives the icon the same trailing padding as when no time is
-    /// shown, so it does not shift when the time appears. Non-template icons
-    /// (automatic monitoring) resolve `labelColor` against `appearance` because
-    /// AppKit does not recolor non-template status bar images.
-    static func timerStatusImage(icon: NSImage, text: String, appearance: NSAppearance) -> NSImage {
-        let textColor: NSColor
-        if icon.isTemplate {
-            textColor = .black
-        } else {
-            var resolvedColor: NSColor = .labelColor
-            appearance.performAsCurrentDrawingAppearance {
-                resolvedColor = NSColor.labelColor.usingColorSpace(.sRGB) ?? .labelColor
-            }
-            textColor = resolvedColor
-        }
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
-            .foregroundColor: textColor
-        ]
-        let textSize = (text as NSString).size(withAttributes: attributes)
-        let spacing: CGFloat = 4
-        let size = NSSize(
-            width: ceil(textSize.width) + spacing + icon.size.width,
-            height: max(icon.size.height, ceil(textSize.height))
+        button.image = Self.statusIcon(
+            keepAwakeState: keepAwakeIconState,
+            isCoolingActive: coordinator.isForcedCoolingActive,
+            appearance: button.effectiveAppearance
         )
-        let image = NSImage(size: size, flipped: false) { rect in
-            (text as NSString).draw(
-                at: NSPoint(x: 0, y: (rect.height - textSize.height) / 2),
-                withAttributes: attributes
-            )
-            icon.draw(in: NSRect(
-                x: rect.maxX - icon.size.width,
-                y: (rect.height - icon.size.height) / 2,
-                width: icon.size.width,
-                height: icon.size.height
-            ))
-            return true
-        }
-        image.isTemplate = icon.isTemplate
-        return image
+        button.toolTip = settingsToolTip
+        button.setAccessibilityValue(accessibilityStatus)
     }
 
-    private func statusIcon() -> NSImage? {
+    enum KeepAwakeIconState {
+        case inactive
+        case manual
+        case automatic
+    }
+
+    static func statusIcon(
+        keepAwakeState: KeepAwakeIconState,
+        isCoolingActive: Bool,
+        appearance: NSAppearance
+    ) -> NSImage? {
         // Named images are cached; keep size and rendering changes local.
-        guard let image = NSImage(named: NSImage.Name(iconName))?.copy() as? NSImage else {
+        guard let image = NSImage(named: NSImage.Name("MenuBarCup"))?.copy() as? NSImage else {
             return nil
         }
-        image.size = Self.statusIconSize
+        image.size = statusIconSize
         image.isTemplate = true
 
-        // Leave the status button's tint untouched so AppKit can adapt the
-        // normal icon to the menu bar, independently of the app appearance.
-        guard isAutomaticMonitoring else { return image }
+        // When completely idle (even if automatic monitoring is enabled),
+        // return a pure template image so AppKit handles menu bar tinting natively.
+        guard keepAwakeState != .inactive || isCoolingActive else {
+            return image
+        }
 
-        let tintedImage = NSImage(size: image.size, flipped: false) { rect in
+        var labelColor = NSColor.labelColor
+        var coffeeColor = NSColor.systemOrange
+        var coolingColor = NSColor.systemBlue
+        appearance.performAsCurrentDrawingAppearance {
+            labelColor = NSColor.labelColor.usingColorSpace(.sRGB) ?? .labelColor
+            let rawCoffee: NSColor = switch keepAwakeState {
+            case .manual: .systemOrange
+            case .automatic: .systemGreen
+            case .inactive: .clear
+            }
+            coffeeColor = rawCoffee.usingColorSpace(.sRGB) ?? rawCoffee
+            coolingColor = NSColor.systemBlue.usingColorSpace(.sRGB) ?? .systemBlue
+        }
+
+        // Source SVG viewBox is 20x16; scale coordinates into `statusIconSize`.
+        let scale = statusIconSize.width / 20.0
+        let composed = NSImage(size: statusIconSize, flipped: true) { rect in
             image.draw(in: rect)
-            NSColor.systemOrange.setFill()
+            labelColor.setFill()
             rect.fill(using: .sourceAtop)
+
+            if keepAwakeState != .inactive {
+                let coffeeRect = NSRect(
+                    x: (8.2 - 4.55) * scale,
+                    y: (4.4 - 1.4) * scale,
+                    width: 9.1 * scale,
+                    height: 2.8 * scale
+                )
+                coffeeColor.setFill()
+                NSBezierPath(ovalIn: coffeeRect).fill()
+            }
+
+            if isCoolingActive {
+                let radius: CGFloat = 1.65 * scale
+                let dotRect = NSRect(
+                    x: 17.8 * scale - radius,
+                    y: 2.6 * scale - radius,
+                    width: radius * 2,
+                    height: radius * 2
+                )
+                coolingColor.setFill()
+                NSBezierPath(ovalIn: dotRect).fill()
+            }
+
             return true
         }
-        tintedImage.isTemplate = false
-        return tintedImage
+        composed.isTemplate = false
+        return composed
     }
 
-    private var iconName: String {
-        coordinator.isActive ? "MenuBarCupActive" : "MenuBarCup"
+    private var keepAwakeIconState: KeepAwakeIconState {
+        guard coordinator.isActive else { return .inactive }
+        return coordinator.isManualKeepAwakeActive ? .manual : .automatic
     }
 
     private var isAutomaticMonitoring: Bool {
-        coordinator.settings.agentMonitoringEnabled || coordinator.settings.downloadMonitoringEnabled
+        coordinator.settings.agentMonitoringEnabled
+            || coordinator.settings.downloadMonitoringEnabled
+            || coordinator.settings.renderKeepAwakeEnabled
     }
 
     private var settingsToolTip: String {

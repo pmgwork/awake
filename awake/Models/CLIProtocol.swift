@@ -5,7 +5,7 @@ nonisolated enum CLIProtocol {
     static var portName: String { "pmgwork.awake.cli.v1.\(getuid())" }
     static let modes = ["indefinitely", "timer"]
     static let coolingModes = ["indefinitely", "timer"]
-    static let autoConditions = ["agent", "download"]
+    static let autoConditions = ["agent", "download", "render"]
     static let coolingAutoConditions = ["awake", "render"]
     static let coolingDurations: [TimeInterval] = [300, 600, 900, 1800]
     static let invalidArguments = "Invalid arguments. See 'awake --help'."
@@ -13,7 +13,7 @@ nonisolated enum CLIProtocol {
     Usage: awake start [--mode <mode>] [--duration <duration>]
            awake stop [--all]
            awake mode [<mode>] [--duration <duration>]
-           awake auto <agent|download> <on|off>
+           awake auto <agent|download|render> <on|off>
            awake status [--json]
            awake cooling start [--mode <mode>] [--duration <duration>]
            awake cooling stop [--all]
@@ -29,7 +29,7 @@ nonisolated enum CLIProtocol {
     conditions. mode and cooling mode select without starting manual sessions
     (or show status when omitted).
     stop and cooling stop end only the manual session; pass --all to also turn
-    off both automatic conditions.
+    off all automatic conditions.
     auto and cooling auto toggle each automatic condition independently
     without changing manual sessions or the other condition.
     Keep Awake durations: positive whole numbers with s, m, h; maximum 7 days.
@@ -197,8 +197,10 @@ nonisolated struct CLIResponse: Codable {
     var manualActive: Bool? = nil
     var agentMonitoringEnabled: Bool? = nil
     var downloadMonitoringEnabled: Bool? = nil
+    var renderMonitoringEnabled: Bool? = nil
     var agentActive: Bool? = nil
     var downloadActive: Bool? = nil
+    var renderActive: Bool? = nil
 }
 
 nonisolated struct CLICoolingStatus: Codable {

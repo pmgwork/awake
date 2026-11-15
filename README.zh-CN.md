@@ -11,7 +11,7 @@
 ## 功能
 
 - **跟随代理保持唤醒** — 通过 Codex、Claude Code、Antigravity、OpenCode 各自的 Hook 事件进行检测，不轮询进程。
-- **独立开关** — 可同时启用代理和下载条件，并结合指定时长或不限时的手动防止睡眠。
+- **独立开关** — 可同时启用代理、下载和渲染条件，并结合指定时长或不限时的手动防止睡眠。
 - **散热** — 除了防止睡眠期间合盖时的自动散热外，还支持在任何显示环境下使用的手动散热（Apple Silicon）。合盖并连接外接显示器时，自动散热会将风扇控制交给 macOS。也可以在 Blender、Adobe After Effects、Adobe Media Encoder 和 Houdini 渲染时自动散热。
 - **电池保护** — 在设定的电量（关闭／5～25%，默认 20%）自动停止防止睡眠和自动散热，并把风扇恢复为自动控制。低于该电量时不会自动启动，但仍可手动启动。
 - **屏幕控制** — 开启「保持屏幕常亮」后，会话期间屏幕保持开启，并同时防止屏幕保护程序和自动锁定。
@@ -40,14 +40,15 @@ Awake 只在菜单栏运行（不会显示在 Dock 中）。
 
 ## 使用方法
 
-- **左键**点按菜单栏图标打开菜单，**右键**点按开始或停止手动防止睡眠。
-- 自动防止睡眠：每个条件都有独立的 ON/OFF 开关。可同时开启两个条件；任一自动条件或手动会话有效时保持唤醒。橙色圆点表示该条件正在防止睡眠。悬停可查看等待或防止睡眠状态；详情仅在条件有效时显示。
+- **左键**点按菜单栏图标打开菜单，**右键**点按开始或停止手动防止睡眠。手动防止睡眠时杯中填充橙色，自动触发时填充绿色；散热运行时右上角显示蓝色圆点。
+- 自动防止睡眠：每个条件都有独立的 ON/OFF 开关。可同时开启这三个条件；任一自动条件或手动会话有效时保持唤醒。橙色圆点表示该条件正在防止睡眠。悬停可查看说明或等待／防止睡眠状态；详情仅在条件有效时显示。
   - *代理运行时* — 已链接的代理存在活动会话时保持唤醒。在「设置 → 防止睡眠 → 代理结束后保持唤醒时间」中，可设置最后一个代理结束后继续保持唤醒的时间（默认3分钟，可选关闭／1／2／3／5／10分钟）。代理重新运行时取消倒计时；关闭该条件会立即停止代理带来的防止睡眠。达到电池停止阈值时，所有防止睡眠均停止。保留此前保存的时长。
   - *下载中* — 监视指定文件夹（默认 `~/Downloads`）中未完成的下载
+  - *渲染中* — 当监视的应用（Blender、Adobe After Effects、Adobe Media Encoder 或 Houdini）正在渲染时保持唤醒。在「设置 → 监视」中配置监视的应用与集成。
 - 手动防止睡眠：选择预设（∞ 表示不限时／15 分／30 分／1 小时／2 小时，保存选择），然后独立开始或停止。定时结束后，已开启的自动条件继续工作。
 - 迁移保留此前选中的自动条件及暂停状态；其他条件在手动开启前保持关闭。
 - 设置
-  - **一般** — 语言（跟随系统、英语或日语）、登录时启动、通知、菜单栏剩余时间、更新
+  - **一般** — 语言（跟随系统、英语或日语）、登录时启动、通知、更新
   - **防止睡眠** — 保持屏幕常亮、合盖运行、合盖低电量模式、电池停止阈值
   - **监视** — 开启或关闭各代理或渲染应用（开启未链接的代理、Blender 或 After Effects 时会进行链接），以及选择下载文件夹
   - **散热** — 自动与手动散热各自的风扇速度、自动散热的「仅在接通电源时」选项
@@ -74,7 +75,7 @@ awake status --json         # JSON 状态（定时结束时间使用 ISO 8601）
 awake --help
 ```
 
-命令会在需要时于后台启动其所属应用，并控制菜单栏中的同一会话。未指定 `--mode` 或 `--duration` 时，`start` 使用当前所选手动模式启动；`start --duration` 选择定时模式并保存时长。再次执行 `start` 会重置手动定时器，保留自动条件。时长支持正整数加 `s`、`m` 或 `h`，最多7天。`stop` 仅停止手动防止睡眠；`stop --all` 还会关闭两个自动条件。散热仍独立运行。CLI 启动遵循与手动启动相同的规则，包括低电量时的手动覆盖。硬件操作仍需现有授权。状态包含实际睡眠保护运行状态；即使会话处于活动状态，保护仍可能降级或失败。成功时退出码为0；输入无效、连接失败或操作被拒绝时为非0。需要应用本体及已登录的 macOS GUI 会话。
+命令会在需要时于后台启动其所属应用，并控制菜单栏中的同一会话。未指定 `--mode` 或 `--duration` 时，`start` 使用当前所选手动模式启动；`start --duration` 选择定时模式并保存时长。再次执行 `start` 会重置手动定时器，保留自动条件。时长支持正整数加 `s`、`m` 或 `h`，最多7天。`stop` 仅停止手动防止睡眠；`stop --all` 还会关闭全部自动条件。散热仍独立运行。CLI 启动遵循与手动启动相同的规则，包括低电量时的手动覆盖。硬件操作仍需现有授权。状态包含实际睡眠保护运行状态；即使会话处于活动状态，保护仍可能降级或失败。成功时退出码为0；输入无效、连接失败或操作被拒绝时为非0。需要应用本体及已登录的 macOS GUI 会话。
 
 操作命令仅显示一行结果。输入错误也保持简短；使用 `awake --help` 查看完整帮助。使用 `status` 查看详情，或使用 `status --json` 获取脚本用输出。
 
@@ -83,6 +84,7 @@ awake --help
 ```sh
 awake auto agent on
 awake auto download off
+awake auto render on
 awake mode timer --duration 1h
 awake start --mode indefinitely
 awake cooling start --mode indefinitely
@@ -96,9 +98,9 @@ awake cooling stop --all
 awake cooling status --json
 ```
 
-手动防止睡眠和手动散热模式接受 `indefinitely`（无限期）和 `timer`（定时）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。`status --json` 中的 `mode` 表示所选手动模式（`indefinitely` 或 `timer`），`cooling.mode` 表示所选手动散热模式。选择 `timer` 或 `indefinitely` 仅停止此前的手动会话并等待启动。选择 `timer` 时，`awake start --mode timer` 和 `awake cooling start` 会使用保存的时长。`awake auto <agent|download> <on|off>` 与 `awake cooling auto <awake|render> <on|off>` 可在不影响手动会话及另一条件的情况下独立切换各自动条件。`cooling stop` 仅停止手动散热；`cooling stop --all` 还会关闭两个自动散热开关。指定时长意味着 `timer`，与 `indefinitely` 同时使用会被拒绝。
+手动防止睡眠和手动散热模式接受 `indefinitely`（无限期）和 `timer`（定时）。`awake mode` 和 `awake cooling mode` 不带值时显示当前状态。`status --json` 中的 `mode` 表示所选手动模式（`indefinitely` 或 `timer`），`cooling.mode` 表示所选手动散热模式。选择 `timer` 或 `indefinitely` 仅停止此前的手动会话并等待启动。选择 `timer` 时，`awake start --mode timer` 和 `awake cooling start` 会使用保存的时长。`awake auto <agent|download|render> <on|off>` 与 `awake cooling auto <awake|render> <on|off>` 可在不影响手动会话及其他条件的情况下独立切换各自动条件。`cooling stop` 仅停止手动散热；`cooling stop --all` 还会关闭两个自动散热开关。指定时长意味着 `timer`，与 `indefinitely` 同时使用会被拒绝。
 
-散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热、启用自动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示自动或手动散热已启用，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示自动条件已开启且防止睡眠正在等待活动。`manualActive`、`agentMonitoringEnabled`、`downloadMonitoringEnabled`、`agentActive` 和 `downloadActive` 分别报告独立控制与运行状态。`automaticEnabled`／`automaticActive`、`renderEnabled`／`renderActive` 与 `manualArmed`／`manualActive` 分别报告自动、渲染与手动散热状态。散热与防止睡眠保持独立。
+散热时长与应用预设一致：`5m`、`10m`、`15m` 或 `30m`；自动和手动风扇速度支持 `50`、`75` 或 `100` 百分比。启动散热、启用自动散热或更改速度需要已安装的辅助工具；CLI 不会安装工具或请求授权。电池保护、合盖及外接显示器规则仍然适用。启动被拒绝时保留当前模式和定时器。`status` 包含嵌套的 `cooling` 状态：`armed` 表示自动或手动散热已启用，`active` 表示当前策略要求散热，`fanControl` 表示控制器已应用的模式（`auto` 或百分比，并非实测转速）。风扇控制是异步的，请再次查看 `status` 以确认结果或错误。`waitingForActivity` 表示自动条件已开启且防止睡眠正在等待活动。`manualActive`、`agentMonitoringEnabled`、`downloadMonitoringEnabled`、`renderMonitoringEnabled`、`agentActive`、`downloadActive` 和 `renderActive` 分别报告独立控制与运行状态。`automaticEnabled`／`automaticActive`、`renderEnabled`／`renderActive` 与 `manualArmed`／`manualActive` 分别报告自动、渲染与手动散热状态。散热与防止睡眠保持独立。
 
 ## 代理集成
 

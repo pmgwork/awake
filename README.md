@@ -11,7 +11,7 @@ A macOS menu bar app that keeps your Mac awake while AI coding agents are runnin
 ## Features
 
 - **Agent-driven keep awake** — follows Codex, Claude Code, Antigravity, and OpenCode through their own hook events. No process polling.
-- **Independent controls** — enable agent and download conditions together, and optionally start manual Keep Awake for a fixed duration (15m–2h) or indefinitely.
+- **Independent controls** — enable agent, download, and rendering conditions together, and optionally start manual Keep Awake for a fixed duration (15m–2h) or indefinitely.
 - **Cooling** — optional fan control while Keep Awake is on with the lid closed, plus manual cooling in any display setup (Apple Silicon). With an external display connected and the lid closed, automatic cooling leaves fans to macOS. Cooling can also follow rendering in Blender, Adobe After Effects, Adobe Media Encoder, and Houdini.
 - **Battery protection** — turns Keep Awake and automatic cooling off and restores automatic fan control at a configurable battery level (Off, 5–25%, default 20%). Automatic starts stay paused below that level, but you can still start Awake manually.
 - **Display control** — **Keep Screen On** keeps the screen on during a session and also prevents the screen saver and automatic idle lock.
@@ -40,14 +40,15 @@ Awake runs only in the menu bar (no Dock icon).
 
 ## Usage
 
-- **Left-click** the menu bar cup to open the menu. **Right-click** to start or stop manual Keep Awake.
-- Automatic Keep Awake: each condition has its own ON/OFF switch. Both can be enabled together; the Mac stays awake while either condition or manual Keep Awake is active. An orange dot indicates an active condition. Hover over a condition to see whether it is waiting or keeping the Mac awake. Agent and download details appear while that condition is active.
+- **Left-click** the menu bar cup to open the menu. **Right-click** to start or stop manual Keep Awake. The cup fills with orange while manual Keep Awake is active (or green when started automatically), and shows a top-right blue dot while cooling is active.
+- Automatic Keep Awake: each condition has its own ON/OFF switch. All three can be enabled together; the Mac stays awake while any automatic condition or manual Keep Awake is active. An orange dot indicates an active condition. Hover over a condition to see whether it is waiting or keeping the Mac awake. Agent, download, and rendering details appear while that condition is active.
   - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session. Settings → Keep Awake → **Keep Awake After Agents Finish** extends this after the last agent finishes (default: 3 minutes; Off, 1, 2, 3, 5, or 10 minutes). New activity resets the countdown; turning this condition off ends its contribution immediately. The battery cutoff stops all Keep Awake. Earlier saved durations are preserved.
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.
+  - *While Rendering* — keeps the Mac awake while a monitored app (Blender, Adobe After Effects, Adobe Media Encoder, or Houdini) is rendering. Configure monitored apps and integrations in Settings → Monitor.
 - Manual Keep Awake: choose a preset (∞ for Indefinitely / 15m / 30m / 1h / 2h, remembered across launches), then start or stop it independently. When the timer ends, enabled automatic conditions continue to work.
 - Existing installs preserve the previously selected automatic condition and its paused state. Other conditions stay OFF until enabled.
 - Settings:
-  - **General** — language (system default, English, or Japanese), launch at login, notifications, remaining time in the menu bar, and updates.
+  - **General** — language (system default, English, or Japanese), launch at login, notifications, and updates.
   - **Keep Awake** — Keep Screen On, closed-lid operation, Low Power Mode with the lid closed, and battery cutoff.
   - **Monitor** — turn each agent or rendering app on or off (turning on an unlinked agent, Blender, or After Effects links it), and choose the download folder.
   - **Cooling** — separate automatic and manual fan speeds, and the "Only When Plugged In" option for automatic cooling.
@@ -74,7 +75,7 @@ awake status --json         # Machine-readable status (ISO 8601 timer end date)
 awake --help
 ```
 
-The command launches its containing app in the background if needed and controls the same session shown in the menu bar. `start` uses the selected manual mode unless `--mode` or `--duration` is given; `start --duration` selects For Duration and saves the duration. Repeating `start` resets the manual timer while preserving automatic conditions. Durations accept positive whole numbers followed by `s`, `m`, or `h`, up to 7 days. `stop` ends only manual Keep Awake; `stop --all` also turns both automatic conditions OFF. Cooling remains independent. CLI starts follow the same rules as manual starts, including the low-battery override. Existing hardware permissions still apply. Status includes the actual sleep-prevention health; an active session can report degraded or failed protection. Commands return 0 on success and nonzero on invalid input, connection failure, or a rejected command. The CLI requires the app and a logged-in macOS GUI session.
+The command launches its containing app in the background if needed and controls the same session shown in the menu bar. `start` uses the selected manual mode unless `--mode` or `--duration` is given; `start --duration` selects For Duration and saves the duration. Repeating `start` resets the manual timer while preserving automatic conditions. Durations accept positive whole numbers followed by `s`, `m`, or `h`, up to 7 days. `stop` ends only manual Keep Awake; `stop --all` also turns all automatic conditions OFF. Cooling remains independent. CLI starts follow the same rules as manual starts, including the low-battery override. Existing hardware permissions still apply. Status includes the actual sleep-prevention health; an active session can report degraded or failed protection. Commands return 0 on success and nonzero on invalid input, connection failure, or a rejected command. The CLI requires the app and a logged-in macOS GUI session.
 
 Actions print a one-line result. Input errors stay brief; `awake --help` shows the full help. Use `status` for details or `status --json` for scripts.
 
@@ -83,6 +84,7 @@ Mode selection, automatic switches, and cooling are also available:
 ```sh
 awake auto agent on
 awake auto download off
+awake auto render on
 awake mode timer --duration 1h
 awake start --mode indefinitely
 awake cooling start --mode indefinitely
@@ -96,9 +98,9 @@ awake cooling stop --all
 awake cooling status --json
 ```
 
-Manual Keep Awake and manual cooling modes accept `indefinitely` and `timer`. `awake mode` and `awake cooling mode` without a value show the current state. `status --json` reports the selected manual mode (`indefinitely` or `timer`) in `mode`, and the selected manual cooling mode in `cooling.mode`. Selecting `timer` or `indefinitely` stops only the previous manual session and waits for Start. `awake start --mode timer` and `awake cooling start` use the saved duration when `timer` is selected. `awake auto <agent|download> <on|off>` and `awake cooling auto <awake|render> <on|off>` toggle each automatic condition independently without changing manual sessions or the other condition. `cooling stop` stops only manual cooling; `cooling stop --all` also turns off both automatic cooling switches. A duration implies `timer`; combining a duration with `indefinitely` is rejected.
+Manual Keep Awake and manual cooling modes accept `indefinitely` and `timer`. `awake mode` and `awake cooling mode` without a value show the current state. `status --json` reports the selected manual mode (`indefinitely` or `timer`) in `mode`, and the selected manual cooling mode in `cooling.mode`. Selecting `timer` or `indefinitely` stops only the previous manual session and waits for Start. `awake start --mode timer` and `awake cooling start` use the saved duration when `timer` is selected. `awake auto <agent|download|render> <on|off>` and `awake cooling auto <awake|render> <on|off>` toggle each automatic condition independently without changing manual sessions or the other conditions. `cooling stop` stops only manual cooling; `cooling stop --all` also turns off both automatic cooling switches. A duration implies `timer`; combining a duration with `indefinitely` is rejected.
 
-Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling, enabling automatic cooling, or changing speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means either automatic or manual cooling is enabled, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates that automation is enabled while Keep Awake is idle. `manualActive`, `agentMonitoringEnabled`, `downloadMonitoringEnabled`, `agentActive`, and `downloadActive` report the independent Keep Awake controls. `automaticEnabled` / `automaticActive`, `renderEnabled` / `renderActive`, and `manualArmed` / `manualActive` report each cooling state separately. Cooling commands leave Keep Awake independent.
+Cooling durations match the app presets: `5m`, `10m`, `15m`, or `30m`. Automatic and manual speeds accept `50`, `75`, or `100` percent. Starting cooling, enabling automatic cooling, or changing speed requires the installed helper; CLI commands do not install it or request authorization. Battery protection, the lid state, and external-display rules still apply. A rejected start leaves the selected mode and timer unchanged. `status` includes nested `cooling` state: `armed` means either automatic or manual cooling is enabled, `active` means policy currently requests cooling, and `fanControl` reports the controller's applied mode (`auto` or a percentage), not a measured RPM. Fan commands are asynchronous; inspect `status` again to see the result and any error. Keep Awake's `waitingForActivity` indicates that automation is enabled while Keep Awake is idle. `manualActive`, `agentMonitoringEnabled`, `downloadMonitoringEnabled`, `renderMonitoringEnabled`, `agentActive`, `downloadActive`, and `renderActive` report the independent Keep Awake controls. `automaticEnabled` / `automaticActive`, `renderEnabled` / `renderActive`, and `manualArmed` / `manualActive` report each cooling state separately. Cooling commands leave Keep Awake independent.
 
 ## Agent integrations
 

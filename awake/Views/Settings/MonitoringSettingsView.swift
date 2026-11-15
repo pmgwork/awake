@@ -258,7 +258,7 @@ struct MonitoringSettingsView: View {
                         Button(L10n.string("Reconnect")) {
                             afterEffects.setEnabled(false)
                             afterEffects.setEnabled(RenderMonitor.shared.enabledApps.contains(.afterEffects)
-                                && settings.renderCoolingEnabled)
+                                && (settings.renderKeepAwakeEnabled || settings.renderCoolingEnabled))
                         }
                         Divider()
                         Button(L10n.string("Unlink"), role: .destructive) {

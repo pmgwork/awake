@@ -18,9 +18,6 @@ struct KeepAwakeSettingsView: View {
                             .tag(duration)
                     }
                 }
-                // AppKit keeps the popup's menu items after SwiftUI refreshes
-                // the selected label. Rebuild them when the app language changes.
-                .id(settings.language)
             } header: {
                 Text(L10n.string("While Agent Is Running"))
             }
@@ -80,7 +77,6 @@ struct KeepAwakeSettingsView: View {
                         Text("\(threshold)%").tag(threshold)
                     }
                 }
-                .id(settings.language)
             } header: {
                 Text(L10n.string("Battery"))
             } footer: {
@@ -88,6 +84,9 @@ struct KeepAwakeSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        // AppKit keeps popup menu items after SwiftUI refreshes labels;
+        // rebuild the Form (not individual Section children, which breaks grouped cards).
+        .id(settings.language)
         .task { await closedDisplayModeManager.refreshHelperState() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await closedDisplayModeManager.refreshHelperState() }

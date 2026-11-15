@@ -61,7 +61,8 @@ struct MenuBarView: View {
                 )
             }
 
-            if settings.renderCoolingEnabled && coordinator.isRenderCoolingActive {
+            if (settings.renderKeepAwakeEnabled && coordinator.isRenderKeepAwakeActive)
+                || (settings.renderCoolingEnabled && coordinator.isRenderCoolingActive) {
                 RenderingAppsView(monitor: coordinator.renderMonitor)
             }
 

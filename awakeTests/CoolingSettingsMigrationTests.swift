@@ -50,20 +50,23 @@ final class CoolingSettingsMigrationTests: XCTestCase {
 
     func testIndependentKeepAwakeReasonsAndBatteryCutoff() {
         // Exhaust every combination, including finishing one condition while
-        // another remains active and turning either condition off during a run.
-        for bits in 0..<128 {
-            let flags = (0..<7).map { bits & (1 << $0) != 0 }
+        // another remains active and turning any condition off during a run.
+        for bits in 0..<512 {
+            let flags = (0..<9).map { bits & (1 << $0) != 0 }
             let policy = KeepAwakeActivity(manual: flags[0], agentEnabled: flags[1],
                 agentRunning: flags[2], graceActive: flags[3], downloadEnabled: flags[4],
-                downloading: flags[5], batteryBlocked: flags[6])
+                downloading: flags[5], renderEnabled: flags[6], rendering: flags[7],
+                batteryBlocked: flags[8])
             var reasons = [String]()
             if flags[0] { reasons.append("manual") }
             if flags[1] && flags[2] { reasons.append("agent") }
             if flags[1] && flags[3] { reasons.append("grace") }
             if flags[4] && flags[5] { reasons.append("download") }
-            XCTAssertEqual(policy.active, !flags[6] && !reasons.isEmpty, "flags: \(bits)")
-            XCTAssertEqual(policy.agent, !flags[6] && (reasons.contains("agent") || reasons.contains("grace")))
-            XCTAssertEqual(policy.download, !flags[6] && reasons.contains("download"))
+            if flags[6] && flags[7] { reasons.append("render") }
+            XCTAssertEqual(policy.active, !flags[8] && !reasons.isEmpty, "flags: \(bits)")
+            XCTAssertEqual(policy.agent, !flags[8] && (reasons.contains("agent") || reasons.contains("grace")))
+            XCTAssertEqual(policy.download, !flags[8] && reasons.contains("download"))
+            XCTAssertEqual(policy.render, !flags[8] && reasons.contains("render"))
         }
     }
 

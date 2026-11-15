@@ -45,6 +45,11 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(downloadOff.condition, "download")
         XCTAssertEqual(downloadOff.enabled, false)
 
+        let autoRenderOn = try CLIProtocol.parse(["auto", "render", "on"])
+        XCTAssertEqual(autoRenderOn.command, "auto")
+        XCTAssertEqual(autoRenderOn.condition, "render")
+        XCTAssertEqual(autoRenderOn.enabled, true)
+
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "start"]).command, "cooling.start")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "start", "--duration", "10m"]).mode, "timer")
         XCTAssertEqual(try CLIProtocol.parse(["cooling", "mode", "indefinitely"]).mode, "indefinitely")
@@ -76,7 +81,7 @@ final class CLITests: XCTestCase {
             ["start", "--mode", "indefinitely", "--duration", "30m"],
             ["start", "--mode", "unknown"], ["mode", "unknown"], ["mode", "agent"],
             ["start", "--duration", "1m", "--duration", "2m"],
-            ["auto"], ["auto", "agent"], ["auto", "render", "on"], ["auto", "agent", "maybe"],
+            ["auto"], ["auto", "agent"], ["auto", "awake", "on"], ["auto", "agent", "maybe"],
             ["cooling"], ["cooling", "mode", "download"], ["cooling", "mode", "awake"],
             ["cooling", "mode", "render"], ["cooling", "mode", "agent"],
             ["cooling", "start", "--mode", "awake"], ["cooling", "start", "--mode", "render"],
@@ -115,6 +120,7 @@ final class CLITests: XCTestCase {
         let savedDuration = settings.selectedTimerDuration
         let savedAgent = settings.agentMonitoringEnabled
         let savedDownload = settings.downloadMonitoringEnabled
+        let savedRender = settings.renderKeepAwakeEnabled
         let savedManual = coordinator.isManualKeepAwakeActive
         let savedAutoCooling = settings.automaticCoolingEnabled
         let savedRenderCooling = settings.renderCoolingEnabled
@@ -124,20 +130,24 @@ final class CLITests: XCTestCase {
             settings.selectedTimerDuration = savedDuration
             settings.agentMonitoringEnabled = savedAgent
             settings.downloadMonitoringEnabled = savedDownload
+            settings.renderKeepAwakeEnabled = savedRender
             if savedManual { coordinator.startKeepAwake(userInitiated: true) }
             settings.automaticCoolingEnabled = savedAutoCooling
             settings.renderCoolingEnabled = savedRenderCooling
         }
 
-        // auto switches toggle independently without altering the other switch
+        // auto switches toggle independently without altering the other switches
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["auto", "agent", "on"])).success)
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["auto", "download", "on"])).success)
+        XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["auto", "render", "on"])).success)
         XCTAssertTrue(settings.agentMonitoringEnabled)
         XCTAssertTrue(settings.downloadMonitoringEnabled)
+        XCTAssertTrue(settings.renderKeepAwakeEnabled)
 
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["auto", "agent", "off"])).success)
         XCTAssertFalse(settings.agentMonitoringEnabled)
         XCTAssertTrue(settings.downloadMonitoringEnabled)
+        XCTAssertTrue(settings.renderKeepAwakeEnabled)
 
         // start uses the selected manual mode and preserves automatic conditions
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["mode", "timer", "--duration", "45m"])).success)
@@ -147,12 +157,14 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(started.manualActive, true)
         XCTAssertEqual(settings.selectedTimerDuration, 2700)
         XCTAssertTrue(settings.downloadMonitoringEnabled)
+        XCTAssertTrue(settings.renderKeepAwakeEnabled)
 
         // stop ends only manual Keep Awake; stop --all disables automatic switches too
         let stoppedManual = CLIService.shared.handle(try CLIProtocol.parse(["stop"]))
         XCTAssertTrue(stoppedManual.success)
         XCTAssertEqual(stoppedManual.manualActive, false)
         XCTAssertTrue(settings.downloadMonitoringEnabled)
+        XCTAssertTrue(settings.renderKeepAwakeEnabled)
 
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["auto", "agent", "on"])).success)
         XCTAssertTrue(CLIService.shared.handle(try CLIProtocol.parse(["start"])).success)
@@ -161,6 +173,7 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(stoppedAll.manualActive, false)
         XCTAssertFalse(settings.agentMonitoringEnabled)
         XCTAssertFalse(settings.downloadMonitoringEnabled)
+        XCTAssertFalse(settings.renderKeepAwakeEnabled)
 
         // cooling auto off and cooling stop work independently without helper
         settings.automaticCoolingEnabled = true

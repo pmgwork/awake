@@ -17,6 +17,7 @@ public final class SettingsStore: ObservableObject {
         static let selectedMode = "pmgwork.awake.selectedMode"
         static let agentMonitoringEnabled = "pmgwork.awake.agentMonitoringEnabled"
         static let downloadMonitoringEnabled = "pmgwork.awake.downloadMonitoringEnabled"
+        static let renderKeepAwakeEnabled = "pmgwork.awake.renderKeepAwakeEnabled"
         static let downloadFolderPath = "pmgwork.awake.downloadFolderPath"
         static let completionGraceDuration = "pmgwork.awake.completionGraceDuration"
         static let selectedTimerDuration = "pmgwork.awake.selectedTimerDuration"
@@ -38,7 +39,6 @@ public final class SettingsStore: ObservableObject {
         static let lowBatteryThreshold = "pmgwork.awake.lowBatteryThreshold"
         static let launchAtLogin = "pmgwork.awake.launchAtLogin"
         static let notificationsEnabled = "pmgwork.awake.notificationsEnabled"
-        static let showTimerInMenuBar = "pmgwork.awake.showTimerInMenuBar"
         static let keepScreenOn = "pmgwork.awake.keepScreenOn"
         /// Merged into keepScreenOn; read once to migrate and left for older builds.
         static let legacyPreventDisplaySleep = "pmgwork.awake.preventDisplaySleep"
@@ -78,6 +78,13 @@ public final class SettingsStore: ObservableObject {
     @Published public var downloadMonitoringEnabled: Bool {
         didSet {
             UserDefaults.standard.set(downloadMonitoringEnabled, forKey: Keys.downloadMonitoringEnabled)
+        }
+    }
+
+    /// Keeps the Mac awake while a supported app is rendering. Off by default.
+    @Published public var renderKeepAwakeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(renderKeepAwakeEnabled, forKey: Keys.renderKeepAwakeEnabled)
         }
     }
 
@@ -193,12 +200,6 @@ public final class SettingsStore: ObservableObject {
             if notificationsEnabled {
                 NotificationManager.shared.requestAuthorization()
             }
-        }
-    }
-
-    @Published public var showTimerInMenuBar: Bool {
-        didSet {
-            UserDefaults.standard.set(showTimerInMenuBar, forKey: Keys.showTimerInMenuBar)
         }
     }
 
@@ -325,6 +326,7 @@ public final class SettingsStore: ObservableObject {
         self.selectedMode = keepAwake.mode
         self.agentMonitoringEnabled = keepAwake.agent
         self.downloadMonitoringEnabled = keepAwake.download
+        self.renderKeepAwakeEnabled = UserDefaults.standard.bool(forKey: Keys.renderKeepAwakeEnabled)
         UserDefaults.standard.set(keepAwake.mode.rawValue, forKey: Keys.selectedMode)
         UserDefaults.standard.set(keepAwake.agent, forKey: Keys.agentMonitoringEnabled)
         UserDefaults.standard.set(keepAwake.download, forKey: Keys.downloadMonitoringEnabled)
@@ -375,12 +377,6 @@ public final class SettingsStore: ObservableObject {
             self.lowBatteryThreshold = 20
         }
 
-
-        if UserDefaults.standard.object(forKey: Keys.showTimerInMenuBar) != nil {
-            self.showTimerInMenuBar = UserDefaults.standard.bool(forKey: Keys.showTimerInMenuBar)
-        } else {
-            self.showTimerInMenuBar = true
-        }
 
         // Check SMAppService status for Launch at Login
         self.launchAtLogin = SMAppService.mainApp.status == .enabled

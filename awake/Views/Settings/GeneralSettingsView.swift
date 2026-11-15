@@ -19,13 +19,11 @@ struct GeneralSettingsView: View {
                     )
                     .foregroundStyle(.red)
                 }
-                Toggle(L10n.string("Show Remaining Time in Menu Bar"), isOn: $settings.showTimerInMenuBar)
                 Picker(L10n.string("Language"), selection: $settings.language) {
                     ForEach(AppLanguage.allCases) { language in
                         Text(language.displayName).tag(language)
                     }
                 }
-                .id(settings.language)
             } header: {
                 Text(L10n.string("General Preferences"))
             }
@@ -75,6 +73,8 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        // Rebuild popup menu items on language change without wrapping individual Section rows.
+        .id(settings.language)
         .onAppear {
             notificationManager.refreshAuthorizationStatus()
         }

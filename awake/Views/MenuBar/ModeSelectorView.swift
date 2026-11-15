@@ -32,6 +32,10 @@ struct ModeSelectorView: View {
                 automaticCondition("While Downloading", enabled: settings.downloadMonitoringEnabled,
                                    active: coordinator.isDownloadKeepAwakeActive,
                                    setEnabled: coordinator.setDownloadMonitoringEnabled)
+                automaticCondition("While Rendering", enabled: settings.renderKeepAwakeEnabled,
+                                   active: coordinator.isRenderKeepAwakeActive,
+                                   help: "Keeps your Mac awake during rendering or sustained Media Encoder load.",
+                                   setEnabled: coordinator.setRenderKeepAwakeEnabled)
 
                 timerPresetsRow
                     .padding(.top, 4)
@@ -41,6 +45,7 @@ struct ModeSelectorView: View {
 
     private func automaticCondition(_ title: String, enabled: Bool, active: Bool,
                                     countdownEnd: Date? = nil,
+                                    help: String? = nil,
                                     setEnabled: @escaping (Bool) -> Void) -> some View {
         HStack(spacing: 7) {
             Text(L10n.string(title))
@@ -70,7 +75,7 @@ struct ModeSelectorView: View {
                 .accessibilityValue(L10n.string(enabled ? (active ? "Keeping Awake" : "Waiting for Activity") : "Off"))
         }
         .frame(minHeight: 20)
-        .help(L10n.string(enabled ? (active ? "Keeping Awake" : "Waiting for Activity") : "Off"))
+        .help(help.map { L10n.string($0) } ?? L10n.string(enabled ? (active ? "Keeping Awake" : "Waiting for Activity") : "Off"))
     }
 
     private var timerPresetsRow: some View {

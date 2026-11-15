@@ -74,6 +74,8 @@ final class CLIService {
                 coordinator.setAgentMonitoringEnabled(enabled)
             case "download":
                 coordinator.setDownloadMonitoringEnabled(enabled)
+            case "render":
+                coordinator.setRenderKeepAwakeEnabled(enabled)
             default:
                 return snapshot(error: CLIProtocol.invalidArguments)
             }
@@ -200,13 +202,17 @@ final class CLIService {
                 renderActive: coordinator.isRenderCoolingActive
             ),
             waitingForActivity: !coordinator.isActive && (
-                settings.agentMonitoringEnabled || settings.downloadMonitoringEnabled
+                settings.agentMonitoringEnabled
+                    || settings.downloadMonitoringEnabled
+                    || settings.renderKeepAwakeEnabled
             ),
             manualActive: coordinator.isManualKeepAwakeActive,
             agentMonitoringEnabled: settings.agentMonitoringEnabled,
             downloadMonitoringEnabled: settings.downloadMonitoringEnabled,
+            renderMonitoringEnabled: settings.renderKeepAwakeEnabled,
             agentActive: coordinator.isAgentKeepAwakeActive,
-            downloadActive: coordinator.isDownloadKeepAwakeActive
+            downloadActive: coordinator.isDownloadKeepAwakeActive,
+            renderActive: coordinator.isRenderKeepAwakeActive
         )
     }
 }
