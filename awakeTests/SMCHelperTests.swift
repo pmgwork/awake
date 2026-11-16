@@ -168,4 +168,50 @@ final class ClosedDisplayModeManagerTests: XCTestCase {
         XCTAssertTrue(manager.isHelperInstalled)
         XCTAssertNil(manager.lastError)
     }
+
+    func testPermissionHintStaysHiddenBeforeFirstCheckAndDuringInstalledRecheck() async throws {
+        let lock = NSLock()
+        var pending: CheckedContinuation<Bool, Never>?
+        func takePending() -> CheckedContinuation<Bool, Never>? {
+            lock.withLock {
+                defer { pending = nil }
+                return pending
+            }
+        }
+
+        let manager = ClosedDisplayModeManager(
+            helperURL: URL(fileURLWithPath: "/does-not-exist"),
+            helperCheck: {
+                await withCheckedContinuation { continuation in
+                    lock.withLock { pending = continuation }
+                }
+            }
+        )
+        defer { takePending()?.resume(returning: false) }
+
+        XCTAssertFalse(manager.hasCheckedHelper)
+        XCTAssertFalse(manager.needsHelperPermissionHint)
+
+        let initialTask = Task { await manager.refreshHelperState() }
+        while lock.withLock({ pending == nil }) { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertTrue(manager.isCheckingHelper)
+        XCTAssertFalse(manager.needsHelperPermissionHint)
+
+        takePending()?.resume(returning: true)
+        await initialTask.value
+        XCTAssertTrue(manager.hasCheckedHelper)
+        XCTAssertTrue(manager.isHelperInstalled)
+        XCTAssertFalse(manager.needsHelperPermissionHint)
+
+        let recheckTask = Task { await manager.refreshHelperState() }
+        while lock.withLock({ pending == nil }) { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertTrue(manager.isCheckingHelper)
+        XCTAssertTrue(manager.isHelperInstalled)
+        XCTAssertFalse(manager.needsHelperPermissionHint)
+
+        takePending()?.resume(returning: false)
+        await recheckTask.value
+        XCTAssertFalse(manager.isHelperInstalled)
+        XCTAssertTrue(manager.needsHelperPermissionHint)
+    }
 }

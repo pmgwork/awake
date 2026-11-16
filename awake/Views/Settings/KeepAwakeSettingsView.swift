@@ -63,10 +63,10 @@ struct KeepAwakeSettingsView: View {
             } header: {
                 Text(L10n.string("While Keeping Awake"))
             } footer: {
-                if closedDisplayModeManager.isHelperInstalled || closedDisplayModeManager.isCheckingHelper {
-                    Text(L10n.string("These settings apply only while Keep Awake is on."))
-                } else {
+                if closedDisplayModeManager.needsHelperPermissionHint {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to stay awake with the lid closed."))
+                } else {
+                    Text(L10n.string("These settings apply only while Keep Awake is on."))
                 }
             }
 
@@ -107,7 +107,6 @@ struct KeepAwakeSettingsView: View {
 
     private var canEnableClosedDisplayMode: Bool {
         closedDisplayModeManager.isHelperInstalled
-            && !closedDisplayModeManager.isCheckingHelper
             && !coordinator.isRemovingHardwareAuthorization
     }
 }

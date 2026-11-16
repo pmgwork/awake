@@ -40,7 +40,7 @@ Awake runs only in the menu bar (no Dock icon).
 
 ## Usage
 
-- **Left-click** the menu bar cup to open the menu. **Right-click** to start or stop manual Keep Awake. The cup fills with orange while manual Keep Awake is active (or green when started automatically), and shows a top-right blue dot while cooling is active.
+- **Left-click** the menu bar cup to open the menu. **Right-click** to start or stop manual Keep Awake. The cup fills with orange while manual Keep Awake is active (or monochrome when started automatically), and shows a top-right blue dot while cooling is active.
 - Automatic Keep Awake: each condition has its own ON/OFF switch. All three can be enabled together; the Mac stays awake while any automatic condition or manual Keep Awake is active. An orange dot indicates an active condition. Hover over a condition to see whether it is waiting or keeping the Mac awake. Agent, download, and rendering details appear while that condition is active.
   - *While Agent Is Running* — keeps the Mac awake while a linked agent has an active session. Settings → Keep Awake → **Keep Awake After Agents Finish** extends this after the last agent finishes (default: 3 minutes; Off, 1, 2, 3, 5, or 10 minutes). New activity resets the countdown; turning this condition off ends its contribution immediately. The battery cutoff stops all Keep Awake. Earlier saved durations are preserved.
   - *While Downloading* — watches a folder (default `~/Downloads`) for unfinished downloads.

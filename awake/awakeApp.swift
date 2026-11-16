@@ -214,41 +214,46 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
         image.size = statusIconSize
         image.isTemplate = true
 
-        // When completely idle (even if automatic monitoring is enabled),
-        // return a pure template image so AppKit handles menu bar tinting natively.
-        guard keepAwakeState != .inactive || isCoolingActive else {
+        // When inactive or monochrome automatic Keep Awake (without cooling),
+        // return a template image so AppKit handles menu bar tinting natively.
+        if keepAwakeState == .inactive && !isCoolingActive {
             return image
         }
 
+        let isTemplateOnly = keepAwakeState != .manual && !isCoolingActive
         var labelColor = NSColor.labelColor
         var coffeeColor = NSColor.systemOrange
         var coolingColor = NSColor.systemBlue
-        appearance.performAsCurrentDrawingAppearance {
-            labelColor = NSColor.labelColor.usingColorSpace(.sRGB) ?? .labelColor
-            let rawCoffee: NSColor = switch keepAwakeState {
-            case .manual: .systemOrange
-            case .automatic: .systemGreen
-            case .inactive: .clear
+        if !isTemplateOnly {
+            appearance.performAsCurrentDrawingAppearance {
+                labelColor = NSColor.labelColor.usingColorSpace(.sRGB) ?? .labelColor
+                let rawCoffee: NSColor = switch keepAwakeState {
+                case .manual: .systemOrange
+                case .automatic: .labelColor
+                case .inactive: .clear
+                }
+                coffeeColor = rawCoffee.usingColorSpace(.sRGB) ?? rawCoffee
+                coolingColor = NSColor.systemBlue.usingColorSpace(.sRGB) ?? .systemBlue
             }
-            coffeeColor = rawCoffee.usingColorSpace(.sRGB) ?? rawCoffee
-            coolingColor = NSColor.systemBlue.usingColorSpace(.sRGB) ?? .systemBlue
         }
 
         // Source SVG viewBox is 20x16; scale coordinates into `statusIconSize`.
         let scale = statusIconSize.width / 20.0
         let composed = NSImage(size: statusIconSize, flipped: true) { rect in
             image.draw(in: rect)
-            labelColor.setFill()
-            rect.fill(using: .sourceAtop)
+            if !isTemplateOnly {
+                labelColor.setFill()
+                rect.fill(using: .sourceAtop)
+            }
 
             if keepAwakeState != .inactive {
                 let coffeeRect = NSRect(
                     x: (8.2 - 4.55) * scale,
-                    y: (4.4 - 1.4) * scale,
+                    y: (5.1 - 1.9) * scale,
                     width: 9.1 * scale,
-                    height: 2.8 * scale
+                    height: 3.8 * scale
                 )
-                coffeeColor.setFill()
+                (isTemplateOnly ? NSColor.black : coffeeColor).setFill()
                 NSBezierPath(ovalIn: coffeeRect).fill()
             }
 
@@ -266,7 +271,7 @@ final class AwakeAppDelegate: NSObject, NSApplicationDelegate {
 
             return true
         }
-        composed.isTemplate = false
+        composed.isTemplate = isTemplateOnly
         return composed
     }
 

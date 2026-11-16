@@ -14,6 +14,10 @@ final class MenuBarStatusIconTests: XCTestCase {
         XCTAssertTrue(idle.isTemplate)
         XCTAssertEqual(idle.size, NSSize(width: 21, height: 16.8))
 
+        let idleBitmap = try renderBitmap(for: idle)
+        let idleCenter = try XCTUnwrap(idleBitmap.colorAt(x: 9, y: 5))
+        XCTAssertLessThan(idleCenter.alphaComponent, 0.1)
+
         let manualAndCoolingDark = try XCTUnwrap(AwakeAppDelegate.statusIcon(
             keepAwakeState: .manual, isCoolingActive: true, appearance: darkAqua
         ))
@@ -32,23 +36,37 @@ final class MenuBarStatusIconTests: XCTestCase {
         XCTAssertLessThan(manualBottomCorner.alphaComponent, 0.1)
         XCTAssertGreaterThan(cupBodyDark.redComponent, 0.7)
 
-        let automaticLight = try XCTUnwrap(AwakeAppDelegate.statusIcon(
+        let automaticTemplate = try XCTUnwrap(AwakeAppDelegate.statusIcon(
             keepAwakeState: .automatic, isCoolingActive: false, appearance: aqua
         ))
-        XCTAssertFalse(automaticLight.isTemplate)
-        XCTAssertEqual(automaticLight.size, idle.size)
+        XCTAssertTrue(automaticTemplate.isTemplate)
+        XCTAssertEqual(automaticTemplate.size, idle.size)
 
-        let automaticBitmap = try renderBitmap(for: automaticLight)
+        let automaticBitmap = try renderBitmap(for: automaticTemplate)
         let automaticCoffee = try XCTUnwrap(automaticBitmap.colorAt(x: 9, y: 5)?.usingColorSpace(.sRGB))
         let automaticTopCorner = try XCTUnwrap(automaticBitmap.colorAt(x: 19, y: 3)?.usingColorSpace(.sRGB))
         let automaticBottomDot = try XCTUnwrap(automaticBitmap.colorAt(x: 19, y: 14)?.usingColorSpace(.sRGB))
-        let cupBodyLight = try XCTUnwrap(automaticBitmap.colorAt(x: 9, y: 12)?.usingColorSpace(.sRGB))
-        XCTAssertGreaterThan(automaticCoffee.greenComponent, 0.6)
-        XCTAssertLessThan(automaticCoffee.redComponent, 0.4)
-        XCTAssertLessThan(automaticCoffee.blueComponent, 0.5)
+        let cupBody = try XCTUnwrap(automaticBitmap.colorAt(x: 9, y: 12)?.usingColorSpace(.sRGB))
+        XCTAssertGreaterThan(automaticCoffee.alphaComponent, 0.7)
+        XCTAssertLessThan(automaticCoffee.redComponent, 0.3)
+        XCTAssertLessThan(automaticCoffee.greenComponent, 0.3)
+        XCTAssertLessThan(automaticCoffee.blueComponent, 0.3)
         XCTAssertLessThan(automaticTopCorner.alphaComponent, 0.1)
         XCTAssertLessThan(automaticBottomDot.alphaComponent, 0.1)
-        XCTAssertLessThan(cupBodyLight.redComponent, 0.3)
+        XCTAssertLessThan(cupBody.redComponent, 0.3)
+
+        let automaticAndCoolingLight = try XCTUnwrap(AwakeAppDelegate.statusIcon(
+            keepAwakeState: .automatic, isCoolingActive: true, appearance: aqua
+        ))
+        XCTAssertFalse(automaticAndCoolingLight.isTemplate)
+        let autoCoolBitmap = try renderBitmap(for: automaticAndCoolingLight)
+        let autoCoolCoffee = try XCTUnwrap(autoCoolBitmap.colorAt(x: 9, y: 5)?.usingColorSpace(.sRGB))
+        let autoCoolDot = try XCTUnwrap(autoCoolBitmap.colorAt(x: 19, y: 3)?.usingColorSpace(.sRGB))
+        XCTAssertGreaterThan(autoCoolCoffee.alphaComponent, 0.7)
+        XCTAssertLessThan(autoCoolCoffee.redComponent, 0.3)
+        XCTAssertLessThan(autoCoolCoffee.greenComponent, 0.3)
+        XCTAssertGreaterThan(autoCoolDot.blueComponent, 0.7)
+        XCTAssertLessThan(autoCoolDot.redComponent, 0.4)
     }
 
     private func renderBitmap(for image: NSImage) throws -> NSBitmapImageRep {

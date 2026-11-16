@@ -17,6 +17,7 @@
 		A10000000000000000000011 /* AgentSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AgentSessionStoreTests.swift */; };
 		B20000000000000000000006 /* SMCHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* SMCHelperTests.swift */; };
 		B30000000000000000000001 /* LegacyScreenLockRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */; };
+		C90000000000000000000001 /* SettingsWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90000000000000000000002 /* SettingsWindowControllerTests.swift */; };
 		C50000000000000000000001 /* CoolingSettingsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50000000000000000000002 /* CoolingSettingsMigrationTests.swift */; };
 		C50000000000000000000003 /* LowPowerModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50000000000000000000004 /* LowPowerModeTests.swift */; };
 		C40000000000000000000001 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40000000000000000000002 /* LocalizationTests.swift */; };
@@ -90,6 +91,7 @@
 		A10000000000000000000013 /* awakeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = awakeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000005 /* SMCHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMCHelperTests.swift; sourceTree = "<group>"; };
 		B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyScreenLockRecoveryTests.swift; sourceTree = "<group>"; };
+		C90000000000000000000002 /* SettingsWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowControllerTests.swift; sourceTree = "<group>"; };
 		C50000000000000000000002 /* CoolingSettingsMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoolingSettingsMigrationTests.swift; sourceTree = "<group>"; };
 		C50000000000000000000004 /* LowPowerModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LowPowerModeTests.swift; sourceTree = "<group>"; };
 		C40000000000000000000002 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
@@ -179,6 +181,7 @@
 				C60000000000000000000002 /* UpdateChannelTests.swift */,
 				B20000000000000000000005 /* SMCHelperTests.swift */,
 				B30000000000000000000002 /* LegacyScreenLockRecoveryTests.swift */,
+				C90000000000000000000002 /* SettingsWindowControllerTests.swift */,
 			);
 			path = awakeTests;
 			sourceTree = "<group>";
@@ -383,6 +386,7 @@
 				C60000000000000000000001 /* UpdateChannelTests.swift in Sources */,
 				B20000000000000000000006 /* SMCHelperTests.swift in Sources */,
 				B30000000000000000000001 /* LegacyScreenLockRecoveryTests.swift in Sources */,
+				C90000000000000000000001 /* SettingsWindowControllerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

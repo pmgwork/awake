@@ -17,6 +17,11 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
     @Published public private(set) var lastError: String?
     @Published public private(set) var isHelperInstalled = false
     @Published public private(set) var isCheckingHelper = false
+    @Published public private(set) var hasCheckedHelper = false
+
+    public var needsHelperPermissionHint: Bool {
+        hasCheckedHelper && !isHelperInstalled
+    }
 
     private let helperURL: URL
     private let helperCheck: () async -> Bool
@@ -73,6 +78,7 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
         }
         isCheckingHelper = true
         isHelperInstalled = await helperCheck()
+        hasCheckedHelper = true
         isCheckingHelper = false
         guard requested else { return }
         guard isHelperInstalled else {

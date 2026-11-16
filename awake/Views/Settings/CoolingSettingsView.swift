@@ -25,10 +25,10 @@ struct CoolingSettingsView: View {
                 if let error = fanController.controlError {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
-                } else if canUseHelper {
-                    Text(L10n.string("Automatic applies to While Keep Awake Is On and While Rendering. Manual applies to ∞ and timed cooling."))
-                } else {
+                } else if closedDisplayModeManager.needsHelperPermissionHint {
                     PermissionsHintFooter(text: L10n.string("Allow the helper in Permissions to control the fans."))
+                } else {
+                    Text(L10n.string("Automatic applies to While Keep Awake Is On and While Rendering. Manual applies to ∞ and timed cooling."))
                 }
             }
             .disabled(!canUseHelper)
@@ -54,7 +54,6 @@ struct CoolingSettingsView: View {
 
     private var canUseHelper: Bool {
         closedDisplayModeManager.isHelperInstalled
-            && !closedDisplayModeManager.isCheckingHelper
             && !coordinator.isRemovingHardwareAuthorization
     }
 }
