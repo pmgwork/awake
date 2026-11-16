@@ -19,6 +19,7 @@ private struct StoredEvent: Codable {
     let occurredAt: Date
     let sourcePID: Int32?
     let sourceProcessStartTime: TimeInterval?
+    let transcriptPath: String?
 }
 
 private struct AwakeHookBridge {
@@ -87,8 +88,7 @@ private struct AwakeHookBridge {
             case .antigravity:
                 switch eventName.lowercased() {
                 case "preinvocation", "pretooluse", "posttooluse": state = .active
-                case "stop":
-                    state = (input["fullyIdle"] as? Bool) == true ? .idle : .active
+                case "stop": state = .idle
                 default: return nil
                 }
             case .opencode:
@@ -101,6 +101,13 @@ private struct AwakeHookBridge {
 
         let date = arguments["occurred-at"].flatMap(iso8601Date(from:)) ?? Date()
         let identity = providerProcessIdentity(provider: provider)
+        let rawTranscriptPath = provider == .antigravity
+            ? (arguments["transcript-path"] ?? input["transcriptPath"] as? String)
+            : nil
+        let transcriptPath = rawTranscriptPath.flatMap { path -> String? in
+            guard !path.isEmpty, path.utf8.count <= 4096 else { return nil }
+            return path
+        }
         return StoredEvent(
             schemaVersion: 1,
             provider: provider,
@@ -110,7 +117,8 @@ private struct AwakeHookBridge {
             reason: arguments["reason"] ?? eventName,
             occurredAt: date,
             sourcePID: identity?.pid,
-            sourceProcessStartTime: identity?.startTime
+            sourceProcessStartTime: identity?.startTime,
+            transcriptPath: transcriptPath
         )
     }
 

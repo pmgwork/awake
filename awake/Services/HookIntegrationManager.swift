@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import AppKit
 import Security
 import Combine
 
@@ -36,15 +37,26 @@ public final class HookIntegrationManager: ObservableObject {
     private let fileManager: FileManager
     private let settings: SettingsStore
     private let homeURL: URL
+    private let applicationSearchDirectories: [URL]
+    private let applicationURLForBundleIdentifier: (String) -> URL?
 
     public init(
         fileManager: FileManager = .default,
         settings: SettingsStore? = nil,
-        homeURL: URL = FileManager.default.homeDirectoryForCurrentUser
+        homeURL: URL = FileManager.default.homeDirectoryForCurrentUser,
+        applicationSearchDirectories: [URL]? = nil,
+        applicationURLForBundleIdentifier: ((String) -> URL?)? = nil
     ) {
         self.fileManager = fileManager
         self.settings = settings ?? .shared
         self.homeURL = homeURL
+        self.applicationSearchDirectories = applicationSearchDirectories ?? [
+            URL(fileURLWithPath: "/Applications", isDirectory: true),
+            homeURL.appendingPathComponent("Applications", isDirectory: true),
+        ]
+        self.applicationURLForBundleIdentifier = applicationURLForBundleIdentifier ?? {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }
         refreshStatuses()
     }
 
@@ -262,20 +274,20 @@ public final class HookIntegrationManager: ObservableObject {
                 "PreInvocation": [[
                     "type": "command",
                     "command": command(bridgeURL, provider: provider, event: "PreInvocation"),
-                    "timeout": 2,
+                    "timeout": 5,
                 ]],
                 "PostToolUse": [[
                     "matcher": "*",
                     "hooks": [[
                         "type": "command",
                         "command": command(bridgeURL, provider: provider, event: "PostToolUse"),
-                        "timeout": 2,
+                        "timeout": 5,
                     ]],
                 ]],
                 "Stop": [[
                     "type": "command",
                     "command": command(bridgeURL, provider: provider, event: "Stop"),
-                    "timeout": 2,
+                    "timeout": 5,
                 ]],
             ]
         } else {
@@ -504,8 +516,30 @@ public final class HookIntegrationManager: ObservableObject {
         var result: [AgentProvider: Bool] = [:]
         for provider in AgentProvider.allCases {
             result[provider] = provider.toolNames.contains(where: toolExists(named:))
+                || applicationExists(for: provider)
         }
         toolAvailability = result
+    }
+
+    private func applicationExists(for provider: AgentProvider) -> Bool {
+        for directory in applicationSearchDirectories {
+            for appName in provider.applicationNames {
+                var isDirectory: ObjCBool = false
+                let url = directory.appendingPathComponent(appName, isDirectory: true)
+                if fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                    return true
+                }
+            }
+        }
+        for bundleIdentifier in provider.applicationBundleIdentifiers {
+            guard let url = applicationURLForBundleIdentifier(bundleIdentifier),
+                  !url.pathComponents.contains(".Trash") else { continue }
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                return true
+            }
+        }
+        return false
     }
 
     private func toolExists(named name: String) -> Bool {

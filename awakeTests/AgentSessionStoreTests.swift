@@ -279,4 +279,101 @@ final class AgentSessionStoreTests: XCTestCase {
         }
         print("Awake cached poll, 777 sessions: \(Date().timeIntervalSince(started) / 20) seconds/poll")
     }
+
+    func testAntigravityTranscriptRecoveryHandlesMissedStopAndPreservesActiveTools() throws {
+        try store.prepareDirectory()
+        let now = Date()
+        let past = now.addingTimeInterval(-(AgentSessionStore.antigravityTranscriptCheckGrace + 5))
+
+        // 1. Final PLANNER_RESPONSE (DONE, no tool_calls) after grace recovers missed Stop.
+        let finishedTranscript = directoryURL.appendingPathComponent("finished-transcript.jsonl")
+        let finishedLine = """
+        {"step_index":0,"type":"USER_INPUT","status":"DONE"}
+        {"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE"}
+        """
+        try Data(finishedLine.utf8).write(to: finishedTranscript)
+        try FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: finishedTranscript.path)
+
+        // 2. PLANNER_RESPONSE with tool_calls keeps long-running tool active past grace.
+        let activeToolTranscript = directoryURL.appendingPathComponent("active-tool-transcript.jsonl")
+        let activeToolLine = """
+        {"step_index":0,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"run_command"}]}
+        """
+        try Data(activeToolLine.utf8).write(to: activeToolTranscript)
+        try FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: activeToolTranscript.path)
+
+        // 3. Canceled transcript step after grace recovers missed Stop.
+        let canceledTranscript = directoryURL.appendingPathComponent("canceled-transcript.jsonl")
+        let canceledLine = """
+        {"step_index":0,"type":"USER_INPUT","status":"DONE"}
+        {"step_index":1,"type":"PLANNER_RESPONSE","status":"CANCELED","tool_calls":[{"name":"run_command"}]}
+        """
+        try Data(canceledLine.utf8).write(to: canceledTranscript)
+        try FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: canceledTranscript.path)
+
+        // 4. Deleted transcript after grace is dropped.
+        let missingTranscript = directoryURL.appendingPathComponent("missing-transcript.jsonl")
+
+        try store.save(AgentHookEvent(
+            provider: .antigravity, sessionID: "finished-missed-stop", state: .active,
+            reason: "PreInvocation", occurredAt: past, transcriptPath: finishedTranscript.path
+        ))
+        try store.save(AgentHookEvent(
+            provider: .antigravity, sessionID: "canceled-missed-stop", state: .active,
+            reason: "PreInvocation", occurredAt: past, transcriptPath: canceledTranscript.path
+        ))
+        try store.save(AgentHookEvent(
+            provider: .antigravity, sessionID: "running-tool", state: .active,
+            reason: "PreInvocation", occurredAt: past, transcriptPath: activeToolTranscript.path
+        ))
+        try store.save(AgentHookEvent(
+            provider: .antigravity, sessionID: "deleted-conversation", state: .active,
+            reason: "PreInvocation", occurredAt: past, transcriptPath: missingTranscript.path
+        ))
+        try store.save(AgentHookEvent(
+            provider: .antigravity, sessionID: "fresh-before-grace", state: .active,
+            reason: "PreInvocation", occurredAt: now, transcriptPath: finishedTranscript.path
+        ))
+
+        let events = store.loadValidEvents(now: now)
+        XCTAssertEqual(Set(events.map(\.sessionID)), ["running-tool", "fresh-before-grace"])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .antigravity, sessionID: "finished-missed-stop").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .antigravity, sessionID: "canceled-missed-stop").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .antigravity, sessionID: "deleted-conversation").path))
+    }
+
+    @MainActor
+    func testHookIntegrationManagerDetectsAntigravityDesktopApp() throws {
+        let tempHome = directoryURL.appendingPathComponent("home", isDirectory: true)
+        let appsDir = directoryURL.appendingPathComponent("Applications", isDirectory: true)
+        let trashApp = directoryURL.appendingPathComponent(".Trash/Antigravity.app", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempHome, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: appsDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: trashApp, withIntermediateDirectories: true)
+
+        let managerWithoutApp = HookIntegrationManager(
+            homeURL: tempHome,
+            applicationSearchDirectories: [appsDir],
+            applicationURLForBundleIdentifier: { _ in trashApp }
+        )
+        XCTAssertFalse(managerWithoutApp.isToolInstalled(.antigravity))
+
+        let installedApp = appsDir.appendingPathComponent("Antigravity.app", isDirectory: true)
+        try FileManager.default.createDirectory(at: installedApp, withIntermediateDirectories: true)
+        let managerWithAppFolder = HookIntegrationManager(
+            homeURL: tempHome,
+            applicationSearchDirectories: [appsDir],
+            applicationURLForBundleIdentifier: { _ in nil }
+        )
+        XCTAssertTrue(managerWithAppFolder.isToolInstalled(.antigravity))
+
+        let customLocationApp = directoryURL.appendingPathComponent("Custom/Antigravity.app", isDirectory: true)
+        try FileManager.default.createDirectory(at: customLocationApp, withIntermediateDirectories: true)
+        let managerWithBundleID = HookIntegrationManager(
+            homeURL: tempHome,
+            applicationSearchDirectories: [],
+            applicationURLForBundleIdentifier: { $0 == "com.google.antigravity" ? customLocationApp : nil }
+        )
+        XCTAssertTrue(managerWithBundleID.isToolInstalled(.antigravity))
+    }
 }

@@ -40,7 +40,7 @@ struct MonitoringSettingsView: View {
                         .foregroundStyle(.red)
                         .lineLimit(2)
                 } else {
-                    Text(L10n.string("Awake detects active work through hooks or plugins added to each CLI."))
+                    Text(L10n.string("Awake detects active work through hooks or plugins added to each agent."))
                 }
             }
 
@@ -176,7 +176,7 @@ struct MonitoringSettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(provider.displayName)
                     .fontWeight(.medium)
-                if let note = providerNote(status: status, installed: toolInstalled) {
+                if let note = providerNote(provider: provider, status: status, installed: toolInstalled) {
                     Text(note.text)
                         .font(.callout)
                         .foregroundStyle(note.color)
@@ -204,9 +204,13 @@ struct MonitoringSettingsView: View {
         }
     }
 
-    private func providerNote(status: HookIntegrationStatus,
+    private func providerNote(provider: AgentProvider,
+                              status: HookIntegrationStatus,
                               installed: Bool) -> (text: String, color: Color)? {
-        guard installed else { return (L10n.string("CLI not installed"), .secondary) }
+        guard installed else {
+            let message = provider.applicationNames.isEmpty ? "CLI not installed" : "Not installed"
+            return (L10n.string(message), .secondary)
+        }
         if status == .needsRepair { return (status.label, .orange) }
         return nil
     }

@@ -91,6 +91,7 @@
 "Awake didn't receive the test event." = "テストイベントを受信できませんでした。";
 "The provider configuration is invalid: %@" = "設定ファイルの内容が無効です：%@";
 "CLI not installed" = "CLIが見つかりません";
+"Not installed" = "インストールされていません";
 "Welcome to Awake" = "Awakeへようこそ";
 "Set Up Later" = "あとで設定";
 "Continue" = "続ける";
@@ -212,7 +213,7 @@
 "Awake cannot replace a file it did not create: %@" = "Awakeが作成したものではないため、ファイルを置き換えられません：%@";
 "Blender Integration" = "Blenderとの連携";
 "Restart Blender to apply the integration change." = "設定を反映するにはBlenderを再起動してください。";
-"Awake detects active work through hooks or plugins added to each CLI." = "各CLIに組み込んだフックやプラグインを通じて、作業中を検出します。";
+"Awake detects active work through hooks or plugins added to each agent." = "各エージェントに組み込んだフックやプラグインを通じて、作業中を検出します。";
 "Blender and After Effects use integration for in-app renders; Media Encoder and Houdini are detected automatically." = "BlenderとAfter Effectsは連携設定でアプリ内の書き出しを検出し、Media EncoderとHoudiniはプロセスや負荷から自動で検出します。";
 
 "Reconnect" = "再接続";

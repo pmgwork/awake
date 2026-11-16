@@ -340,7 +340,8 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(provider.displayName)
                     .fontWeight(.medium)
-                Text(isInstalled ? status.label : L10n.string("CLI not installed"))
+                let missingMessage = provider.applicationNames.isEmpty ? "CLI not installed" : "Not installed"
+                Text(isInstalled ? status.label : L10n.string(missingMessage))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

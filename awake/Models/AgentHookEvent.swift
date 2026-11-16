@@ -22,6 +22,7 @@ public nonisolated struct AgentHookEvent: Codable, Equatable, Sendable {
     public let occurredAt: Date
     public let sourcePID: Int32?
     public let sourceProcessStartTime: TimeInterval?
+    public let transcriptPath: String?
 
     public init(
         schemaVersion: Int = currentSchemaVersion,
@@ -32,7 +33,8 @@ public nonisolated struct AgentHookEvent: Codable, Equatable, Sendable {
         reason: String,
         occurredAt: Date = Date(),
         sourcePID: Int32? = nil,
-        sourceProcessStartTime: TimeInterval? = nil
+        sourceProcessStartTime: TimeInterval? = nil,
+        transcriptPath: String? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.provider = provider
@@ -43,6 +45,7 @@ public nonisolated struct AgentHookEvent: Codable, Equatable, Sendable {
         self.occurredAt = occurredAt
         self.sourcePID = sourcePID
         self.sourceProcessStartTime = sourceProcessStartTime
+        self.transcriptPath = transcriptPath
     }
 
     public var sessionKey: String { "\(provider.rawValue):\(sessionID)" }

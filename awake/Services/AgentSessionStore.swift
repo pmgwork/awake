@@ -16,6 +16,8 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
     /// only bounds sessions with zero events for a full day. Any fresh event
     /// for the session re-asserts it.
     public static let orphanSessionTTL: TimeInterval = 24 * 60 * 60
+    /// Grace window before consulting an Antigravity transcript to recover from a missed Stop hook.
+    public static let antigravityTranscriptCheckGrace: TimeInterval = 15
 
     public let directoryURL: URL
     private let fileManager: FileManager
@@ -24,7 +26,12 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         let data: Data
         let event: AgentHookEvent
     }
+    private struct CachedTranscriptCheck {
+        let modificationDate: Date?
+        let isFinished: Bool
+    }
     private var cachedEvents: [URL: CachedEvent] = [:]
+    private var cachedTranscriptChecks: [String: CachedTranscriptCheck] = [:]
 
     public init(directoryURL: URL? = nil, fileManager: FileManager = .default) {
         self.fileManager = fileManager
@@ -94,6 +101,8 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         )) ?? []) : Array(cachedEvents.keys)
         let existingURLs = Set(urls)
         cachedEvents = cachedEvents.filter { existingURLs.contains($0.key) }
+        let activeTranscriptPaths = Set(cachedEvents.values.compactMap(\.event.transcriptPath))
+        cachedTranscriptChecks = cachedTranscriptChecks.filter { activeTranscriptPaths.contains($0.key) }
         var newestBySession: [String: AgentHookEvent] = [:]
         for url in urls where url.pathExtension == "json" {
             let snapshot = reloadingFiles ? (try? readCached(url)) : cachedEvents[url]?.event
@@ -112,6 +121,13 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
             }
             if (event.state == .active || event.state == .waitingForInput),
                now.timeIntervalSince(event.occurredAt) > Self.orphanSessionTTL {
+                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
+                continue
+            }
+            if event.state == .active,
+               event.provider == .antigravity,
+               let transcriptPath = event.transcriptPath,
+               isAntigravityTranscriptFinished(path: transcriptPath, eventOccurredAt: event.occurredAt, now: now) {
                 if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
                 continue
             }
@@ -199,6 +215,64 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         return formatter
     }()
     private static let wholeSecondsFormatter = ISO8601DateFormatter()
+
+    private func isAntigravityTranscriptFinished(
+        path: String,
+        eventOccurredAt: Date,
+        now: Date
+    ) -> Bool {
+        guard now.timeIntervalSince(eventOccurredAt) >= Self.antigravityTranscriptCheckGrace else {
+            return false
+        }
+        guard fileManager.fileExists(atPath: path) else {
+            // Conversation transcript was removed, so the session cannot still be running.
+            return true
+        }
+        let attributes = try? fileManager.attributesOfItem(atPath: path)
+        let modificationDate = attributes?[.modificationDate] as? Date
+        if let modificationDate,
+           now.timeIntervalSince(modificationDate) < Self.antigravityTranscriptCheckGrace {
+            return false
+        }
+        if let cached = cachedTranscriptChecks[path], cached.modificationDate == modificationDate {
+            return cached.isFinished
+        }
+        let isFinished = Self.transcriptTailLooksFinished(atPath: path)
+        cachedTranscriptChecks[path] = CachedTranscriptCheck(
+            modificationDate: modificationDate,
+            isFinished: isFinished
+        )
+        return isFinished
+    }
+
+    private static func transcriptTailLooksFinished(atPath path: String) -> Bool {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return false }
+        defer { try? handle.close() }
+        let maxTailBytes: UInt64 = 64 * 1024
+        let fileSize = (try? handle.seekToEnd()) ?? 0
+        let startOffset = fileSize > maxTailBytes ? fileSize - maxTailBytes : 0
+        try? handle.seek(toOffset: startOffset)
+        let data = handle.readDataToEndOfFile()
+        guard let text = String(data: data, encoding: .utf8) else { return false }
+        let lines = text.split(whereSeparator: \.isNewline)
+        guard let lastLine = lines.last(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
+              let lineData = lastLine.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any] else {
+            return false
+        }
+        let status = (json["status"] as? String)?.uppercased()
+        if status == "ERROR" || status == "CANCELED" || status == "CANCELLED" {
+            return true
+        }
+        let stepType = (json["type"] as? String)?.uppercased()
+        let toolCalls = json["tool_calls"] as? [Any]
+        if stepType == "PLANNER_RESPONSE",
+           status == "DONE",
+           (toolCalls?.isEmpty ?? true) {
+            return true
+        }
+        return false
+    }
 
     private static func processIsSame(pid: Int32, expectedStartTime: TimeInterval?) -> Bool {
         guard pid > 1, kill(pid, 0) == 0 || errno == EPERM else { return false }

@@ -39,6 +39,22 @@ public nonisolated enum AgentProvider: String, Codable, CaseIterable, Identifiab
         }
     }
 
+    /// Bundle identifiers of desktop apps that share the provider's hook integration.
+    public var applicationBundleIdentifiers: [String] {
+        switch self {
+        case .antigravity: return ["com.google.antigravity"]
+        case .codex, .claude, .openCode: return []
+        }
+    }
+
+    /// Application bundle names checked under `/Applications` and `~/Applications`.
+    public var applicationNames: [String] {
+        switch self {
+        case .antigravity: return ["Antigravity.app"]
+        case .codex, .claude, .openCode: return []
+        }
+    }
+
     public static func infer(name: String, processNames: [String]) -> AgentProvider? {
         let candidates = Set(([name] + processNames).map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
