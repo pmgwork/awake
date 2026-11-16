@@ -1,6 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
             <title>0.6.1</title>
+            <pubDate>Tue, 17 Nov 2026 01:30:35 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.1b5</sparkle:version>
+            <sparkle:shortVersionString>0.6.1-beta.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## What's Changed Since Beta 4
+
+- Detected the Antigravity desktop app (`Antigravity.app`, `com.google.antigravity`) in **Settings → Monitor** and the welcome guide even when the `agy` CLI is not installed, and updated the missing-installation label to **Not installed** for app-backed agents.
+- Transitioned Antigravity sessions to idle on `Stop` regardless of `fullyIdle`, and increased the Antigravity hook timeout to 5 seconds so completed turns do not remain active when background processes stay open.
+- Added `transcriptPath`-based recovery in `AgentSessionStore` to clear orphaned Antigravity sessions after a short grace period when `Stop` is missed (final `PLANNER_RESPONSE` without tool calls, canceled/errored steps, or removed transcripts) while keeping long-running tool calls active.
+
+This release also builds on [Beta 4](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.4), [Beta 3](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.3), [Beta 2](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.2), and [Beta 1](https://github.com/PMGWork/awake/releases/tag/v0.6.1-beta.1).
+
+## Installation
+
+Download `Awake-0.6.1-beta.5.zip` or `Awake-0.6.1-beta.5.dmg` and move `Awake.app` to `/Applications`. Existing users with beta updates enabled can use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.1-beta.4...v0.6.1-beta.5)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.1-beta.5/Awake-0.6.1-beta.5.zip" length="4904270" type="application/octet-stream" sparkle:edSignature="/Dll8dj5eixYLxtbXmzBoORTXJB6lVcaK8PBwheWca78GxHltTikYuszdzRZ4S3wX0gos4so8PkpUtrr/Hm2Bg==" />
+        </item>
+    <item>
+            <title>0.6.1</title>
             <pubDate>Mon, 16 Nov 2026 16:29:12 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
             <sparkle:version>0.6.1b4</sparkle:version>
