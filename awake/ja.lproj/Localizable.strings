@@ -165,7 +165,7 @@
 "Automatic Cooling Stopped" = "自動冷却を停止しました";
 "Battery is at %d%%, so automatic cooling stopped." = "バッテリー残量が%d%%になったため、自動冷却を停止しました。";
 "Automatic cooling is unavailable while the battery is low." = "バッテリー残量が少ないため、自動冷却は利用できません。";
-"Update the hardware helper in Permissions to use cooling and closed-lid operation." = "冷却と蓋を閉じたままの動作を使うには、「権限」でハードウェア制御ヘルパーを更新してください。";
+"Cooling and closed-lid operation need a helper update." = "冷却と蓋を閉じたままの動作には、ヘルパーの更新が必要です。";
 "The fans may still be under manual control. Restart your Mac to return them to automatic control." = "ファンが手動制御のままの可能性があります。Macを再起動すると自動制御に戻ります。";
 "Link Your Agents" = "エージェントを連携";
 "Closed Lid & Fans" = "蓋を閉じたままの動作とファン";

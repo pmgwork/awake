@@ -10,6 +10,8 @@ struct MenuBarView: View {
     @ObservedObject var settings: SettingsStore
     var popoverCloseAction: () -> Void
 
+    @State private var isUpdatingHelper = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ModeSelectorView(
@@ -120,18 +122,28 @@ struct MenuBarView: View {
 
     /// Shown after an update that changed the helper, until it is reinstalled.
     private var helperUpdateNotice: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(L10n.string("Update the hardware helper in Permissions to use cooling and closed-lid operation."),
+        HStack(alignment: .center, spacing: 8) {
+            Label(L10n.string("Cooling and closed-lid operation need a helper update."),
                   systemImage: "exclamationmark.triangle")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button(L10n.string("Open Permissions")) {
-                popoverCloseAction()
-                SettingsWindowController.shared.show(tab: .permissions)
+            Spacer(minLength: 0)
+            Button {
+                isUpdatingHelper = true
+                Task {
+                    _ = await coordinator.installHardwareHelper()
+                    isUpdatingHelper = false
+                }
+            } label: {
+                if isUpdatingHelper {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Text(L10n.string("Update…"))
+                }
             }
-            .buttonStyle(.link)
-            .font(.system(size: 11))
+            .controlSize(.small)
+            .disabled(isUpdatingHelper)
         }
     }
 

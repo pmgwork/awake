@@ -245,6 +245,21 @@ public final class AwakeCoordinator: ObservableObject {
         return true
     }
 
+    /// Installs or updates the helper, then re-applies the policies that use it.
+    /// Returns whether the expected helper is installed afterward.
+    public func installHardwareHelper() async -> Bool {
+        let success = await withCheckedContinuation { continuation in
+            SMCHelper.shared.installHelperTool { continuation.resume(returning: $0) }
+        }
+        await closedDisplayModeManager.refreshHelperState()
+        let installed = success && closedDisplayModeManager.isHelperInstalled
+        if installed && !isRemovingHardwareAuthorization {
+            fanController.allowPolicyRetry()
+            evaluateState()
+        }
+        return installed
+    }
+
     public func toggleKeepAwake() {
         if isManualKeepAwakeActive {
             stopManualKeepAwake()

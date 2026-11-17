@@ -69,18 +69,12 @@ struct HelperAuthorizationRow: View {
     private func installHelper() {
         helperStatusText = ""
         isInstallingHelper = true
-        SMCHelper.shared.installHelperTool { success in
-            Task { @MainActor in
-                await closedDisplayModeManager.refreshHelperState()
-                isInstallingHelper = false
-                helperStatusText = success && closedDisplayModeManager.isHelperInstalled
-                    ? ""
-                    : L10n.string("Helper installation was cancelled or failed.")
-                if success && closedDisplayModeManager.isHelperInstalled && !coordinator.isRemovingHardwareAuthorization {
-                    coordinator.fanController.allowPolicyRetry()
-                    coordinator.evaluateState()
-                    onInstalled()
-                }
+        Task {
+            let installed = await coordinator.installHardwareHelper()
+            isInstallingHelper = false
+            helperStatusText = installed ? "" : L10n.string("Helper installation was cancelled or failed.")
+            if installed && !coordinator.isRemovingHardwareAuthorization {
+                onInstalled()
             }
         }
     }

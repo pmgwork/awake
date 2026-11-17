@@ -187,7 +187,7 @@ Release (distribution) steps are documented in `docs/DISTRIBUTION.md`.
 | macOS blocks the first launch | System Settings → Privacy & Security → **Open Anyway**, or clear the quarantine attribute (see Installation) |
 | In-app updates fail | Replace the app with the latest release from GitHub |
 | Fan control is unavailable | Settings → Permissions → **Install** / **Update** |
-| Cooling or closed-lid operation stopped after an update | The update replaced the hardware helper. Settings → Permissions → **Update…** (the menu also links there) |
+| Cooling or closed-lid operation stopped after an update | The update replaced the hardware helper. Click **Update…** in the menu or in Settings → Permissions |
 | Agents are not detected | Settings → Monitor → **Link** for that provider, then **Test** |
 
 ## License
