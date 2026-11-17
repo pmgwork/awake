@@ -12,7 +12,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-13"
+    private let helperProtocolVersion = "awake-smc-14"
 
     var closedDisplayHelperURL: URL { URL(fileURLWithPath: helperToolPath) }
     private let fanLeaseLock = NSLock()
@@ -934,8 +934,11 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             // restoration bounded when an inherited pipe remains open.
             struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
             while (!shouldStop && getppid() == awakePID) {
-                int ready = poll(&input, 1, 1000);
+                int ready = poll(&input, 1, 500);
                 if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+                // powerd rewrites this single flag on power source changes,
+                // assertion changes, and wake, so apply it again each time.
+                (void)IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
             }
             disabled = 0;
             result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
@@ -1008,7 +1011,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-13");
+                puts("awake-smc-14");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
