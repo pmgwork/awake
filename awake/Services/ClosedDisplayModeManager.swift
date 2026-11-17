@@ -8,8 +8,11 @@ import Combine
 import Foundation
 
 /// Owns a helper process that disables clamshell sleep while Awake is active.
-/// The helper holds the override only while its stdin remains open, so it
-/// restores normal lid behavior even if Awake exits without notification.
+/// While the lid is closed, the helper also turns on the system-wide
+/// SleepDisabled setting, because powerd can clear the clamshell override at
+/// any time on battery. The helper holds both only while its stdin remains
+/// open, so it restores normal lid behavior even if Awake exits without
+/// notification.
 @MainActor
 public final class ClosedDisplayModeManager: NSObject, ObservableObject {
     public static let shared = ClosedDisplayModeManager()
@@ -131,6 +134,32 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
             output.fileHandleForReading.readabilityHandler = nil
             lastError = error.localizedDescription
             NSLog("[ClosedDisplayModeManager] Failed to start helper: %@", error.localizedDescription)
+        }
+    }
+
+    /// While the lid is closed, the helper also turns on the system-wide
+    /// SleepDisabled setting, which pmset saves. If a helper was killed before
+    /// it could restore that setting (for example by a crash or restart), the
+    /// helper restores it here.
+    public func recoverSleepSettingIfNeeded() async {
+        guard process == nil, await helperCheck(), process == nil else { return }
+        let recovery = Process()
+        recovery.executableURL = helperURL
+        recovery.arguments = ["recover-sleep"]
+        recovery.standardInput = FileHandle.nullDevice
+        recovery.standardOutput = FileHandle.nullDevice
+        recovery.standardError = FileHandle.nullDevice
+        let status: Int32? = await withCheckedContinuation { continuation in
+            recovery.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
+            do {
+                try recovery.run()
+            } catch {
+                recovery.terminationHandler = nil
+                continuation.resume(returning: nil)
+            }
+        }
+        if status != 0 {
+            NSLog("[ClosedDisplayModeManager] Could not recover the sleep setting (status: %d)", status ?? -1)
         }
     }
 

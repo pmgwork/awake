@@ -76,6 +76,8 @@ public final class AwakeCoordinator: ObservableObject {
         // A Low Power Mode setting left over from a session that ended
         // without restoring it (for example after a restart).
         Task { await lowPowerModeManager.restoreSavedStateIfNeeded() }
+        // Likewise for the setting that keeps the Mac awake with the lid closed.
+        Task { await closedDisplayModeManager.recoverSleepSettingIfNeeded() }
     }
 
     deinit {
@@ -232,12 +234,11 @@ public final class AwakeCoordinator: ObservableObject {
 
         // Block automatic restarts while each existing helper releases its
         // override. Never delete the privileged tool if restoration fails.
-        let sleepStopped = await sleepManager.prepareForHelperRemoval()
         stopKeepAwake()
         let lidStopped = await closedDisplayModeManager.prepareForHelperRemoval()
         let lowPowerStopped = await lowPowerModeManager.prepareForHelperRemoval()
         let fansStopped = await fanController.prepareForHelperRemoval()
-        guard sleepStopped, lidStopped, lowPowerStopped, fansStopped else { return false }
+        guard lidStopped, lowPowerStopped, fansStopped else { return false }
         guard await SMCHelper.shared.removeHelperTool() else { return false }
         settings.closedDisplayModeEnabled = false
         settings.lowPowerModeWhenLidClosed = false
@@ -403,27 +404,11 @@ public final class AwakeCoordinator: ObservableObject {
             return
         }
 
-        let isClosed = lidMonitor.isLidClosed
-        let hasExternal = displayMonitor.hasExternalDisplay
-        let isAC = powerMonitor.isOnACPower
-
-        if !isClosed {
-            // Awake / Lid Open
-            // caffeinate -s is AC-only. On battery, arm a limited-power system
-            // assertion before the lid closes so the app remains scheduled long
-            // enough to apply the M3/M4 fan unlock sequence.
-            sleepManager.enableSleepPrevention(
-                closedLid: false,
-                prepareForClosedLid: !isAC,
-                appliesToBattery: !isAC
-            )
-        } else if hasExternal {
-            // Awake / Normal Clamshell (External Display Connected)
-            sleepManager.enableSleepPrevention(closedLid: false)
-        } else {
-            // Awake / Closed Lid Mode (No External Display)
-            sleepManager.enableSleepPrevention(closedLid: true, appliesToBattery: !isAC)
-        }
+        // Closed Lid Mode applies only without an external display; with one
+        // connected, macOS keeps the Mac awake in normal clamshell mode.
+        sleepManager.enableSleepPrevention(
+            closedLid: lidMonitor.isLidClosed && !displayMonitor.hasExternalDisplay
+        )
         // Fans last, once the sleep assertion is in place.
         applyFanPolicy()
     }

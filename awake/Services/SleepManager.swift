@@ -33,9 +33,7 @@ public final class SleepManager: ObservableObject {
 
     private var assertionID: IOPMAssertionID = 0
     private var closedLidAssertionID: IOPMAssertionID = 0
-    private var closedLidAssertionAppliesToBattery = false
     private var caffeinateProcess: Process?
-    private var batteryAssertionProcess: Process?
     private var isClosedLidMode = false
     @Published public private(set) var health: SleepPreventionHealth = .inactive
     @Published public private(set) var lastError: String?
@@ -59,11 +57,9 @@ public final class SleepManager: ObservableObject {
 
     /// Enable sleep prevention.
     /// If `closedLid` is true, we take strong system-sleep prevention to avoid clamshell sleep.
-    public func enableSleepPrevention(
-        closedLid: Bool = false,
-        prepareForClosedLid: Bool = false,
-        appliesToBattery: Bool = false
-    ) {
+    /// macOS honors it only on AC power. On battery, `ClosedDisplayModeManager`
+    /// keeps the Mac awake with the lid closed.
+    public func enableSleepPrevention(closedLid: Bool = false) {
         self.isClosedLidMode = closedLid
 
         // Standard idle system sleep prevention (allows display sleep and screen lock)
@@ -83,12 +79,7 @@ public final class SleepManager: ObservableObject {
         }
 
         // Closed-lid system sleep assertion
-        if closedLid || prepareForClosedLid {
-            if closedLidAssertionID != 0,
-               closedLidAssertionAppliesToBattery != appliesToBattery {
-                releaseClosedLidAssertion()
-            }
-
+        if closedLid {
             if closedLidAssertionID == 0 {
                 let closedReason = "Awake: Closed-Lid Keep Awake" as CFString
                 let result = IOPMAssertionCreateWithName(
@@ -100,12 +91,7 @@ public final class SleepManager: ObservableObject {
                 if result != kIOReturnSuccess {
                     NSLog("[SleepManager] Failed to create closed lid sleep assertion: %d", result)
                 } else {
-                    closedLidAssertionAppliesToBattery = appliesToBattery
-                    NSLog(
-                        "[SleepManager] Closed lid system sleep assertion created (ID: %u, battery: %@)",
-                        closedLidAssertionID,
-                        appliesToBattery ? "yes" : "no"
-                    )
+                    NSLog("[SleepManager] Closed lid system sleep assertion created (ID: %u)", closedLidAssertionID)
                 }
             }
 
@@ -113,47 +99,20 @@ public final class SleepManager: ObservableObject {
             if let process = caffeinateProcess, !process.isRunning {
                 caffeinateProcess = nil
             }
-            if closedLid && !appliesToBattery && caffeinateProcess == nil {
+            if caffeinateProcess == nil {
                 startCaffeinateProcess()
-            } else if !closedLid || appliesToBattery {
-                stopCaffeinateProcess()
-            }
-
-            if let process = batteryAssertionProcess, !process.isRunning {
-                batteryAssertionProcess = nil
-            }
-            if appliesToBattery && batteryAssertionProcess == nil {
-                batteryAssertionProcess = SMCHelper.shared.startBatterySleepAssertion()
-            } else if !appliesToBattery {
-                stopBatteryAssertionProcess()
             }
         } else {
             // Not closed lid, release closed lid specific assertions if held
             releaseClosedLidAssertion()
         }
 
-        updatePublishedStatus(
-            expectsClosedLidAssertion: closedLid || prepareForClosedLid,
-            expectsCaffeinate: closedLid && !appliesToBattery,
-            expectsBatteryHelper: (closedLid || prepareForClosedLid) && appliesToBattery
-        )
+        updatePublishedStatus(closedLid: closedLid)
     }
 
     /// Disable all sleep prevention and return system to normal power management.
     public func disableSleepPrevention() {
         releaseAllAssertions()
-    }
-
-    @MainActor
-    public func prepareForHelperRemoval() async -> Bool {
-        let retiringProcess = batteryAssertionProcess
-        releaseAllAssertions()
-        guard let retiringProcess else { return true }
-        let deadline = Date().addingTimeInterval(3)
-        while retiringProcess.isRunning, Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-        return !retiringProcess.isRunning && retiringProcess.terminationStatus == 0
     }
 
     private func releaseClosedLidAssertion() {
@@ -162,9 +121,7 @@ public final class SleepManager: ObservableObject {
             NSLog("[SleepManager] Released closed lid assertion (ID: %u)", closedLidAssertionID)
             closedLidAssertionID = 0
         }
-        closedLidAssertionAppliesToBattery = false
         stopCaffeinateProcess()
-        stopBatteryAssertionProcess()
     }
 
     private func releaseAllAssertions() {
@@ -207,49 +164,24 @@ public final class SleepManager: ObservableObject {
         }
     }
 
-    private func stopBatteryAssertionProcess() {
-        if let process = batteryAssertionProcess {
-            if process.isRunning {
-                process.terminate()
-                NSLog("[SleepManager] Terminated battery closed-lid assertion helper")
-            }
-            batteryAssertionProcess = nil
-        }
-    }
-
-    private func updatePublishedStatus(
-        expectsClosedLidAssertion: Bool,
-        expectsCaffeinate: Bool,
-        expectsBatteryHelper: Bool
-    ) {
+    private func updatePublishedStatus(closedLid: Bool) {
         var failures: [String] = []
 
         if assertionID == 0 {
             failures.append(L10n.string("Couldn't prevent idle sleep."))
         }
 
-        if expectsClosedLidAssertion && closedLidAssertionID == 0 {
+        if closedLid && closedLidAssertionID == 0 {
             failures.append(L10n.string("Couldn't prevent sleep with the lid closed."))
         }
 
-        if expectsCaffeinate && caffeinateProcess?.isRunning != true {
+        if closedLid && caffeinateProcess?.isRunning != true {
             failures.append(L10n.string("The caffeinate fallback isn't running."))
         }
 
-        if expectsBatteryHelper && batteryAssertionProcess?.isRunning != true {
-            failures.append(L10n.string("The helper for closed-lid operation on battery isn't running."))
-        }
-
-        let isEffective: Bool
-        if isClosedLidMode {
-            if expectsBatteryHelper {
-                isEffective = batteryAssertionProcess?.isRunning == true
-            } else {
-                isEffective = closedLidAssertionID != 0 || caffeinateProcess?.isRunning == true
-            }
-        } else {
-            isEffective = assertionID != 0
-        }
+        let isEffective = isClosedLidMode
+            ? closedLidAssertionID != 0 || caffeinateProcess?.isRunning == true
+            : assertionID != 0
 
         let health: SleepPreventionHealth
         if !isEffective {

@@ -12,7 +12,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     public static let shared = SMCHelper()
 
     private let helperToolPath = "/Library/PrivilegedHelperTools/pmgwork.awake.smc"
-    private let helperProtocolVersion = "awake-smc-14"
+    private let helperProtocolVersion = "awake-smc-15"
 
     var closedDisplayHelperURL: URL { URL(fileURLWithPath: helperToolPath) }
     private let fanLeaseLock = NSLock()
@@ -26,8 +26,6 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
     private let helperMutationLock = NSLock()
     private let installCheckQueue = DispatchQueue(label: "pmgwork.awake.smchelper.installcheck", qos: .utility)
     private var cachedInstallCheck: (date: Date, installed: Bool)?
-    /// Logs a missing battery helper once instead of on every heartbeat.
-    private var loggedMissingBatteryHelper = false
     private let installCheckTTL: TimeInterval = 30
 
     private init() {}
@@ -484,42 +482,6 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         return !process.isRunning
     }
 
-    /// Starts a root-owned limited-power assertion. The helper watches its
-    /// parent Awake process and releases the assertion on termination or crash.
-    public func startBatterySleepAssertion() -> Process? {
-        let installed = checkHelperInstalled()
-        installStateLock.lock()
-        let shouldLog = !installed && !loggedMissingBatteryHelper
-        loggedMissingBatteryHelper = !installed
-        installStateLock.unlock()
-        guard installed else {
-            if shouldLog {
-                NSLog("[SMCHelper] Battery sleep assertion requires the current helper version")
-            }
-            return nil
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: helperToolPath)
-        process.arguments = ["hold-sleep"]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        process.terminationHandler = { process in
-            NSLog(
-                "[SMCHelper] Battery sleep assertion helper exited (status: %d)",
-                process.terminationStatus
-            )
-        }
-        do {
-            try process.run()
-            NSLog("[SMCHelper] Started battery sleep assertion helper (PID: %d)", process.processIdentifier)
-            return process
-        } catch {
-            NSLog("[SMCHelper] Failed to start battery sleep assertion helper: %@", error.localizedDescription)
-            return nil
-        }
-    }
-
     /// Installs the privileged helper tool once so future fan changes don't require admin password prompts
     public func installHelperTool(completion: @escaping (Bool) -> Void) {
         // NSAppleScript's authorization work is performed by macOS at Default QoS.
@@ -673,8 +635,10 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
         #include <fcntl.h>
         #include <spawn.h>
         #include <sys/wait.h>
+        #include <stdlib.h>
         #include <string.h>
         #include <unistd.h>
+        #include <libproc.h>
         #include <IOKit/pwr_mgt/IOPMLib.h>
         #include <IOKit/pwr_mgt/IOPM.h>
 
@@ -866,86 +830,6 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
             }
         }
 
-        static int holdBatterySleepAssertion(void) {
-            pid_t awakePID = getppid();
-            signal(SIGTERM, handleStopSignal);
-            signal(SIGINT, handleStopSignal);
-
-            int level = kIOPMAssertionLevelOn;
-            CFNumberRef levelNumber = CFNumberCreate(
-                kCFAllocatorDefault,
-                kCFNumberIntType,
-                &level
-            );
-            if (!levelNumber) return 9;
-
-            CFMutableDictionaryRef properties = CFDictionaryCreateMutable(
-                kCFAllocatorDefault,
-                0,
-                &kCFTypeDictionaryKeyCallBacks,
-                &kCFTypeDictionaryValueCallBacks
-            );
-            if (!properties) {
-                CFRelease(levelNumber);
-                return 9;
-            }
-            CFDictionarySetValue(properties, kIOPMAssertionTypeKey, kIOPMAssertionTypePreventSystemSleep);
-            CFDictionarySetValue(properties, kIOPMAssertionNameKey, CFSTR("Awake: Battery Closed-Lid Keep Awake"));
-            CFDictionarySetValue(properties, kIOPMAssertionLevelKey, levelNumber);
-            CFDictionarySetValue(properties, CFSTR("AppliesToLimitedPower"), kCFBooleanTrue);
-
-            IOPMAssertionID assertionID = 0;
-            IOReturn result = IOPMAssertionCreateWithProperties(properties, &assertionID);
-            CFRelease(properties);
-            CFRelease(levelNumber);
-            if (result != kIOReturnSuccess || assertionID == 0) {
-                fprintf(stderr, "limited-power assertion failed: 0x%x", result);
-                return 9;
-            }
-
-            while (!shouldStop && getppid() == awakePID) sleep(1);
-            IOPMAssertionRelease(assertionID);
-            return 0;
-        }
-
-        static int holdClamshellOverride(void) {
-            pid_t awakePID = getppid();
-            if (awakePID <= 1) return 3;
-            signal(SIGPIPE, SIG_IGN);
-            signal(SIGTERM, handleStopSignal);
-            signal(SIGINT, handleStopSignal);
-
-            io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"));
-            if (!service) return 1;
-            io_connect_t connection = 0;
-            IOReturn result = IOServiceOpen(service, mach_task_self(), 0, &connection);
-            IOObjectRelease(service);
-            if (result != kIOReturnSuccess) return 2;
-
-            uint64_t disabled = 1;
-            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
-            if (result != kIOReturnSuccess) {
-                IOServiceClose(connection);
-                return 9;
-            }
-            puts("ready");
-            fflush(stdout);
-            // Stop on stdin closure, a signal, or parent death. Poll also keeps
-            // restoration bounded when an inherited pipe remains open.
-            struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
-            while (!shouldStop && getppid() == awakePID) {
-                int ready = poll(&input, 1, 500);
-                if (ready > 0 || (ready < 0 && errno != EINTR)) break;
-                // powerd rewrites this single flag on power source changes,
-                // assertion changes, and wake, so apply it again each time.
-                (void)IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
-            }
-            disabled = 0;
-            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
-            IOServiceClose(connection);
-            return result == kIOReturnSuccess ? 0 : 9;
-        }
-
         static bool isLowPowerKey(const char *key) {
             return strcmp(key, "lowpowermode") == 0 || strcmp(key, "powermode") == 0;
         }
@@ -956,9 +840,7 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                    strcmp(value, "1") == 0 || strcmp(value, "2") == 0;
         }
 
-        static bool runPmset(const char *source, const char *key, const char *value) {
-            if (strcmp(value, "-") == 0) return true;
-            char *const arguments[] = { "/usr/bin/pmset", (char *)source, (char *)key, (char *)value, NULL };
+        static bool runPmsetArguments(char *const arguments[]) {
             char *const environment[] = { "PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL };
             // Keep pmset off the stdin/stdout pipes shared with Awake.
             posix_spawn_file_actions_t actions;
@@ -975,6 +857,150 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
                 if (errno != EINTR) return false;
             }
             return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        }
+
+        static bool runPmset(const char *source, const char *key, const char *value) {
+            if (strcmp(value, "-") == 0) return true;
+            char *const arguments[] = { "/usr/bin/pmset", (char *)source, (char *)key, (char *)value, NULL };
+            return runPmsetArguments(arguments);
+        }
+
+        // MARK: Closed-lid operation
+
+        // Records the helper that turned on the system-wide SleepDisabled
+        // setting. pmset saves that setting, so a helper killed before it
+        // restores the setting would leave the Mac unable to sleep.
+        static const char *sleepMarkerPath = "/var/db/pmgwork.awake.sleepdisabled";
+
+        static bool setSleepDisabled(bool disabled) {
+            char *const arguments[] = { "/usr/bin/pmset", "disablesleep", disabled ? "1" : "0", NULL };
+            return runPmsetArguments(arguments);
+        }
+
+        static bool copyRootDomainFlag(io_service_t rootDomain, CFStringRef key) {
+            CFTypeRef value = IORegistryEntryCreateCFProperty(rootDomain, key, kCFAllocatorDefault, 0);
+            bool result = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)value);
+            if (value) CFRelease(value);
+            return result;
+        }
+
+        static bool writeSleepMarker(void) {
+            int fd = open(sleepMarkerPath, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+            if (fd < 0) return false;
+            char text[32];
+            int length = snprintf(text, sizeof(text), "%d\\n", (int)getpid());
+            bool written = write(fd, text, (size_t)length) == length && fsync(fd) == 0;
+            close(fd);
+            return written;
+        }
+
+        static void removeSleepMarker(void) {
+            (void)unlink(sleepMarkerPath);
+        }
+
+        // Returns 0 without a marker and -1 for an unreadable one.
+        static pid_t readSleepMarker(void) {
+            int fd = open(sleepMarkerPath, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+            if (fd < 0) return errno == ENOENT ? 0 : -1;
+            char text[32] = {0};
+            ssize_t length = read(fd, text, sizeof(text) - 1);
+            close(fd);
+            if (length <= 0) return -1;
+            long pid = strtol(text, NULL, 10);
+            return pid > 0 ? (pid_t)pid : -1;
+        }
+
+        static bool isRunningHelper(pid_t pid) {
+            char path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+            char ownPath[PROC_PIDPATHINFO_MAXSIZE] = {0};
+            return proc_pidpath(pid, path, sizeof(path)) > 0 &&
+                   proc_pidpath(getpid(), ownPath, sizeof(ownPath)) > 0 &&
+                   strcmp(path, ownPath) == 0;
+        }
+
+        // Turns SleepDisabled off again when the helper that turned it on has
+        // exited without restoring it. A running holder keeps its setting.
+        static bool recoverSleepDisabled(void) {
+            pid_t owner = readSleepMarker();
+            if (owner == 0) return true;
+            if (owner > 0 && owner != getpid() && isRunningHelper(owner)) return true;
+            if (!setSleepDisabled(false)) return false;
+            removeSleepMarker();
+            return true;
+        }
+
+        // Keeps the Mac awake while the lid is closed until stdin closes.
+        //
+        // The clamshell sleep override is a single flag that powerd also
+        // writes. When powerd clears it with the lid closed (for example when
+        // the power adapter or a display is disconnected), the kernel sleeps
+        // at once, before the flag can be applied again. While the lid is
+        // closed, SleepDisabled is therefore turned on as well: powerd does
+        // not change it, and the kernel refuses every sleep request while it
+        // is on. It is turned off again when the lid opens or the helper stops.
+        static int holdClamshellOverride(void) {
+            pid_t awakePID = getppid();
+            if (awakePID <= 1) return 3;
+            signal(SIGPIPE, SIG_IGN);
+            signal(SIGTERM, handleStopSignal);
+            signal(SIGINT, handleStopSignal);
+            // pmset changes settings only for a real root user.
+            if (setuid(0) != 0) return 2;
+            (void)recoverSleepDisabled();
+
+            io_service_t rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"));
+            if (!rootDomain) return 1;
+            io_connect_t connection = 0;
+            IOReturn result = IOServiceOpen(rootDomain, mach_task_self(), 0, &connection);
+            if (result != kIOReturnSuccess) {
+                IOObjectRelease(rootDomain);
+                return 2;
+            }
+
+            uint64_t disabled = 1;
+            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+            if (result != kIOReturnSuccess) {
+                IOServiceClose(connection);
+                IOObjectRelease(rootDomain);
+                return 9;
+            }
+            puts("ready");
+            fflush(stdout);
+
+            bool holdsSleepDisabled = false;
+            // Stop on stdin closure, a signal, or parent death. Poll also keeps
+            // restoration bounded when an inherited pipe remains open.
+            struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
+            while (!shouldStop && getppid() == awakePID) {
+                bool lidClosed = copyRootDomainFlag(rootDomain, CFSTR("AppleClamshellState"));
+                if (lidClosed && !holdsSleepDisabled &&
+                    !copyRootDomainFlag(rootDomain, CFSTR("SleepDisabled"))) {
+                    // A setting the user turned on is left alone.
+                    if (writeSleepMarker()) {
+                        holdsSleepDisabled = setSleepDisabled(true);
+                        if (!holdsSleepDisabled) removeSleepMarker();
+                    }
+                } else if (!lidClosed && holdsSleepDisabled && setSleepDisabled(false)) {
+                    holdsSleepDisabled = false;
+                    removeSleepMarker();
+                }
+
+                int ready = poll(&input, 1, 500);
+                if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+                // powerd rewrites this single flag on power source changes,
+                // assertion changes, and wake, so apply it again each time.
+                (void)IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+            }
+            bool restored = true;
+            if (holdsSleepDisabled) {
+                restored = setSleepDisabled(false);
+                if (restored) removeSleepMarker();
+            }
+            disabled = 0;
+            result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+            IOServiceClose(connection);
+            IOObjectRelease(rootDomain);
+            return restored && result == kIOReturnSuccess ? 0 : 9;
         }
 
         static bool setLowPowerMode(const char *key, const char *battery, const char *ac) {
@@ -1011,14 +1037,15 @@ public nonisolated final class SMCHelper: @unchecked Sendable {
 
         int main(int argc, char **argv) {
             if (argc > 1 && strcmp(argv[1], "version") == 0) {
-                puts("awake-smc-14");
+                puts("awake-smc-15");
                 return 0;
             }
             if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
                 return holdClamshellOverride();
             }
-            if (argc > 1 && strcmp(argv[1], "hold-sleep") == 0) {
-                return holdBatterySleepAssertion();
+            if (argc > 1 && strcmp(argv[1], "recover-sleep") == 0) {
+                if (setuid(0) != 0) return 2;
+                return recoverSleepDisabled() ? 0 : 9;
             }
             if (argc > 1 && (strcmp(argv[1], "hold-lowpower") == 0 || strcmp(argv[1], "set-lowpower") == 0)) {
                 if (argc != 5 || !isLowPowerKey(argv[2]) ||
