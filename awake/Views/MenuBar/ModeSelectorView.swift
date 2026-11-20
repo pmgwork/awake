@@ -17,7 +17,8 @@ struct ModeSelectorView: View {
                     .textCase(.uppercase)
                 Spacer()
                 if coordinator.isManualKeepAwakeActive, let end = coordinator.timerEndDate {
-                    Text(timerInterval: Date()...max(end, Date()), countsDown: true)
+                    let now = Date()
+                    Text(timerInterval: now...max(end, now), countsDown: true)
                         .font(.system(size: 10))
                         .monospacedDigit()
                 }
@@ -57,8 +58,9 @@ struct ModeSelectorView: View {
                     .accessibilityHidden(true)
             }
             Spacer(minLength: 8)
-            if enabled, let end = countdownEnd, end > Date() {
-                Text(timerInterval: Date()...end, countsDown: true)
+            let now = Date()
+            if enabled, let end = countdownEnd, end > now {
+                Text(timerInterval: now...end, countsDown: true)
                     .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)

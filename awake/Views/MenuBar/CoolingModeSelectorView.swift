@@ -18,7 +18,8 @@ struct CoolingModeSelectorView: View {
                 Spacer()
                 if settings.coolingMode == .timed, settings.coolingArmed,
                    let end = coordinator.forcedCoolingEndDate {
-                    Text(timerInterval: Date()...max(end, Date()), countsDown: true)
+                    let now = Date()
+                    Text(timerInterval: now...max(end, now), countsDown: true)
                         .font(.system(size: 10))
                         .monospacedDigit()
                 }

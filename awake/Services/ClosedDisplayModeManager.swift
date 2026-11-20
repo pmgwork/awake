@@ -28,12 +28,14 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
 
     private let helperURL: URL
     private let helperCheck: () async -> Bool
+    private let sleepMarkerPath: String
 
     private var process: Process?
     private var input: Pipe?
     private var requested = false
     private var isStopping = false
     private var restorationFailed = false
+    private var recoveryTask: Task<Bool, Never>?
     /// Bounds automatic helper checks from the heartbeat while the helper is
     /// missing, outdated, or keeps exiting. Each check launches the helper.
     private var lastAutomaticCheck: Date?
@@ -41,10 +43,12 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
 
     init(
         helperURL: URL = SMCHelper.shared.closedDisplayHelperURL,
-        helperCheck: @escaping () async -> Bool = { await SMCHelper.shared.refreshHelperInstallState() }
+        helperCheck: @escaping () async -> Bool = { await SMCHelper.shared.refreshHelperInstallState() },
+        sleepMarkerPath: String = "/var/db/pmgwork.awake.sleepdisabled"
     ) {
         self.helperURL = helperURL
         self.helperCheck = helperCheck
+        self.sleepMarkerPath = sleepMarkerPath
         super.init()
         NotificationCenter.default.addObserver(
             self, selector: #selector(stop), name: NSApplication.willTerminateNotification, object: nil
@@ -88,7 +92,13 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
             lastError = L10n.string("Install or update the helper in Permissions to stay awake with the lid closed.")
             return
         }
-        if process == nil { start() }
+        // Let any in-flight startup recovery finish before launching a new
+        // clamshell holder so recover-sleep cannot clear the new lease's flag.
+        if let recoveryTask {
+            _ = await recoveryTask.value
+        }
+        guard requested, isHelperInstalled, process == nil else { return }
+        start()
     }
 
     private func start() {
@@ -141,8 +151,23 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
     /// SleepDisabled setting, which pmset saves. If a helper was killed before
     /// it could restore that setting (for example by a crash or restart), the
     /// helper restores it here.
-    public func recoverSleepSettingIfNeeded() async {
-        guard process == nil, await helperCheck(), process == nil else { return }
+    @discardableResult
+    public func recoverSleepSettingIfNeeded() async -> Bool {
+        if let recoveryTask {
+            return await recoveryTask.value
+        }
+        guard process == nil else { return true }
+        let task = Task { await performSleepRecovery() }
+        recoveryTask = task
+        let recovered = await task.value
+        recoveryTask = nil
+        return recovered
+    }
+
+    private func performSleepRecovery() async -> Bool {
+        guard process == nil else { return true }
+        guard await helperCheck() else { return false }
+        guard process == nil else { return true }
         let recovery = Process()
         recovery.executableURL = helperURL
         recovery.arguments = ["recover-sleep"]
@@ -158,20 +183,27 @@ public final class ClosedDisplayModeManager: NSObject, ObservableObject {
                 continuation.resume(returning: nil)
             }
         }
-        if status != 0 {
-            NSLog("[ClosedDisplayModeManager] Could not recover the sleep setting (status: %d)", status ?? -1)
+        if status == 0 {
+            restorationFailed = false
+            return true
         }
+        NSLog("[ClosedDisplayModeManager] Could not recover the sleep setting (status: %d)", status ?? -1)
+        return false
     }
 
     public func prepareForHelperRemoval() async -> Bool {
         let retiringProcess = process
         stop()
-        guard let retiringProcess else { return !restorationFailed }
-        let deadline = Date().addingTimeInterval(3)
-        while retiringProcess.isRunning, Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(25))
+        if let retiringProcess {
+            let deadline = Date().addingTimeInterval(3)
+            while retiringProcess.isRunning, Date() < deadline {
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            return !retiringProcess.isRunning && retiringProcess.terminationStatus == 0
         }
-        return !retiringProcess.isRunning && retiringProcess.terminationStatus == 0
+        let hasMarker = FileManager.default.fileExists(atPath: sleepMarkerPath)
+        guard restorationFailed || hasMarker else { return true }
+        return await recoverSleepSettingIfNeeded()
     }
 
     private func handleReady(_ data: Data, from process: Process) {

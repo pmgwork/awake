@@ -116,19 +116,25 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
             if (event.state == .active || event.state == .waitingForInput),
                let pid = event.sourcePID,
                !Self.processIsSame(pid: pid, expectedStartTime: event.sourceProcessStartTime) {
-                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
+                if cleaningInvalidFiles, removeIfUnchanged(url: url, event: event) {
+                    cachedEvents.removeValue(forKey: url)
+                }
                 continue
             }
             if (event.state == .active || event.state == .waitingForInput),
                now.timeIntervalSince(event.occurredAt) > Self.orphanSessionTTL {
-                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
+                if cleaningInvalidFiles, removeIfUnchanged(url: url, event: event) {
+                    cachedEvents.removeValue(forKey: url)
+                }
                 continue
             }
             if event.state == .active,
                event.provider == .antigravity,
                let transcriptPath = event.transcriptPath,
                isAntigravityTranscriptFinished(path: transcriptPath, eventOccurredAt: event.occurredAt, now: now) {
-                if cleaningInvalidFiles { removeIfUnchanged(url: url, event: event) }
+                if cleaningInvalidFiles, removeIfUnchanged(url: url, event: event) {
+                    cachedEvents.removeValue(forKey: url)
+                }
                 continue
             }
             if let current = newestBySession[event.sessionKey], current.occurredAt > event.occurredAt {
@@ -156,21 +162,25 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
 
     /// Deletes an expired snapshot under the bridge's write lock, preserving
     /// a newer event that arrived while the cleanup pass was running.
-    private func removeIfUnchanged(url: URL, event: AgentHookEvent) {
+    /// Returns `true` when the file was removed or is already absent.
+    @discardableResult
+    private func removeIfUnchanged(url: URL, event: AgentHookEvent) -> Bool {
         let lockURL = directoryURL.appendingPathComponent(".write.lock")
         let descriptor = open(lockURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
-        guard descriptor >= 0 else { return }
+        guard descriptor >= 0 else { return false }
         defer {
             flock(descriptor, LOCK_UN)
             close(descriptor)
         }
-        guard flock(descriptor, LOCK_EX) == 0 else { return }
+        guard flock(descriptor, LOCK_EX) == 0 else { return false }
+        guard fileManager.fileExists(atPath: url.path) else { return true }
         // Dates round-trip through ISO8601 with millisecond precision, so a
         // freshly-created event can differ from its stored copy by <1 ms.
         guard let current = try? read(url),
               current.state == event.state,
-              abs(current.occurredAt.timeIntervalSince(event.occurredAt)) < 0.001 else { return }
+              abs(current.occurredAt.timeIntervalSince(event.occurredAt)) < 0.001 else { return false }
         try? fileManager.removeItem(at: url)
+        return !fileManager.fileExists(atPath: url.path)
     }
 
     public func fileURL(provider: AgentProvider, sessionID: String) -> URL {
@@ -252,8 +262,14 @@ public nonisolated final class AgentSessionStore: @unchecked Sendable {
         let fileSize = (try? handle.seekToEnd()) ?? 0
         let startOffset = fileSize > maxTailBytes ? fileSize - maxTailBytes : 0
         try? handle.seek(toOffset: startOffset)
-        let data = handle.readDataToEndOfFile()
-        guard let text = String(data: data, encoding: .utf8) else { return false }
+        var data = handle.readDataToEndOfFile()
+        // Seeking into the middle of the file may land inside a line or a
+        // multi-byte UTF-8 sequence; drop bytes through the first newline so
+        // the trailing JSONL entries always decode cleanly.
+        if startOffset > 0, let newline = data.firstIndex(of: 0x0A) {
+            data = data.suffix(from: data.index(after: newline))
+        }
+        let text = String(decoding: data, as: UTF8.self)
         let lines = text.split(whereSeparator: \.isNewline)
         guard let lastLine = lines.last(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
               let lineData = lastLine.data(using: .utf8),

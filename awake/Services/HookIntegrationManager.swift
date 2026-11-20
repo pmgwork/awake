@@ -234,7 +234,8 @@ public final class HookIntegrationManager: ObservableObject {
     }
 
     private var openCodeConfigurationURLs: [URL] {
-        let directory = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map(URL.init(fileURLWithPath:))
+        let xdgConfigHome = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"]
+        let directory = (xdgConfigHome?.isEmpty == false ? xdgConfigHome.map(URL.init(fileURLWithPath:)) : nil)
             ?? homeURL.appendingPathComponent(".config", isDirectory: true)
         let base = directory.appendingPathComponent("opencode", isDirectory: true)
         let jsonc = base.appendingPathComponent("opencode.jsonc")

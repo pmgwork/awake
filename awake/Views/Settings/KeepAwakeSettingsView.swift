@@ -14,7 +14,7 @@ struct KeepAwakeSettingsView: View {
                 Picker(L10n.string("Keep Awake After Agents Finish"), selection: $settings.completionGraceDuration) {
                     Text(L10n.string("Off")).tag(TimeInterval(0))
                     ForEach(graceDurations, id: \.self) { duration in
-                        Text(verbatim: L10n.format("%d min", language: settings.language, Int(duration / 60)))
+                        Text(verbatim: formattedGraceDuration(duration))
                             .tag(duration)
                     }
                 }
@@ -98,6 +98,16 @@ struct KeepAwakeSettingsView: View {
         // Keep custom durations saved by earlier releases selectable.
         if settings.completionGraceDuration > 0 { durations.insert(settings.completionGraceDuration) }
         return durations.sorted()
+    }
+
+    private func formattedGraceDuration(_ duration: TimeInterval) -> String {
+        let totalSeconds = Int(duration.rounded())
+        if totalSeconds >= 60 && totalSeconds % 60 == 0 {
+            return L10n.format("%d min", language: settings.language, totalSeconds / 60)
+        }
+        return Duration.seconds(totalSeconds).formatted(
+            .units(allowed: [.minutes, .seconds], width: .abbreviated).locale(settings.language.locale)
+        )
     }
 
     /// Low Power Mode applies only while the Mac stays awake with the lid closed.

@@ -1,4 +1,5 @@
 import XCTest
+import IOKit.ps
 @testable import awake
 
 final class SMCHelperTests: XCTestCase {
@@ -42,6 +43,47 @@ final class SMCHelperTests: XCTestCase {
             XCTAssertTrue(policy.allowsCooling(for: .timed))
             XCTAssertFalse(policy.allowsCooling(for: .whileKeepAwakeIsOn))
         }
+    }
+
+    func testClosedLidSleepPreventionRespectsOptInAndHelperAvailability() {
+        let closedHeadless = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
+        XCTAssertTrue(closedHeadless.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
+        XCTAssertFalse(closedHeadless.preventsClosedLidSleep(closedDisplayModeEnabled: false, helperAvailable: true))
+        XCTAssertFalse(closedHeadless.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: false))
+
+        let openLid = DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: false)
+        XCTAssertFalse(openLid.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
+
+        let clamshell = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
+        XCTAssertFalse(clamshell.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
+    }
+
+    func testPowerSourcesIgnoreUPSAndPreferInternalBattery() {
+        let internalBattery: [String: Any] = [
+            kIOPSTypeKey as String: kIOPSInternalBatteryType as String,
+            kIOPSPowerSourceStateKey as String: kIOPSBatteryPowerValue as String,
+            kIOPSCurrentCapacityKey as String: 42,
+            kIOPSMaxCapacityKey as String: 100,
+        ]
+        let ups: [String: Any] = [
+            kIOPSTypeKey as String: kIOPSUPSType as String,
+            kIOPSPowerSourceStateKey as String: kIOPSACPowerValue as String,
+            kIOPSCurrentCapacityKey as String: 100,
+            kIOPSMaxCapacityKey as String: 100,
+        ]
+        let laptopWithUPS = PowerMonitor.parsePowerSources(
+            providingSourceType: kIOPSBatteryPowerValue as String,
+            descriptions: [internalBattery, ups]
+        )
+        XCTAssertFalse(laptopWithUPS.isOnACPower)
+        XCTAssertEqual(laptopWithUPS.batteryLevel, 42)
+
+        let desktopWithUPS = PowerMonitor.parsePowerSources(
+            providingSourceType: kIOPSACPowerValue as String,
+            descriptions: [ups]
+        )
+        XCTAssertTrue(desktopWithUPS.isOnACPower)
+        XCTAssertNil(desktopWithUPS.batteryLevel)
     }
 
     /// The main thread must never launch the privileged helper: `waitUntilExit()`
@@ -213,5 +255,60 @@ final class ClosedDisplayModeManagerTests: XCTestCase {
         await recheckTask.value
         XCTAssertFalse(manager.isHelperInstalled)
         XCTAssertTrue(manager.needsHelperPermissionHint)
+    }
+
+    func testRemovalRecoversStaleMarkerAndWaitOrderAvoidsStartupRace() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let script = directory.appendingPathComponent("helper")
+        let marker = directory.appendingPathComponent("sleepdisabled")
+        let log = directory.appendingPathComponent("events")
+        try "99999\n".write(to: marker, atomically: true, encoding: .utf8)
+        try """
+        #!/bin/sh
+        if [ "$1" = "recover-sleep" ]; then
+            echo "recover-start" >> '\(log.path)'
+            /bin/sleep 0.15
+            rm -f '\(marker.path)'
+            echo "recover-end" >> '\(log.path)'
+            exit 0
+        fi
+        echo "hold-start" >> '\(log.path)'
+        echo ready
+        read line
+        """.write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
+
+        // 1. Stale marker is recovered before allowing helper removal.
+        let removalManager = ClosedDisplayModeManager(
+            helperURL: script,
+            helperCheck: { true },
+            sleepMarkerPath: marker.path
+        )
+        let canRemove = await removalManager.prepareForHelperRemoval()
+        XCTAssertTrue(canRemove)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+
+        // 2. Startup recovery finishes before a newly requested clamshell lease starts.
+        try "".write(to: log, atomically: true, encoding: .utf8)
+        let raceManager = ClosedDisplayModeManager(
+            helperURL: script,
+            helperCheck: { true },
+            sleepMarkerPath: marker.path
+        )
+        let recovery = Task { await raceManager.recoverSleepSettingIfNeeded() }
+        try await Task.sleep(for: .milliseconds(30))
+        raceManager.update(sessionActive: true, enabled: true)
+        await raceManager.refreshHelperState()
+        _ = await recovery.value
+        for _ in 0..<100 {
+            let lines = ((try? String(contentsOf: log, encoding: .utf8)) ?? "").split(separator: "\n")
+            if lines.count >= 3 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let lines = ((try? String(contentsOf: log, encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
+        XCTAssertEqual(lines, ["recover-start", "recover-end", "hold-start"])
+        raceManager.update(sessionActive: false, enabled: true)
     }
 }

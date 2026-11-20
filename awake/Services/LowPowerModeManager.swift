@@ -61,6 +61,15 @@ public final class LowPowerModeManager: NSObject, ObservableObject {
         Task { await start() }
     }
 
+    /// Re-runs any pending restoration or active request after the helper is
+    /// installed or updated.
+    public func retryIfNeeded() async {
+        await restoreSavedStateIfNeeded()
+        guard requested, process == nil else { return }
+        handledRequest = false
+        await start()
+    }
+
     private func start() async {
         // Wait for a previous helper to restore the setting first, including
         // after a rapid stop/start; its termination retries the request.

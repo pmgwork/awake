@@ -342,6 +342,38 @@ final class AgentSessionStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(provider: .antigravity, sessionID: "deleted-conversation").path))
     }
 
+    func testAntigravityTranscriptRecoveryHandlesMultibyteUTF8SeekBoundary() throws {
+        try store.prepareDirectory()
+        let now = Date()
+        let past = now.addingTimeInterval(-(AgentSessionStore.antigravityTranscriptCheckGrace + 5))
+
+        // Try 0, 1, and 2 bytes of ASCII padding so at least one case lands
+        // inside a 3-byte Japanese UTF-8 character at fileSize - 64 KiB.
+        for padding in 0..<3 {
+            let transcript = directoryURL.appendingPathComponent("multibyte-\(padding).jsonl")
+            let japaneseChunk = String(repeating: "あ", count: 25_000) // 75,000 bytes
+            let contents = """
+            {"step_index":0,"type":"USER_INPUT","status":"DONE","content":"\(String(repeating: "a", count: padding))\(japaneseChunk)"}
+            {"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE"}
+            """
+            try Data(contents.utf8).write(to: transcript)
+            try FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: transcript.path)
+
+            let sessionID = "multibyte-finished-\(padding)"
+            try store.save(AgentHookEvent(
+                provider: .antigravity, sessionID: sessionID, state: .active,
+                reason: "PreInvocation", occurredAt: past, transcriptPath: transcript.path
+            ))
+        }
+
+        let events = store.loadValidEvents(now: now)
+        XCTAssertTrue(events.isEmpty)
+        for padding in 0..<3 {
+            let url = store.fileURL(provider: .antigravity, sessionID: "multibyte-finished-\(padding)")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
     @MainActor
     func testHookIntegrationManagerDetectsAntigravityDesktopApp() throws {
         let tempHome = directoryURL.appendingPathComponent("home", isDirectory: true)

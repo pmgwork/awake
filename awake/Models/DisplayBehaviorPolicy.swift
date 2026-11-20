@@ -29,4 +29,11 @@ struct DisplayBehaviorPolicy {
     // lid-sleep override can interrupt the active display session. Keep the
     // override armed with the lid open only when no external display is attached.
     var needsClosedDisplayOverride: Bool { !hasExternalDisplay }
+
+    /// Whether SleepManager should take closed-lid system-sleep assertions.
+    /// Requires the user's closed-lid opt-in and an available helper, and
+    /// applies only without an external display.
+    func preventsClosedLidSleep(closedDisplayModeEnabled: Bool, helperAvailable: Bool) -> Bool {
+        closedDisplayModeEnabled && helperAvailable && lidClosed && !hasExternalDisplay
+    }
 }

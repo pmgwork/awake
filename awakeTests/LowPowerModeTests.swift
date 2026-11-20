@@ -188,4 +188,26 @@ final class LowPowerModeManagerTests: XCTestCase {
         XCTAssertEqual(recordedInvocations(), [])
         XCTAssertNil(defaults.data(forKey: "pmgwork.awake.lowPowerModeSavedState"))
     }
+
+    func testRetryIfNeededStartsPendingRequestAfterHelperBecomesAvailable() async throws {
+        var authorized = false
+        let manager = LowPowerModeManager(
+            helperURL: try makeHelper(),
+            helperCheck: { authorized },
+            readState: { LowPowerModeState(key: "lowpowermode", battery: 0, ac: 0) },
+            defaults: defaults
+        )
+        manager.update(requested: true)
+        try await waitUntil { manager.lastError != nil }
+        XCTAssertEqual(recordedInvocations(), [])
+
+        authorized = true
+        await manager.retryIfNeeded()
+        try await waitUntil { recordedInvocations().count == 1 && manager.lastError == nil }
+        XCTAssertEqual(recordedInvocations(), ["hold-lowpower lowpowermode 0 0"])
+        XCTAssertNil(manager.lastError)
+
+        manager.update(requested: false)
+        try await waitUntil { FileManager.default.fileExists(atPath: stopped.path) }
+    }
 }

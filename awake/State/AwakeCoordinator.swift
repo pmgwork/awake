@@ -256,6 +256,7 @@ public final class AwakeCoordinator: ObservableObject {
         let installed = success && closedDisplayModeManager.isHelperInstalled
         if installed && !isRemovingHardwareAuthorization {
             fanController.allowPolicyRetry()
+            await lowPowerModeManager.retryIfNeeded()
             evaluateState()
         }
         return installed
@@ -404,10 +405,14 @@ public final class AwakeCoordinator: ObservableObject {
             return
         }
 
-        // Closed Lid Mode applies only without an external display; with one
-        // connected, macOS keeps the Mac awake in normal clamshell mode.
+        // Closed Lid Mode applies only when enabled with an available helper
+        // and without an external display; with one connected, macOS keeps the
+        // Mac awake in normal clamshell mode.
         sleepManager.enableSleepPrevention(
-            closedLid: lidMonitor.isLidClosed && !displayMonitor.hasExternalDisplay
+            closedLid: displayBehaviorPolicy.preventsClosedLidSleep(
+                closedDisplayModeEnabled: settings.closedDisplayModeEnabled,
+                helperAvailable: isFanHelperInstalled
+            )
         )
         // Fans last, once the sleep assertion is in place.
         applyFanPolicy()
@@ -426,6 +431,7 @@ public final class AwakeCoordinator: ObservableObject {
 
     private func updateForcedCooling(now: Date = Date()) {
         updateCoolingAvailability()
+        let wasAutomaticCoolingActive = isAutomaticCoolingActive || isRenderCoolingActive
 
         if isRemovingHardwareAuthorization {
             settings.automaticCoolingEnabled = false
@@ -433,9 +439,10 @@ public final class AwakeCoordinator: ObservableObject {
             settings.coolingArmed = false
             resetCoolingState()
         }
-        if settings.automaticCoolingEnabled && isCoolingCutOffByLowBattery {
+        if isCoolingCutOffByLowBattery && (settings.automaticCoolingEnabled || settings.renderCoolingEnabled) {
             settings.automaticCoolingEnabled = false
-            if let batteryLevel = powerMonitor.batteryLevel {
+            settings.renderCoolingEnabled = false
+            if wasAutomaticCoolingActive, let batteryLevel = powerMonitor.batteryLevel {
                 sendNotification(
                     title: L10n.string("Automatic Cooling Stopped"),
                     body: L10n.format("Battery is at %d%%, so automatic cooling stopped.", batteryLevel),

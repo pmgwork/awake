@@ -236,11 +236,13 @@ public final class FanController: ObservableObject {
             guard SMCClient.shared.areAnyFansInManualMode() else { return }
             let success = SMCHelper.shared.setFanAuto(allowAuthorizationPrompt: false)
             Task { @MainActor in
+                let controller = FanController.shared
+                guard controller.modeInFlight == nil, controller.requestedMode == .auto else { return }
                 if success {
-                    FanController.shared.activeMode = .auto
-                    FanController.shared.controlError = nil
+                    controller.activeMode = .auto
+                    controller.controlError = nil
                 } else {
-                    FanController.shared.controlError = L10n.string("The fans may still be under manual control. Restart your Mac to return them to automatic control.")
+                    controller.controlError = L10n.string("The fans may still be under manual control. Restart your Mac to return them to automatic control.")
                 }
             }
         }

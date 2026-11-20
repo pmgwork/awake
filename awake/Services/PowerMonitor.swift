@@ -38,23 +38,57 @@ public final class PowerMonitor: ObservableObject {
             return
         }
 
-        var isAC = true
+        let providingSource = IOPSGetProvidingPowerSourceType(blob)?.takeRetainedValue() as String?
+        let descriptions = list.compactMap {
+            IOPSGetPowerSourceDescription(blob, $0)?.takeUnretainedValue() as? [String: Any]
+        }
+        let parsed = Self.parsePowerSources(providingSourceType: providingSource, descriptions: descriptions)
+        apply(isOnACPower: parsed.isOnACPower, batteryLevel: parsed.batteryLevel)
+    }
+
+    /// Extracts the Mac's own AC/battery status without letting UPS or
+    /// accessory power sources overwrite the internal battery reading.
+    nonisolated static func parsePowerSources(
+        providingSourceType: String?,
+        descriptions: [[String: Any]]
+    ) -> (isOnACPower: Bool, batteryLevel: Int?) {
+        let internalBatteries = descriptions.filter {
+            ($0[kIOPSTypeKey as String] as? String) == (kIOPSInternalBatteryType as String)
+        }
+        let targetDescriptions: [[String: Any]]
+        if !internalBatteries.isEmpty {
+            targetDescriptions = internalBatteries
+        } else {
+            // Only fall back to untyped entries; never treat a UPS or external
+            // accessory battery as the Mac's internal battery.
+            targetDescriptions = descriptions.filter { $0[kIOPSTypeKey as String] == nil }
+        }
+
+        var isAC: Bool? = nil
         var batteryPct: Int? = nil
 
-        for item in list {
-            if let desc = IOPSGetPowerSourceDescription(blob, item)?.takeUnretainedValue() as? [String: Any] {
-                if let powerSourceState = desc[kIOPSPowerSourceStateKey as String] as? String {
-                    isAC = (powerSourceState == (kIOPSACPowerValue as String))
-                }
-                if let currentCapacity = desc[kIOPSCurrentCapacityKey as String] as? Int,
-                   let maxCapacity = desc[kIOPSMaxCapacityKey as String] as? Int,
-                   maxCapacity > 0 {
-                    batteryPct = Int((Double(currentCapacity) / Double(maxCapacity)) * 100.0)
-                }
+        for desc in targetDescriptions {
+            if let powerSourceState = desc[kIOPSPowerSourceStateKey as String] as? String {
+                isAC = (powerSourceState == (kIOPSACPowerValue as String))
+            }
+            if let currentCapacity = desc[kIOPSCurrentCapacityKey as String] as? Int,
+               let maxCapacity = desc[kIOPSMaxCapacityKey as String] as? Int,
+               maxCapacity > 0 {
+                batteryPct = Int((Double(currentCapacity) / Double(maxCapacity)) * 100.0)
             }
         }
 
-        apply(isOnACPower: isAC, batteryLevel: batteryPct)
+        let resolvedIsAC: Bool
+        if let isAC {
+            resolvedIsAC = isAC
+        } else if let providingSourceType {
+            resolvedIsAC = providingSourceType != (kIOPSBatteryPowerValue as String)
+        } else {
+            // Desktops without a battery default to AC.
+            resolvedIsAC = true
+        }
+
+        return (resolvedIsAC, batteryPct)
     }
 
     // @Published fires on every assignment, and this runs on a 3 s poll.
