@@ -405,9 +405,8 @@ public final class AwakeCoordinator: ObservableObject {
             return
         }
 
-        // Closed Lid Mode applies only when enabled with an available helper
-        // and without an external display; with one connected, macOS keeps the
-        // Mac awake in normal clamshell mode.
+        // Closed Lid Mode applies when enabled with an available helper, also
+        // with an external display (see DisplayBehaviorPolicy).
         sleepManager.enableSleepPrevention(
             closedLid: displayBehaviorPolicy.preventsClosedLidSleep(
                 closedDisplayModeEnabled: settings.closedDisplayModeEnabled,
@@ -660,10 +659,15 @@ public final class AwakeCoordinator: ObservableObject {
         )
     }
 
+    /// The override stays armed with an external display too. The Mac would
+    /// otherwise sleep at once when that display is unplugged with the lid
+    /// closed, before the helper could start, and AirPlay, Sidecar, and virtual
+    /// displays don't keep a closed Mac awake. The override only affects the
+    /// sleep decision, so it leaves the display session alone.
     private func applyClosedDisplayModePolicy() {
         closedDisplayModeManager.update(
             sessionActive: isActive && !isRemovingHardwareAuthorization,
-            enabled: settings.closedDisplayModeEnabled && displayBehaviorPolicy.needsClosedDisplayOverride
+            enabled: settings.closedDisplayModeEnabled
         )
     }
 

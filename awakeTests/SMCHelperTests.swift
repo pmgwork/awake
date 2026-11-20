@@ -16,29 +16,26 @@ final class SMCHelperTests: XCTestCase {
         }
     }
 
-    func testNativeClamshellKeepsScreenPreventionWithoutOverridingLidSleep() {
+    func testNativeClamshellKeepsScreenPreventionAndLeavesAutomaticCoolingToMacOS() {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
         XCTAssertTrue(policy.allowsScreenPrevention)
-        XCTAssertFalse(policy.needsClosedDisplayOverride)
         XCTAssertTrue(policy.allowsCooling(for: .forced))
         XCTAssertTrue(policy.allowsCooling(for: .timed))
         XCTAssertFalse(policy.allowsCooling(for: .whileKeepAwakeIsOn))
     }
 
-    func testHeadlessClosedLidSuppressesScreenPreventionAndUsesOverride() {
+    func testHeadlessClosedLidSuppressesScreenPreventionAndAllowsAllCooling() {
         let policy = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
         XCTAssertFalse(policy.allowsScreenPrevention)
-        XCTAssertTrue(policy.needsClosedDisplayOverride)
         for mode in CoolingMode.allCases {
             XCTAssertTrue(policy.allowsCooling(for: mode))
         }
     }
 
-    func testOpenLidAllowsScreenPreventionAndArmsOverrideOnlyWithoutExternalDisplay() {
+    func testOpenLidAllowsScreenPreventionAndOnlyManualCooling() {
         for hasExternal in [false, true] {
             let policy = DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: hasExternal)
             XCTAssertTrue(policy.allowsScreenPrevention)
-            XCTAssertEqual(policy.needsClosedDisplayOverride, !hasExternal)
             XCTAssertTrue(policy.allowsCooling(for: .forced))
             XCTAssertTrue(policy.allowsCooling(for: .timed))
             XCTAssertFalse(policy.allowsCooling(for: .whileKeepAwakeIsOn))
@@ -54,8 +51,10 @@ final class SMCHelperTests: XCTestCase {
         let openLid = DisplayBehaviorPolicy(lidClosed: false, hasExternalDisplay: false)
         XCTAssertFalse(openLid.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
 
+        // Unplugging an external display with the lid closed must not sleep the
+        // Mac, and AirPlay/Sidecar/virtual displays also count as external.
         let clamshell = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: true)
-        XCTAssertFalse(clamshell.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
+        XCTAssertTrue(clamshell.preventsClosedLidSleep(closedDisplayModeEnabled: true, helperAvailable: true))
     }
 
     func testPowerSourcesIgnoreUPSAndPreferInternalBattery() {
