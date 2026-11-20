@@ -1,5 +1,43 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Stable Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake stable update feed</description><item>
+            <title>0.6.2</title>
+            <pubDate>Sat, 21 Nov 2026 00:11:20 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.2</sparkle:version>
+            <sparkle:shortVersionString>0.6.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">## What's Changed
+
+### Closed-Lid Operation
+
+- Fixed the Mac sometimes going to sleep when the lid was closed during Keep Awake, most often after switching between AC and battery power, after waking from sleep, or after unplugging the power adapter or a display with the lid closed. macOS can reset the lid-close sleep override at these times and put the Mac to sleep before it is reapplied. The helper now reapplies the override every 0.5 seconds, and while the lid is closed it also turns on the macOS `disablesleep` power setting. Awake turns that setting off again when you open the lid or Keep Awake stops, or on its next launch if the helper couldn't, for example after a crash.
+- With **Stay Awake with the Lid Closed** on, Awake now keeps the Mac awake with the lid closed whether or not an external display is connected. Unplugging an external display with the lid closed no longer puts the Mac to sleep, and closing the lid while only AirPlay, Sidecar, or virtual displays are connected no longer does either. Low Power Mode with the lid closed and automatic cooling still apply only when no external display is connected.
+- Fixed closed-lid sleep assertions still being held on AC power when **Stay Awake with the Lid Closed** in **Settings → Keep Awake** was turned off or the hardware helper was unavailable.
+- Removed the separate battery helper, which never worked on current macOS and was restarted every second while Keep Awake was on battery power.
+
+### Hardware Helper
+
+- The helper has been updated. After installing this version, click **Update…** in the menu or in **Settings → Permissions**. Keep Awake with the lid closed stays unavailable until the helper is updated. Closed-lid operation also requires **Stay Awake with the Lid Closed** in **Settings → Keep Awake**.
+- When the helper needs an update, the menu now shows a one-line notice with an **Update…** button that updates the helper right away, so you no longer need to open **Settings → Permissions**.
+- **Use Low Power Mode with the Lid Closed** is now retried automatically after installing or updating the helper. Stale closed-lid sleep settings are recovered before removing the helper or starting a new session on launch, and startup fan recovery no longer overwrites a mode change made right after launch.
+
+### Other Fixes
+
+- Fixed Antigravity sessions sometimes remaining active after a missed Stop hook when the tail of a transcript landed in the middle of a multi-byte UTF-8 character, and cleared expired sessions from the in-memory cache immediately upon cleanup.
+- Fixed a potential crash when a menu bar countdown ended, including at the end of **Keep Awake After Agents Finish**.
+- Made the low-battery cutoff turn off both **While Keep Awake Is On** and **While Rendering** cooling consistently, and send the automatic cooling stopped notification only when automatic cooling was actually running.
+- Fixed power source detection so external UPS or accessory batteries do not overwrite the Mac's internal battery level or AC power status.
+- Fixed OpenCode configuration lookup when `XDG_CONFIG_HOME` is set to an empty string, and formatted legacy sub-minute **Keep Awake After Agents Finish** values cleanly instead of showing `0 min`.
+
+## Installation
+
+Download `Awake-0.6.2.zip` or `Awake-0.6.2.dmg` and move `Awake.app` to `/Applications`. Existing users can also use **Settings → General → Check Now**. The build is not notarized; on first launch, use **System Settings → Privacy &amp; Security → Open Anyway** if macOS blocks it.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.1...v0.6.2)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.2/Awake-0.6.2.zip" length="4929737" type="application/octet-stream" sparkle:edSignature="tS1WfOSQw6CPxOtxKdBR189vbqdteUcVzZSdrdt1lO8OCReMxqzpdNNBLqnCSKUlWTs1ZeJuHxi6xOmgjLBqCw==" />
+        </item>
+    <item>
             <title>0.6.1</title>
             <pubDate>Tue, 17 Nov 2026 03:39:05 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
