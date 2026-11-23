@@ -1,5 +1,27 @@
 <?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>Awake Beta Updates</title><link>https://github.com/pmgwork/awake</link><description>Awake beta update feed</description><item>
+            <title>0.6.3</title>
+            <pubDate>Mon, 23 Nov 2026 14:01:29 +0900</pubDate>
+            <link>https://github.com/PMGWork/awake</link>
+            <sparkle:version>0.6.3b1</sparkle:version>
+            <sparkle:shortVersionString>0.6.3-beta.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown">This is a beta release. To receive it in-app, enable **Settings → General → Receive Beta Updates**.
+
+## Hardware Helper
+
+- Fixed a helper installation failure that could prevent the administrator prompt from appearing when the installed compiler and macOS SDK were incompatible. Awake now includes a prebuilt, signed hardware helper. Installing or updating it in **Settings → Permissions** no longer requires Xcode or Command Line Tools. macOS still asks for administrator authorization when needed.
+- If Awake already shows **Helper Authorized**, you can keep using your installed helper.
+
+## Installation
+
+Awake requires macOS 26.0 or later and supports Apple silicon and Intel Macs. Download `Awake-0.6.3-beta.1.zip` or `Awake-0.6.3-beta.1.dmg` and move `Awake.app` to `/Applications`. If you already receive beta updates, use **Settings → General → Check Now**.
+
+[Full Changelog](https://github.com/PMGWork/awake/compare/v0.6.2...v0.6.3-beta.1)
+</description>
+            <enclosure url="https://github.com/PMGWork/awake/releases/download/v0.6.3-beta.1/Awake-0.6.3-beta.1.zip" length="4935101" type="application/octet-stream" sparkle:edSignature="AmBncjFiswks2O7npjsaWnN18SQB0iluGEI6LRhJ5LG9qPZIxAZpktVwfLTNl/TEY67k/DOWwdErZJaLX4VBDg==" />
+        </item>
+    <item>
             <title>0.6.2</title>
             <pubDate>Sat, 21 Nov 2026 00:11:20 +0900</pubDate>
             <link>https://github.com/PMGWork/awake</link>
