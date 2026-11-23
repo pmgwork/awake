@@ -63,7 +63,8 @@ fi
 # Coverage-instrumented binaries write default.profraw into the current
 # directory; the hook bridge runs inside users' projects, so never ship one.
 echo "==> Checking for coverage instrumentation..."
-for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/AwakeHookBridge" "$BUILT_APP/Contents/Helpers/awake"; do
+SMC_HELPER="$BUILT_APP/Contents/Helpers/pmgwork.awake.smc"
+for binary in "$BUILT_APP/Contents/MacOS/awake" "$BUILT_APP/Contents/Helpers/AwakeHookBridge" "$BUILT_APP/Contents/Helpers/awake" "$SMC_HELPER"; do
   [ -f "$binary" ] || { echo "Binary not found: $binary" >&2; exit 1; }
   if DEVELOPER_DIR="$DEVELOPER_DIR" xcrun nm "$binary" | grep -q __llvm_profile; then
     echo "Coverage instrumentation found in $binary" >&2
@@ -78,8 +79,11 @@ if find "$BUILT_APP" -name '*.profraw' | grep -q .; then
 fi
 
 echo "==> Architectures: $(lipo -archs "$BUILT_APP/Contents/MacOS/awake")"
+lipo "$SMC_HELPER" -verify_arch arm64
+lipo "$SMC_HELPER" -verify_arch x86_64
 
 echo "==> Verifying signature..."
+codesign --verify --strict "$SMC_HELPER"
 codesign --verify --deep --strict "$BUILT_APP" || {
   echo "warning: codesign verify failed (ad-hoc / Apple Development build is expected without a paid account)" >&2
 }

@@ -1,0 +1,554 @@
+#include <IOKit/IOKitLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <mach/mach.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <signal.h>
+#include <poll.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <libproc.h>
+#include <IOKit/pwr_mgt/IOPMLib.h>
+#include <IOKit/pwr_mgt/IOPM.h>
+
+typedef struct {
+    uint32_t key;
+    uint8_t version[6];
+    uint8_t limitData[18];
+    uint32_t dataSize;
+    uint32_t dataType;
+    uint8_t dataAttributes;
+    uint8_t keyInfoPadding[3];
+    uint8_t result;
+    uint8_t status;
+    uint8_t command;
+    uint8_t commandPadding;
+    uint32_t data32;
+    uint8_t bytes[32];
+} SMCParam;
+
+static uint32_t fourCC(const char *s) {
+    return ((uint32_t)(uint8_t)s[0] << 24) | ((uint32_t)(uint8_t)s[1] << 16) |
+           ((uint32_t)(uint8_t)s[2] << 8) | (uint32_t)(uint8_t)s[3];
+}
+
+static kern_return_t callSMC(io_connect_t connection, SMCParam *input, SMCParam *output) {
+    size_t outputSize = sizeof(*output);
+    return IOConnectCallStructMethod(connection, 2, input, sizeof(*input), output, &outputSize);
+}
+
+static bool keyInfo(io_connect_t connection, const char *key, SMCParam *info) {
+    SMCParam input = {0};
+    input.key = fourCC(key);
+    input.command = 9;
+    return callSMC(connection, &input, info) == KERN_SUCCESS && info->result == 0;
+}
+
+static bool readKey(io_connect_t connection, const char *key, uint8_t *bytes, uint32_t *size) {
+    SMCParam info = {0};
+    if (!keyInfo(connection, key, &info) || info.dataSize > 32) return false;
+    SMCParam input = {0}, output = {0};
+    input.key = fourCC(key);
+    input.dataSize = info.dataSize;
+    input.command = 5;
+    if (callSMC(connection, &input, &output) != KERN_SUCCESS || output.result != 0) return false;
+    memcpy(bytes, output.bytes, info.dataSize);
+    *size = info.dataSize;
+    return true;
+}
+
+static bool writeKey(io_connect_t connection, const char *key, const uint8_t *bytes, uint32_t size) {
+    SMCParam info = {0};
+    if (!keyInfo(connection, key, &info) || info.dataSize != size || size > 32) return false;
+    SMCParam input = {0}, output = {0};
+    input.key = fourCC(key);
+    input.dataSize = info.dataSize;
+    input.dataType = info.dataType;
+    input.dataAttributes = info.dataAttributes;
+    input.command = 6;
+    memcpy(input.bytes, bytes, size);
+    return callSMC(connection, &input, &output) == KERN_SUCCESS && output.result == 0;
+}
+
+static volatile sig_atomic_t shouldStop = 0;
+static bool abortOnStop = true;
+static pid_t expectedParentPID = 0;
+
+static void handleStopSignal(int signalNumber) {
+    (void)signalNumber;
+    shouldStop = 1;
+}
+
+static bool parentDied(void) {
+    return expectedParentPID > 1 && getppid() != expectedParentPID;
+}
+
+static bool writeKeyRetry(io_connect_t connection, const char *key, const uint8_t *bytes,
+                          uint32_t size, int attempts, useconds_t delay) {
+    for (int attempt = 0; attempt < attempts; ++attempt) {
+        if (abortOnStop && (shouldStop || parentDied())) return false;
+        if (writeKey(connection, key, bytes, size)) return true;
+        if (attempt + 1 < attempts) usleep(delay);
+    }
+    return false;
+}
+
+static bool resolveModeKey(io_connect_t connection, int fan, char key[5]) {
+    memcpy(key, "F0Md", 5);
+    key[1] = (char)('0' + fan);
+    SMCParam info = {0};
+    if (keyInfo(connection, key, &info)) return true;
+    key[2] = 'm';
+    key[3] = 'd';
+    return keyInfo(connection, key, &info);
+}
+
+static bool engageManual(io_connect_t connection, const char *modeKey) {
+    if (shouldStop || parentDied()) return false;
+    uint8_t manual = 1;
+    if (writeKey(connection, modeKey, &manual, 1)) return true;
+
+    // M3/M4 thermalmonitord keeps the fans in protected system mode (3).
+    // Ftst=1 asks it to yield, which normally takes 3-6 seconds.
+    uint8_t unlock = 1;
+    if (!writeKeyRetry(connection, "Ftst", &unlock, 1, 100, 50000)) {
+        fprintf(stderr, "could not set Ftst=1");
+        return false;
+    }
+    usleep(3000000);
+    if (shouldStop || parentDied()) return false;
+    if (!writeKeyRetry(connection, modeKey, &manual, 1, 300, 100000)) {
+        fprintf(stderr, "thermal manager did not release %s", modeKey);
+        return false;
+    }
+    return true;
+}
+
+static bool restoreFanAuto(io_connect_t connection, int fan) {
+    char modeKey[5] = {0};
+    if (!resolveModeKey(connection, fan, modeKey)) return false;
+
+    uint8_t modeBytes[32] = {0};
+    uint32_t modeSize = 0;
+    bool alreadySystemControlled = readKey(connection, modeKey, modeBytes, &modeSize) &&
+                                   modeSize == 1 && modeBytes[0] != 1;
+    uint8_t automatic = 0;
+    bool modeOK = alreadySystemControlled ||
+                  writeKeyRetry(connection, modeKey, &automatic, 1, 20, 50000);
+
+    // Clear a stale target as a best effort. Both flt and fpe2 encode zero
+    // as all-zero bytes.
+    char targetKey[] = "F0Tg";
+    targetKey[1] = (char)('0' + fan);
+    SMCParam targetInfo = {0};
+    if (keyInfo(connection, targetKey, &targetInfo) && targetInfo.dataSize <= 32) {
+        uint8_t zero[32] = {0};
+        (void)writeKeyRetry(connection, targetKey, zero, targetInfo.dataSize, 10, 50000);
+    }
+    return modeOK;
+}
+
+static void rollbackToAuto(io_connect_t connection, int fanCount) {
+    // Rollback must finish even when a stop was requested: turn off the
+    // abort checks that guard the manual-engage path.
+    abortOnStop = false;
+    for (int fan = 0; fan < fanCount; ++fan) {
+        (void)restoreFanAuto(connection, fan);
+    }
+    SMCParam ftstInfo = {0};
+    if (keyInfo(connection, "Ftst", &ftstInfo)) {
+        uint8_t release = 0;
+        (void)writeKeyRetry(connection, "Ftst", &release, 1, 20, 50000);
+    }
+}
+
+typedef struct {
+    char modeKey[5];
+    char targetKey[5];
+    uint8_t target[32];
+    uint32_t targetSize;
+} FanLease;
+
+// macOS can take the fans back (thermalmonitord on M3/M4, or a sleep
+// and wake). Re-assert manual mode and the target in place, without
+// handing the fans to the system first. Failed writes retry on the
+// next pass.
+static void maintainManual(io_connect_t connection, const FanLease *fans, int fanCount) {
+    for (int fan = 0; fan < fanCount; ++fan) {
+        if (shouldStop || parentDied()) return;
+        uint8_t bytes[32] = {0};
+        uint32_t size = 0;
+        if (readKey(connection, fans[fan].modeKey, bytes, &size) && size == 1 && bytes[0] != 1) {
+            uint8_t manual = 1;
+            if (!writeKey(connection, fans[fan].modeKey, &manual, 1)) {
+                // Ask thermalmonitord to yield again.
+                SMCParam ftstInfo = {0};
+                if (keyInfo(connection, "Ftst", &ftstInfo)) {
+                    uint8_t unlock = 1;
+                    (void)writeKey(connection, "Ftst", &unlock, 1);
+                }
+                continue;
+            }
+        }
+        size = 0;
+        if (!readKey(connection, fans[fan].targetKey, bytes, &size) ||
+            size != fans[fan].targetSize ||
+            memcmp(bytes, fans[fan].target, size) != 0) {
+            (void)writeKey(connection, fans[fan].targetKey, fans[fan].target, fans[fan].targetSize);
+        }
+    }
+}
+
+static bool isLowPowerKey(const char *key) {
+    return strcmp(key, "lowpowermode") == 0 || strcmp(key, "powermode") == 0;
+}
+
+// "-" leaves that power source unchanged.
+static bool isLowPowerValue(const char *value) {
+    return strcmp(value, "-") == 0 || strcmp(value, "0") == 0 ||
+           strcmp(value, "1") == 0 || strcmp(value, "2") == 0;
+}
+
+static bool runPmsetArguments(char *const arguments[]) {
+    char *const environment[] = { "PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL };
+    // Keep pmset off the stdin/stdout pipes shared with Awake.
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions) != 0) return false;
+    posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
+    posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    pid_t pid = 0;
+    int spawnResult = posix_spawn(&pid, "/usr/bin/pmset", &actions, NULL, arguments, environment);
+    posix_spawn_file_actions_destroy(&actions);
+    if (spawnResult != 0) return false;
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) return false;
+    }
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+
+static bool runPmset(const char *source, const char *key, const char *value) {
+    if (strcmp(value, "-") == 0) return true;
+    char *const arguments[] = { "/usr/bin/pmset", (char *)source, (char *)key, (char *)value, NULL };
+    return runPmsetArguments(arguments);
+}
+
+// MARK: Closed-lid operation
+
+// Records the helper that turned on the system-wide SleepDisabled
+// setting. pmset saves that setting, so a helper killed before it
+// restores the setting would leave the Mac unable to sleep.
+static const char *sleepMarkerPath = "/var/db/pmgwork.awake.sleepdisabled";
+
+static bool setSleepDisabled(bool disabled) {
+    char *const arguments[] = { "/usr/bin/pmset", "disablesleep", disabled ? "1" : "0", NULL };
+    return runPmsetArguments(arguments);
+}
+
+static bool copyRootDomainFlag(io_service_t rootDomain, CFStringRef key) {
+    CFTypeRef value = IORegistryEntryCreateCFProperty(rootDomain, key, kCFAllocatorDefault, 0);
+    bool result = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)value);
+    if (value) CFRelease(value);
+    return result;
+}
+
+static bool writeSleepMarker(void) {
+    int fd = open(sleepMarkerPath, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd < 0) return false;
+    char text[32];
+    int length = snprintf(text, sizeof(text), "%d\n", (int)getpid());
+    bool written = write(fd, text, (size_t)length) == length && fsync(fd) == 0;
+    close(fd);
+    return written;
+}
+
+static void removeSleepMarker(void) {
+    (void)unlink(sleepMarkerPath);
+}
+
+// Returns 0 without a marker and -1 for an unreadable one.
+static pid_t readSleepMarker(void) {
+    int fd = open(sleepMarkerPath, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd < 0) return errno == ENOENT ? 0 : -1;
+    char text[32] = {0};
+    ssize_t length = read(fd, text, sizeof(text) - 1);
+    close(fd);
+    if (length <= 0) return -1;
+    long pid = strtol(text, NULL, 10);
+    return pid > 0 ? (pid_t)pid : -1;
+}
+
+static bool isRunningHelper(pid_t pid) {
+    char path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+    char ownPath[PROC_PIDPATHINFO_MAXSIZE] = {0};
+    return proc_pidpath(pid, path, sizeof(path)) > 0 &&
+           proc_pidpath(getpid(), ownPath, sizeof(ownPath)) > 0 &&
+           strcmp(path, ownPath) == 0;
+}
+
+// Turns SleepDisabled off again when the helper that turned it on has
+// exited without restoring it. A running holder keeps its setting.
+static bool recoverSleepDisabled(void) {
+    pid_t owner = readSleepMarker();
+    if (owner == 0) return true;
+    if (owner > 0 && owner != getpid() && isRunningHelper(owner)) return true;
+    if (!setSleepDisabled(false)) return false;
+    removeSleepMarker();
+    return true;
+}
+
+// Keeps the Mac awake while the lid is closed until stdin closes.
+//
+// The clamshell sleep override is a single flag that powerd also
+// writes. When powerd clears it with the lid closed (for example when
+// the power adapter or a display is disconnected), the kernel sleeps
+// at once, before the flag can be applied again. While the lid is
+// closed, SleepDisabled is therefore turned on as well: powerd does
+// not change it, and the kernel refuses every sleep request while it
+// is on. It is turned off again when the lid opens or the helper stops.
+static int holdClamshellOverride(void) {
+    pid_t awakePID = getppid();
+    if (awakePID <= 1) return 3;
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGTERM, handleStopSignal);
+    signal(SIGINT, handleStopSignal);
+    // pmset changes settings only for a real root user.
+    if (setuid(0) != 0) return 2;
+    (void)recoverSleepDisabled();
+
+    io_service_t rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"));
+    if (!rootDomain) return 1;
+    io_connect_t connection = 0;
+    IOReturn result = IOServiceOpen(rootDomain, mach_task_self(), 0, &connection);
+    if (result != kIOReturnSuccess) {
+        IOObjectRelease(rootDomain);
+        return 2;
+    }
+
+    uint64_t disabled = 1;
+    result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+    if (result != kIOReturnSuccess) {
+        IOServiceClose(connection);
+        IOObjectRelease(rootDomain);
+        return 9;
+    }
+    puts("ready");
+    fflush(stdout);
+
+    bool holdsSleepDisabled = false;
+    // Stop on stdin closure, a signal, or parent death. Poll also keeps
+    // restoration bounded when an inherited pipe remains open.
+    struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
+    while (!shouldStop && getppid() == awakePID) {
+        bool lidClosed = copyRootDomainFlag(rootDomain, CFSTR("AppleClamshellState"));
+        if (lidClosed && !holdsSleepDisabled &&
+            !copyRootDomainFlag(rootDomain, CFSTR("SleepDisabled"))) {
+            // A setting the user turned on is left alone.
+            if (writeSleepMarker()) {
+                holdsSleepDisabled = setSleepDisabled(true);
+                if (!holdsSleepDisabled) removeSleepMarker();
+            }
+        } else if (!lidClosed && holdsSleepDisabled && setSleepDisabled(false)) {
+            holdsSleepDisabled = false;
+            removeSleepMarker();
+        }
+
+        int ready = poll(&input, 1, 500);
+        if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+        // powerd rewrites this single flag on power source changes,
+        // assertion changes, and wake, so apply it again each time.
+        (void)IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+    }
+    bool restored = true;
+    if (holdsSleepDisabled) {
+        restored = setSleepDisabled(false);
+        if (restored) removeSleepMarker();
+    }
+    disabled = 0;
+    result = IOConnectCallScalarMethod(connection, kPMSetClamshellSleepState, &disabled, 1, NULL, NULL);
+    IOServiceClose(connection);
+    IOObjectRelease(rootDomain);
+    return restored && result == kIOReturnSuccess ? 0 : 9;
+}
+
+static bool setLowPowerMode(const char *key, const char *battery, const char *ac) {
+    bool batteryOK = runPmset("-b", key, battery);
+    bool acOK = runPmset("-c", key, ac);
+    return batteryOK && acOK;
+}
+
+static int holdLowPowerMode(const char *key, const char *battery, const char *ac) {
+    pid_t awakePID = getppid();
+    if (awakePID <= 1) return 3;
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGTERM, handleStopSignal);
+    signal(SIGINT, handleStopSignal);
+    // pmset changes settings only for a real root user.
+    if (setuid(0) != 0) return 2;
+
+    const char *batteryLow = strcmp(battery, "-") == 0 ? "-" : "1";
+    const char *acLow = strcmp(ac, "-") == 0 ? "-" : "1";
+    if (!setLowPowerMode(key, batteryLow, acLow)) {
+        (void)setLowPowerMode(key, battery, ac);
+        return 9;
+    }
+    puts("ready");
+    fflush(stdout);
+    // Stop on stdin closure, a signal, or parent death.
+    struct pollfd input = { .fd = STDIN_FILENO, .events = POLLIN };
+    while (!shouldStop && getppid() == awakePID) {
+        int ready = poll(&input, 1, 1000);
+        if (ready > 0 || (ready < 0 && errno != EINTR)) break;
+    }
+    return setLowPowerMode(key, battery, ac) ? 0 : 9;
+}
+
+int main(int argc, char **argv) {
+    if (argc > 1 && strcmp(argv[1], "version") == 0) {
+        puts("awake-smc-15");
+        return 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "hold-clamshell") == 0) {
+        return holdClamshellOverride();
+    }
+    if (argc > 1 && strcmp(argv[1], "recover-sleep") == 0) {
+        if (setuid(0) != 0) return 2;
+        return recoverSleepDisabled() ? 0 : 9;
+    }
+    if (argc > 1 && (strcmp(argv[1], "hold-lowpower") == 0 || strcmp(argv[1], "set-lowpower") == 0)) {
+        if (argc != 5 || !isLowPowerKey(argv[2]) ||
+            !isLowPowerValue(argv[3]) || !isLowPowerValue(argv[4])) return 64;
+        if (strcmp(argv[1], "hold-lowpower") == 0) {
+            return holdLowPowerMode(argv[2], argv[3], argv[4]);
+        }
+        if (setuid(0) != 0) return 2;
+        return setLowPowerMode(argv[2], argv[3], argv[4]) ? 0 : 9;
+    }
+    const char *mode = argc > 1 ? argv[1] : "auto";
+    if (strcmp(mode, "max") != 0 && strcmp(mode, "aggressive") != 0 && strcmp(mode, "moderate") != 0 && strcmp(mode, "auto") != 0) return 64;
+    bool watchParent = argc > 2 && strcmp(argv[2], "watch-parent") == 0;
+
+    // Handlers are installed before any hardware write so that a stop
+    // request or a dead parent can still roll the fans back to system
+    // control instead of leaving them pinned in manual mode.
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGTERM, handleStopSignal);
+    signal(SIGINT, handleStopSignal);
+    expectedParentPID = getppid();
+    if (expectedParentPID <= 1) return 3;
+
+    io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMCKeysEndpoint"));
+    if (!service) service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"));
+    if (!service) return 1;
+    io_connect_t connection = 0;
+    kern_return_t openResult = IOServiceOpen(service, mach_task_self(), 0, &connection);
+    IOObjectRelease(service);
+    if (openResult != KERN_SUCCESS) return 2;
+
+    uint8_t fanCountBytes[32] = {0};
+    uint32_t fanCountSize = 0;
+    if (!readKey(connection, "FNum", fanCountBytes, &fanCountSize) ||
+        fanCountSize != 1 || fanCountBytes[0] == 0 || fanCountBytes[0] > 10) {
+        fprintf(stderr, "invalid FNum");
+        IOServiceClose(connection);
+        return 4;
+    }
+    int fanCount = fanCountBytes[0];
+
+    if (strcmp(mode, "auto") == 0) {
+        bool success = true;
+        for (int fan = 0; fan < fanCount; ++fan) {
+            if (!restoreFanAuto(connection, fan)) success = false;
+        }
+        SMCParam ftstInfo = {0};
+        if (keyInfo(connection, "Ftst", &ftstInfo)) {
+            uint8_t release = 0;
+            if (!writeKeyRetry(connection, "Ftst", &release, 1, 20, 50000)) {
+                fprintf(stderr, "could not set Ftst=0");
+                success = false;
+            }
+        }
+        IOServiceClose(connection);
+        return success ? 0 : 7;
+    }
+
+    bool success = true;
+    FanLease fans[10];
+    memset(fans, 0, sizeof(fans));
+    for (int fan = 0; fan < fanCount; ++fan) {
+        if (shouldStop || parentDied()) {
+            fprintf(stderr, "cancelled before fan %d", fan);
+            success = false;
+            break;
+        }
+        char modeKey[5] = {0};
+        char maxKey[] = "F0Mx";
+        char targetKey[] = "F0Tg";
+        maxKey[1] = targetKey[1] = (char)('0' + fan);
+        if (!resolveModeKey(connection, fan, modeKey) || !engageManual(connection, modeKey)) {
+            fprintf(stderr, " (fan %d manual mode failed)", fan);
+            success = false;
+            break;
+        }
+
+        uint8_t maxBytes[32] = {0};
+        uint32_t maxSize = 0;
+        bool targetOK = readKey(connection, maxKey, maxBytes, &maxSize);
+        float fraction = 1.0f;
+        if (strcmp(mode, "aggressive") == 0) fraction = 0.75f;
+        else if (strcmp(mode, "moderate") == 0) fraction = 0.5f;
+        if (targetOK && fraction < 1.0f) {
+            SMCParam maxInfo = {0};
+            targetOK = keyInfo(connection, maxKey, &maxInfo);
+            if (targetOK && maxInfo.dataType == fourCC("flt ") && maxSize == 4) {
+                float rpm = 0;
+                memcpy(&rpm, maxBytes, sizeof(rpm));
+                rpm *= fraction;
+                memcpy(maxBytes, &rpm, sizeof(rpm));
+            } else if (targetOK && maxInfo.dataType == fourCC("fpe2") && maxSize == 2) {
+                uint16_t raw = ((uint16_t)maxBytes[0] << 8) | maxBytes[1];
+                raw = (uint16_t)((float)raw * fraction);
+                maxBytes[0] = (uint8_t)(raw >> 8);
+                maxBytes[1] = (uint8_t)raw;
+            } else {
+                targetOK = false;
+            }
+        }
+        targetOK = targetOK &&
+                   writeKeyRetry(connection, targetKey, maxBytes, maxSize, 10, 50000);
+        if (!targetOK) {
+            fprintf(stderr, "could not set %s", targetKey);
+            success = false;
+            break;
+        }
+        memcpy(fans[fan].modeKey, modeKey, 5);
+        memcpy(fans[fan].targetKey, targetKey, 5);
+        memcpy(fans[fan].target, maxBytes, maxSize);
+        fans[fan].targetSize = maxSize;
+    }
+    if (!success) rollbackToAuto(connection, fanCount);
+    if (success && watchParent) {
+        if (shouldStop || parentDied()) {
+            rollbackToAuto(connection, fanCount);
+            IOServiceClose(connection);
+            return 5;
+        }
+        puts("READY");
+        fflush(stdout);
+        while (!shouldStop && getppid() == expectedParentPID) {
+            sleep(1);
+            if (shouldStop || parentDied()) break;
+            maintainManual(connection, fans, fanCount);
+        }
+        rollbackToAuto(connection, fanCount);
+    }
+    IOServiceClose(connection);
+    return success ? 0 : 6;
+}

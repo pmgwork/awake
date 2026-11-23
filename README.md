@@ -130,7 +130,7 @@ Automatic cooling follows Keep Awake; manual cooling runs independently. Both ca
 | While Keep Awake Is On | Follows Keep Awake in every mode, with the lid closed. A 30-minute Keep Awake timer also gives 30 minutes of cooling. Enable or disable it with its switch; it remains independent of manual cooling (default: on) |
 | While Rendering | Cools while a supported app is rendering, with the lid open or closed (see below). While it runs, the menu shows which apps are rendering. Turn individual apps on or off in Settings → Monitor. Uses the automatic fan speed and stops at the low-battery cutoff (default: off) |
 
-- Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper.
+- Check authorization and install or update the shared privileged helper under Settings → Permissions. Closed-lid operation and fan control use the same helper. It comes with Awake and can be installed without Xcode or Command Line Tools.
 - The first activation asks for an administrator password once to install a small privileged helper at `/Library/PrivilegedHelperTools/pmgwork.awake.smc` (`root:admin`, setuid root).
 - The helper holds a fan lease and watches the Awake process, so automatic fan control is restored if Awake exits or crashes.
 - With **Stay Awake with the Lid Closed** on, the helper turns on macOS's `disablesleep` power setting while the lid is closed, so unplugging the power adapter or an external display doesn't put the Mac to sleep. Awake turns it off again when you open the lid or Keep Awake stops, or on the next launch if the helper couldn't.

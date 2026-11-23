@@ -3,6 +3,21 @@ import IOKit.ps
 @testable import awake
 
 final class SMCHelperTests: XCTestCase {
+    func testBundledHelperReportsExpectedProtocolVersion() throws {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = SMCHelper.bundledHelperURL
+        process.arguments = ["version"]
+        process.standardOutput = output
+
+        try process.run()
+        process.waitUntilExit()
+
+        let version = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        XCTAssertEqual(process.terminationStatus, 0)
+        XCTAssertEqual(version.trimmingCharacters(in: .whitespacesAndNewlines), SMCHelper.helperProtocolVersion)
+    }
+
     func testAutomaticCoolingFollowsKeepAwakeRatherThanAgentActivity() {
         let closed = DisplayBehaviorPolicy(lidClosed: true, hasExternalDisplay: false)
         // Timer, indefinite, download and agent sessions all use the same active state.
